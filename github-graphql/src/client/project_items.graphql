@@ -1,0 +1,94 @@
+query ProjectItems(
+  $login: String!
+  $projectNumber: Int!
+  $pageSize: Int!
+  $after: String
+) {
+  organization(login: $login) {
+    projectV2(number: $projectNumber) {
+      items(first: $pageSize, after: $after) {
+        totalCount
+        nodes {
+          __typename
+          id
+          updatedAt
+          Status: fieldValueByName(name: "Status") {
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          Category: fieldValueByName(name: "Category") {
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          Workstream: fieldValueByName(name: "Workstream") {
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          ProjectMilestone: fieldValueByName(name: "ProjectMilestone") {
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          content {
+            __typename
+
+            ... on DraftIssue {
+              id
+              title
+              updatedAt
+            }
+
+            ... on Issue {
+              id
+              resourcePath
+              repository {
+                owner {
+                  __typename
+                  login
+                }
+              }
+              updatedAt
+              title
+              state
+              subIssues(first: 100) {
+                nodes {
+                  id
+                }
+              }
+              trackedIssues(first: 100) {
+                nodes {
+                  id
+                }
+              }
+            }
+
+            ... on PullRequest {
+              id
+              resourcePath
+              repository {
+                owner {
+                  __typename
+                  login
+                }
+              }
+              title
+              updatedAt
+              state
+            }
+          }
+        }
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+      }
+    }
+  }
+}
