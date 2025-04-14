@@ -41,7 +41,9 @@
     }
   }
 
-  update_status();
+  update_status().then(() => {
+    if (!hasPat) isOpen = true;
+  });
 
   const propsId = $props.id();
   const buttonId = `${propsId}-button`;
