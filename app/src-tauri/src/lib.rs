@@ -16,7 +16,7 @@ struct PATState {
 
 impl Default for PATState {
     fn default() -> Self {
-        let pat_entry = keyring::Entry::new("ghui", "local user").expect("keyring failed to get entry");
+        let pat_entry = keyring::Entry::new("ghui", "PAT").expect("keyring failed to get entry");
 
         println!("{:?}", pat_entry);
 
