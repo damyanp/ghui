@@ -1,17 +1,22 @@
 use std::sync::Mutex;
 
 use serde::Serialize;
-use tauri::{Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 enum PatStatus {
     NotSet,
     Set,
+    #[allow(dead_code)]
     Broken,
 }
 
+fn notify_pat_status(app: &AppHandle, status: PatStatus) {
+    let _ = app.emit("pat-status", status);
+}
+
 struct PATState {
-    pat_entry : keyring::Entry
+    pat_entry: keyring::Entry,
 }
 
 impl Default for PATState {
@@ -37,12 +42,20 @@ fn get_pat_status(state: State<Mutex<PATState>>) -> PatStatus {
 }
 
 #[tauri::command]
-fn set_pat(state: State<'_, Mutex<PATState>>, pat: String) {
+fn set_pat(app: AppHandle, state: State<'_, Mutex<PATState>>, pat: String) {
     let pat_state = state.lock().unwrap();
-    if pat.len() > 0 {
-        pat_state.pat_entry.set_password(&pat).expect("set_password failed");
+    if !pat.is_empty() {
+        pat_state
+            .pat_entry
+            .set_password(&pat)
+            .expect("set_password failed");
+        notify_pat_status(&app, PatStatus::Set);
     } else {
-        pat_state.pat_entry.delete_credential().expect("delete_credntial failed");
+        pat_state
+            .pat_entry
+            .delete_credential()
+            .expect("delete_credntial failed");
+        notify_pat_status(&app, PatStatus::NotSet);
     }
 }
 

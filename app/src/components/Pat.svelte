@@ -8,19 +8,17 @@
     Input,
   } from "@sveltestrap/sveltestrap";
   import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
 
   let color = $state("secondary");
   let text = $state("...");
   let hasPat = $state(false);
   let isOpen = $state(false);
 
-  async function update_status() {
-    type Status = "NotSet" | "Set" | "Broken";
+  type Status = "NotSet" | "Set" | "Broken";
 
-    const statusString = (await invoke("get_pat_status")) as String;
-    const status = statusString as Status;
-
-    switch (status) {
+  function update_pat_status(pat_status: Status) {
+    switch (pat_status) {
       case "NotSet":
         color = "danger";
         text = "Set PAT";
@@ -41,8 +39,14 @@
     }
   }
 
-  update_status().then(() => {
+  invoke("get_pat_status").then((s) => {
+    update_pat_status(s as Status);
     if (!hasPat) isOpen = true;
+  });
+
+  listen<Status>("pat-status", (e) => {
+    console.log(`pat-status: ${e}`);
+    update_pat_status(e.payload);
   });
 
   const propsId = $props.id();
@@ -52,14 +56,12 @@
 
   async function setPat() {
     await invoke("set_pat", { pat: pat });
-    await update_status();
     isOpen = false;
     pat = "";
   }
 
   async function clearPat() {
     await invoke("set_pat", { pat: "" });
-    await update_status();
     isOpen = false;
     pat = "";
   }

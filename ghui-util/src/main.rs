@@ -6,15 +6,15 @@ use std::fs::File;
 use std::io::Write;
 
 #[derive(Parser, Debug)]
-#[command(name="ghui-util")]
+#[command(name = "ghui-util")]
 struct Args {
     #[command(subcommand)]
-    command: Commands
+    command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    GetAllItems 
+    GetAllItems,
 }
 
 fn main() {
