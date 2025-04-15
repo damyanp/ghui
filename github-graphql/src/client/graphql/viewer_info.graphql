@@ -1,0 +1,3 @@
+query ViewerInfoQuery {
+    viewer { login avatarUrl }
+}

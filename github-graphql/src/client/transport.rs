@@ -3,14 +3,15 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 pub trait Client {
-    fn request<Q, R>(&self, request: &Q) -> Result<R, Box<dyn std::error::Error>>
+    #[allow(async_fn_in_trait)]
+    async fn request<Q, R>(&self, request: &Q) -> Result<R, Box<dyn std::error::Error>>
     where
         Q: Serialize,
         R: DeserializeOwned;
 }
 
 pub struct GithubClient {
-    client: reqwest::blocking::Client,
+    client: reqwest::Client,
 }
 
 impl GithubClient {
@@ -26,7 +27,7 @@ impl GithubClient {
         headers.append(header::AUTHORIZATION, auth_header);
 
         Ok(GithubClient {
-            client: reqwest::blocking::Client::builder()
+            client: reqwest::Client::builder()
                 .user_agent(APP_USER_AGENT)
                 .default_headers(headers)
                 .build()?,
@@ -35,7 +36,7 @@ impl GithubClient {
 }
 
 impl Client for GithubClient {
-    fn request<Q, R>(&self, request: &Q) -> Result<R, Box<dyn std::error::Error>>
+    async fn request<Q, R>(&self, request: &Q) -> Result<R, Box<dyn std::error::Error>>
     where
         Q: Serialize,
         R: DeserializeOwned,
@@ -44,7 +45,7 @@ impl Client for GithubClient {
             .client
             .post("https://api.github.com/graphql")
             .json(request)
-            .send()?
-            .json()?)
+            .send().await?
+            .json().await?)
     }
 }

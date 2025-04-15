@@ -12,8 +12,7 @@ use project_items::{
     ProjectItemsOrganizationProjectV2ItemsNodesWorkstream,
 };
 
-#[allow(clippy::upper_case_acronyms)]
-type URI = String;
+use super::URI;
 
 type DateTime = String;
 
@@ -37,7 +36,7 @@ fn build_query() -> graphql_client::QueryBody<project_items::Variables> {
     ProjectItems::build_query(variables)
 }
 
-pub fn get_all_items<ClientType: super::super::transport::Client>(
+pub async fn get_all_items<ClientType: crate::client::transport::Client>(
     client: &ClientType,
     report_progress: fn(count: usize, total: usize),
 ) -> Result<
@@ -48,7 +47,7 @@ pub fn get_all_items<ClientType: super::super::transport::Client>(
     let mut all_items: Vec<project_items::ProjectItemsOrganizationProjectV2ItemsNodes> =
         Vec::new();
     loop {
-        let response: Response<project_items::ResponseData> = client.request(&request_body)?;
+        let response: Response<project_items::ResponseData> = client.request(&request_body).await?;
 
         let items = response
             .data

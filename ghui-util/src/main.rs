@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
+use github_graphql::client::graphql::get_viewer_info;
 use github_graphql::{client::graphql::get_all_items, client::transport::GithubClient};
 use std::env;
 use std::fs::File;
@@ -15,19 +16,24 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Commands {
     GetAllItems,
+    Viewer,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), ()> {
     dotenv().ok();
 
     let arg = Args::parse();
 
     match arg.command {
-        Commands::GetAllItems => run_get_all_items(),
+        Commands::GetAllItems => run_get_all_items().await?,
+        Commands::Viewer => run_get_viewer().await?,
     }
+
+    Ok(())
 }
 
-fn run_get_all_items() {
+async fn run_get_all_items() -> Result<(), ()> {
     let github_pat =
         env::var("GITHUB_PAT").expect("GITHUB_PAT needs to be set in environemnt or .env file");
 
@@ -35,7 +41,9 @@ fn run_get_all_items() {
 
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
-    let all_items = get_all_items(&client, report_progress).expect("get_all_items failed");
+    let all_items = get_all_items(&client, report_progress)
+        .await
+        .expect("get_all_items failed");
 
     let json_data = serde_json::to_string_pretty(&all_items).expect("serialize to JSON failed");
     let mut file = File::create("all_items.json").expect("create file failed");
@@ -43,4 +51,21 @@ fn run_get_all_items() {
         .expect("write to file failed");
 
     println!("Retrieved {} items", all_items.len());
+
+    Ok(())
+}
+
+async fn run_get_viewer() -> Result<(), ()> {
+    let github_pat =
+        env::var("GITHUB_PAT").expect("GITHUB_PAT needs to be set in environemnt or .env file");
+
+    let client = GithubClient::new(&github_pat).expect("create client");
+
+    let info = get_viewer_info(&client)
+        .await
+        .expect("get_viewer_info failed");
+
+    println!("{:?}", info);
+
+    Ok(())
 }

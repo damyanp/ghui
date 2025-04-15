@@ -6,16 +6,22 @@
     Form,
     FormGroup,
     Input,
+    Tooltip,
   } from "@sveltestrap/sveltestrap";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
+  import { onDestroy } from "svelte";
 
   let color = $state("secondary");
   let text = $state("...");
   let hasPat = $state(false);
   let isOpen = $state(false);
+  let avatar = $state<string | undefined>(undefined);
 
-  type Status = "NotSet" | "Set" | "Broken";
+  type Status =
+    | "NotSet"
+    | { Set: { login: string; avatar_uri: string } }
+    | "Broken";
 
   function update_pat_status(pat_status: Status) {
     switch (pat_status) {
@@ -23,31 +29,34 @@
         color = "danger";
         text = "Set PAT";
         hasPat = false;
-        break;
-
-      case "Set":
-        color = "success";
-        text = "PAT ok";
-        hasPat = true;
+        avatar = undefined;
         break;
 
       case "Broken":
         color = "danger";
         text = "PAT broken";
         hasPat = true;
+        avatar = undefined;
+        break;
+
+      default:
+        if (typeof pat_status === "object" && "Set" in pat_status) {
+          color = "success";
+          text = pat_status.Set.login;
+          hasPat = true;
+          avatar = pat_status.Set.avatar_uri;
+        }
         break;
     }
   }
 
-  invoke("get_pat_status").then((s) => {
-    update_pat_status(s as Status);
-    if (!hasPat) isOpen = true;
-  });
-
-  listen<Status>("pat-status", (e) => {
-    console.log(`pat-status: ${e}`);
+  const unlistenStatus = listen<Status>("pat-status", (e) => {
+    console.log(`pat-status: ${JSON.stringify(e.payload)}`);
     update_pat_status(e.payload);
   });
+  invoke("check_pat_status");
+
+  onDestroy(() => unlistenStatus.then((u) => u()));
 
   const propsId = $props.id();
   const buttonId = `${propsId}-button`;
@@ -75,7 +84,14 @@
 </script>
 
 <NavItem>
-  <Button id={buttonId} size="sm" {color}>{text}</Button>
+  <Button id={buttonId} size="sm" {color}>
+    {#if avatar}
+      <img src={avatar} alt={text} style="width: 32px; height: 32px; aspect-ratio: auto 32 / 32;" />
+      <Tooltip animation target={buttonId}>{text}</Tooltip>
+    {:else}
+      {text}
+    {/if}
+  </Button>
 </NavItem>
 
 <Popover
@@ -86,7 +102,7 @@
   placement="auto"
   trigger="click"
   title="Personal Access Token"
-  style="max-width:80em; min-width:40em"
+  style="max-width:30em; min-width:40em"
 >
   <p>
     This app needs access to github. Although we'd do a proper github login
