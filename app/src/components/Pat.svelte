@@ -105,7 +105,7 @@
       </p>
 
       <p class="m-4">
-        <a target="_blank" href="https://github.com/settings/tokens"
+        <a target="_blank" href="https://github.com/settings/tokens" class="anchor"
           >Generate PAT here</a
         >. Tokens (classic) with access to projects seem to work well.
       </p>
