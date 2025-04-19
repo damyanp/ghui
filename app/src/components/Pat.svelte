@@ -1,13 +1,5 @@
 <script lang="ts">
-  import {
-    NavItem,
-    Button,
-    Popover,
-    Form,
-    FormGroup,
-    Input,
-    Tooltip,
-  } from "@sveltestrap/sveltestrap";
+  import { Avatar } from "@skeletonlabs/skeleton-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onDestroy } from "svelte";
@@ -83,17 +75,8 @@
   }
 </script>
 
-<NavItem>
-  <Button id={buttonId} size="sm" {color}>
-    {#if avatar}
-      <img src={avatar} alt={text} style="width: 32px; height: 32px; aspect-ratio: auto 32 / 32;" />
-      <Tooltip animation target={buttonId}>{text}</Tooltip>
-    {:else}
-      {text}
-    {/if}
-  </Button>
-</NavItem>
-
+<Avatar src={avatar} name={text} />
+<!-- 
 <Popover
   bind:isOpen={() => isOpen, setIsOpen}
   hideOnOutsideClick
@@ -128,4 +111,4 @@
     >
     <Button color="danger" disabled={!hasPat} on:click={clearPat}>Clear</Button>
   </Form>
-</Popover>
+</Popover> -->
