@@ -75,7 +75,8 @@
   }
 </script>
 
-<Avatar src={avatar} name={text} />
+<Avatar src={avatar} name={text} size="size-12"/>
+
 <!-- 
 <Popover
   bind:isOpen={() => isOpen, setIsOpen}
