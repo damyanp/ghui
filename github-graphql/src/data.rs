@@ -19,6 +19,12 @@ pub enum PullRequestState {
 pub struct Id(pub String);
 
 #[derive(PartialEq, Eq, Debug)]
+pub enum ProjectItemRef {
+    Resolved(Rc<ProjectItem>),
+    Unresolved(Id),
+}
+
+#[derive(PartialEq, Eq, Debug)]
 pub enum ContentKind {
     DraftIssue,
     Issue(Issue),
@@ -49,8 +55,8 @@ pub struct ProjectItemContent {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Issue {
     pub state: IssueState,
-    pub sub_issues: Vec<Id>,
-    pub tracked_issues: Vec<Id>,
+    pub sub_issues: Vec<ProjectItemRef>,
+    pub tracked_issues: Vec<ProjectItemRef>,
 }
 
 #[derive(PartialEq, Eq, Debug)]

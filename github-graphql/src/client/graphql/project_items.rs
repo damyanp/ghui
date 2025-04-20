@@ -1,4 +1,4 @@
-use crate::data::{self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, PullRequest};
+use crate::data::{self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, ProjectItemRef, PullRequest};
 use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
@@ -210,10 +210,10 @@ impl HasId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedI
     }
 }
 
-fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<Id> {
+fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<ProjectItemRef> {
     if let Some(nodes) = nodes {
         let nodes = nodes.iter().filter_map(|i| i.as_ref());
-        nodes.map(|n| n.id()).collect()
+        nodes.map(|n| ProjectItemRef::Unresolved(n.id())).collect()
     } else {
         Vec::default()
     }
@@ -470,8 +470,8 @@ mod tests {
             panic!("ProjectItem doesn't match")
         };
 
-        fn to_id_vec(vec: Vec<&str>) -> Vec<Id> {
-            vec.into_iter().map(|id| Id(id.to_owned())).collect()
+        fn to_id_vec(vec: Vec<&str>) -> Vec<ProjectItemRef> {
+            vec.into_iter().map(|id| ProjectItemRef::Unresolved(Id(id.to_owned()))).collect()
         }
 
         assert_eq!(
