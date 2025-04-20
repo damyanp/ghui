@@ -195,25 +195,25 @@ impl From<project_items::PullRequestState> for data::PullRequestState {
 }
 
 trait HasId {
-    fn id(&self) -> &String;
+    fn id(&self) -> Id;
 }
 
 impl HasId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes {
-    fn id(&self) -> &String {
-        &self.id
+    fn id(&self) -> Id {
+        Id(self.id.clone())
     }
 }
 
 impl HasId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes {
-    fn id(&self) -> &String {
-        &self.id
+    fn id(&self) -> Id {
+        Id(self.id.clone())
     }
 }
 
-fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<String> {
+fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<Id> {
     if let Some(nodes) = nodes {
         let nodes = nodes.iter().filter_map(|i| i.as_ref());
-        nodes.map(|n| n.id().clone()).collect()
+        nodes.map(|n| n.id()).collect()
     } else {
         Vec::default()
     }
@@ -470,20 +470,24 @@ mod tests {
             panic!("ProjectItem doesn't match")
         };
 
+        fn to_id_vec(vec: Vec<&str>) -> Vec<Id> {
+            vec.into_iter().map(|id| Id(id.to_owned())).collect()
+        }
+
         assert_eq!(
             sub_issues,
-            &vec!["I_kwDOMbLzis6VOIXt", "I_kwDOBITxeM6RoqRE"]
+            &to_id_vec(vec!["I_kwDOMbLzis6VOIXt", "I_kwDOBITxeM6RoqRE"])
         );
         assert_eq!(
             tracked_issues,
-            &vec![
+            &to_id_vec(vec![
                 "I_kwDOBITxeM6RopkI",
                 "I_kwDOBITxeM6S15Vc",
                 "I_kwDOMbLzis6S3UK3",
                 "I_kwDOBITxeM6YlVED",
                 "I_kwDOBITxeM6TCeSQ",
                 "I_kwDOBITxeM6RoqRE"
-            ]
+            ])
         );
     }
 }

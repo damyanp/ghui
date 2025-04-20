@@ -49,8 +49,8 @@ pub struct ProjectItemContent {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Issue {
     pub state: IssueState,
-    pub sub_issues: Vec<String>,
-    pub tracked_issues: Vec<String>,
+    pub sub_issues: Vec<Id>,
+    pub tracked_issues: Vec<Id>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
