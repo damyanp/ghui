@@ -1,6 +1,4 @@
-use crate::data::{
-    self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, ProjectItemRef, PullRequest,
-};
+use crate::data::{self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, PullRequest};
 use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
@@ -212,10 +210,10 @@ impl HasId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedI
     }
 }
 
-fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<ProjectItemRef> {
+fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<Id> {
     if let Some(nodes) = nodes {
         let nodes = nodes.iter().filter_map(|i| i.as_ref());
-        nodes.map(|n| ProjectItemRef::Unresolved(n.id())).collect()
+        nodes.map(|n| n.id()).collect()
     } else {
         Vec::default()
     }
@@ -334,12 +332,10 @@ mod tests {
             },
         };
 
-        assert_eq!(*draft_issue.borrow(), expected_draft_issue);
+        assert_eq!(*draft_issue, expected_draft_issue.id);
+
         assert_eq!(
-            *project_items
-                .get(&expected_draft_issue.id)
-                .unwrap()
-                .borrow(),
+            *project_items.get(&expected_draft_issue.id).unwrap(),
             expected_draft_issue
         );
 
@@ -365,9 +361,9 @@ mod tests {
                 }),
             },
         };
-        assert_eq!(*issue.borrow(), expected_issue);
+        assert_eq!(*issue, expected_issue.id);
         assert_eq!(
-            *project_items.get(&expected_issue.id).unwrap().borrow(),
+            *project_items.get(&expected_issue.id).unwrap(),
             expected_issue
         );
 
@@ -390,12 +386,9 @@ mod tests {
                 }),
             },
         };
-        assert_eq!(*pull_request.borrow(), expected_pull_request);
+        assert_eq!(*pull_request, expected_pull_request.id);
         assert_eq!(
-            *project_items
-                .get(&expected_pull_request.id)
-                .unwrap()
-                .borrow(),
+            *project_items.get(&expected_pull_request.id).unwrap(),
             expected_pull_request
         );
     }
@@ -459,8 +452,7 @@ mod tests {
 
         let item = project_items
             .get(&Id("PVTI_lADOAQWwKc4ABQXFzgOXzwE".into()))
-            .unwrap()
-            .as_ref();
+            .unwrap();
 
         let ProjectItem {
             content:
@@ -474,24 +466,22 @@ mod tests {
                     ..
                 },
             ..
-        } = *item.borrow()
+        } = *item
         else {
             panic!("ProjectItem doesn't match")
         };
 
-        fn to_id_vec(vec: Vec<&str>) -> Vec<ProjectItemRef> {
-            vec.into_iter()
-                .map(|id| ProjectItemRef::Unresolved(Id(id.to_owned())))
-                .collect()
+        fn to_id_vec(ids: &[&str]) -> Vec<Id> {
+            ids.iter().map(|id| Id((*id).to_owned())).collect()
         }
 
         assert_eq!(
-            sub_issues,
-            &to_id_vec(vec!["I_kwDOMbLzis6VOIXt", "I_kwDOBITxeM6RoqRE"])
+            *sub_issues,
+            to_id_vec(&["I_kwDOMbLzis6VOIXt", "I_kwDOBITxeM6RoqRE"])
         );
         assert_eq!(
-            tracked_issues,
-            &to_id_vec(vec![
+            *tracked_issues,
+            to_id_vec(&[
                 "I_kwDOBITxeM6RopkI",
                 "I_kwDOBITxeM6S15Vc",
                 "I_kwDOMbLzis6S3UK3",

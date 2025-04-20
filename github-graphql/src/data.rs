@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use serde::Serialize;
 
@@ -21,12 +21,6 @@ pub enum PullRequestState {
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
 pub struct Id(pub String);
-
-#[derive(PartialEq, Eq, Debug, Clone, Serialize)]
-pub enum ProjectItemRef {
-    Resolved(Rc<RefCell<ProjectItem>>),
-    Unresolved(Id),
-}
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub enum ContentKind {
@@ -60,8 +54,8 @@ pub struct ProjectItemContent {
 #[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
 pub struct Issue {
     pub state: IssueState,
-    pub sub_issues: Vec<ProjectItemRef>,
-    pub tracked_issues: Vec<ProjectItemRef>,
+    pub sub_issues: Vec<Id>,
+    pub tracked_issues: Vec<Id>,
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
@@ -71,8 +65,9 @@ pub struct PullRequest {
 
 #[derive(Default)]
 pub struct ProjectItems {
-    project_items: Vec<Rc<RefCell<ProjectItem>>>,
-    project_items_by_id: HashMap<Id, Rc<RefCell<ProjectItem>>>,
+    ordered_items: Vec<Id>,
+    project_items: HashMap<Id, ProjectItem>,
+    content_id_to_item_id: HashMap<Id, Id>,
 }
 
 impl ProjectItems {
@@ -80,177 +75,17 @@ impl ProjectItems {
         let item_id = item.id.clone();
         let content_id = item.content.id.clone();
 
-        let item = Rc::new(RefCell::new(item));
-        self.project_items.push(Rc::clone(&item));
-        self.project_items_by_id.insert(item_id, Rc::clone(&item));
-        self.project_items_by_id
-            .insert(content_id, Rc::clone(&item));
+        self.project_items.insert(item_id.clone(), item);
+        self.content_id_to_item_id
+            .insert(item_id.clone(), content_id);
+        self.ordered_items.push(item_id);
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Rc<RefCell<ProjectItem>>> {
-        self.project_items.iter()
+    pub fn iter(&self) -> std::slice::Iter<'_, Id>  {
+        self.ordered_items.iter()
     }
 
-    pub fn get(&self, id: &Id) -> Option<&Rc<RefCell<ProjectItem>>> {
-        self.project_items_by_id.get(id)
-    }
-
-    pub fn resolve_references(&mut self) {
-        for item in &self.project_items {
-            if let ProjectItem {
-                content:
-                    ProjectItemContent {
-                        kind: ContentKind::Issue(ref mut issue),
-                        ..
-                    },
-                ..
-            } = *item.borrow_mut()
-            {
-                self.resolve_item_references(&mut issue.sub_issues);
-                self.resolve_item_references(&mut issue.tracked_issues);
-            }
-        }
-    }
-
-    fn resolve_item_references(&self, sub_issues: &mut [ProjectItemRef]) {
-        for reference in sub_issues {
-            if let ProjectItemRef::Unresolved(ref id) = reference {
-                if let Some(referenced_item) = self.get(id) {
-                    *reference = ProjectItemRef::Resolved(referenced_item.to_owned());
-                }
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct TestData {
-        project_items: ProjectItems,
-        next_id: i32,
-    }
-
-    impl TestData {
-        fn new() -> Self {
-            TestData {
-                project_items: ProjectItems::default(),
-                next_id: 0,
-            }
-        }
-
-        fn next_id(&mut self) -> Id {
-            self.next_id += 1;
-            Id(format!("{}", self.next_id).to_owned())
-        }
-
-        fn add(&mut self, sub_issues: &[&Id], tracked_issues: &[&Id]) -> Id {
-            let content_id = self.next_id();
-
-            let item = ProjectItem {
-                id: self.next_id(),
-                content: ProjectItemContent {
-                    id: content_id.clone(),
-                    kind: ContentKind::Issue(Issue {
-                        sub_issues: to_project_item_ref_vec(sub_issues),
-                        tracked_issues: to_project_item_ref_vec(tracked_issues),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            self.project_items.add(item);
-
-            content_id
-        }
-    }
-
-    fn to_project_item_ref_vec(ids: &[&Id]) -> Vec<ProjectItemRef> {
-        ids.iter()
-            .map(|id| ProjectItemRef::Unresolved((*id).to_owned()))
-            .collect()
-    }
-
-    #[test]
-    fn test_resolve() {
-        let mut data = TestData::new();
-
-        let a = data.add(&[], &[]);
-        let b = data.add(&[], &[]);
-
-        let c = data.add(&[&a], &[&a]);
-        let d = data.add(&[&a, &b], &[&a, &b]);
-
-        let unresolvable = data.next_id();
-
-        let root = data.add(&[&c], &[&d, &unresolvable]);
-
-        data.project_items.resolve_references();
-
-        let [aref, bref, cref, dref, rootref] =
-            [&a, &b, &c, &d, &root].map(|id| data.project_items.get(id).expect("expected item"));
-
-        assert_eq!(issue(aref).sub_issues, to_project_item_ref_vec(&[]));
-        assert_eq!(issue(aref).tracked_issues, to_project_item_ref_vec(&[]));
-
-        assert_eq!(issue(bref).sub_issues, to_project_item_ref_vec(&[]));
-        assert_eq!(issue(bref).tracked_issues, to_project_item_ref_vec(&[]));
-
-        assert_eq!(
-            issue(cref).sub_issues[0],
-            ProjectItemRef::Resolved(aref.to_owned())
-        );
-        assert_eq!(
-            issue(cref).tracked_issues[0],
-            ProjectItemRef::Resolved(aref.to_owned())
-        );
-
-        assert_eq!(
-            issue(dref).sub_issues[0],
-            ProjectItemRef::Resolved(aref.to_owned())
-        );
-        assert_eq!(
-            issue(dref).sub_issues[1],
-            ProjectItemRef::Resolved(bref.to_owned())
-        );
-        assert_eq!(
-            issue(dref).tracked_issues[0],
-            ProjectItemRef::Resolved(aref.to_owned())
-        );
-        assert_eq!(
-            issue(dref).tracked_issues[1],
-            ProjectItemRef::Resolved(bref.to_owned())
-        );
-
-        assert_eq!(
-            issue(rootref).sub_issues[0],
-            ProjectItemRef::Resolved(cref.to_owned())
-        );
-        assert_eq!(
-            issue(rootref).tracked_issues[0],
-            ProjectItemRef::Resolved(dref.to_owned())
-        );
-        assert_eq!(
-            issue(rootref).tracked_issues[1],
-            ProjectItemRef::Unresolved(unresolvable.to_owned())
-        );
-
-        fn issue(pi: &Rc<RefCell<ProjectItem>>) -> Issue {
-            if let ProjectItem {
-                content:
-                    ProjectItemContent {
-                        kind: ContentKind::Issue(ref issue),
-                        ..
-                    },
-                ..
-            } = *pi.borrow()
-            {
-                issue.clone()
-            } else {
-                panic!("Couldn't match project item");
-            }
-        }
+    pub fn get(&self, id: &Id) -> Option<&ProjectItem> {
+        self.project_items.get(id)
     }
 }
