@@ -1,6 +1,8 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone)]
+use serde::Serialize;
+
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
 pub enum IssueState {
     CLOSED,
     #[default]
@@ -8,7 +10,7 @@ pub enum IssueState {
     Other(String),
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
 pub enum PullRequestState {
     CLOSED,
     #[default]
@@ -17,16 +19,16 @@ pub enum PullRequestState {
     Other(String),
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
 pub struct Id(pub String);
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize)]
 pub enum ProjectItemRef {
     Resolved(Rc<RefCell<ProjectItem>>),
     Unresolved(Id),
 }
 
-#[derive(Default, PartialEq, Eq, Debug)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub enum ContentKind {
     #[default]
     DraftIssue,
@@ -34,7 +36,7 @@ pub enum ContentKind {
     PullRequest(PullRequest),
 }
 
-#[derive(Default, PartialEq, Eq, Debug)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub struct ProjectItem {
     pub id: Id,
     pub updated_at: String,
@@ -45,7 +47,7 @@ pub struct ProjectItem {
     pub content: ProjectItemContent,
 }
 
-#[derive(Default, PartialEq, Eq, Debug)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub struct ProjectItemContent {
     pub id: Id,
     pub title: String,
@@ -55,14 +57,14 @@ pub struct ProjectItemContent {
     pub kind: ContentKind,
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
 pub struct Issue {
     pub state: IssueState,
     pub sub_issues: Vec<ProjectItemRef>,
     pub tracked_issues: Vec<ProjectItemRef>,
 }
 
-#[derive(Default, PartialEq, Eq, Debug)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub struct PullRequest {
     pub state: PullRequestState,
 }
