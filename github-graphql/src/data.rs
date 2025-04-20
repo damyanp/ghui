@@ -81,11 +81,90 @@ impl ProjectItems {
         self.ordered_items.push(item_id);
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Id>  {
+    pub fn iter(&self) -> std::slice::Iter<'_, Id> {
         self.ordered_items.iter()
     }
 
     pub fn get(&self, id: &Id) -> Option<&ProjectItem> {
         self.project_items.get(id)
+    }
+
+    pub fn get_roots(&self) -> Vec<Id> {
+        Vec::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    struct TestData {
+        project_items: ProjectItems,
+        next_id: i32,
+    }
+
+    impl TestData {
+        fn new() -> Self {
+            TestData {
+                project_items: ProjectItems::default(),
+                next_id: 0,
+            }
+        }
+
+        fn next_id(&mut self) -> Id {
+            self.next_id += 1;
+            Id(format!("{}", self.next_id).to_owned())
+        }
+
+        fn add(&mut self, sub_issues: &[&Id], tracked_issues: &[&Id]) -> Id {
+            let content_id = self.next_id();
+
+            let item = ProjectItem {
+                id: self.next_id(),
+                content: ProjectItemContent {
+                    id: content_id.clone(),
+                    kind: ContentKind::Issue(Issue {
+                        sub_issues: to_project_item_ref_vec(sub_issues),
+                        tracked_issues: to_project_item_ref_vec(tracked_issues),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            self.project_items.add(item);
+
+            content_id
+        }
+    }
+
+    fn to_project_item_ref_vec(ids: &[&Id]) -> Vec<Id> {
+        ids.iter().map(|id| (*id).to_owned()).collect()
+    }
+
+    #[test]
+    fn test_resolve() {
+        let mut data = TestData::new();
+
+        let a = data.add(&[], &[]);
+        let b = data.add(&[], &[]);
+
+        let c = data.add(&[&a], &[&a]);
+        let d = data.add(&[&a, &b], &[&a, &b]);
+
+        let unresolvable = data.next_id();
+
+        let root1 = data.add(&[&c], &[&d, &unresolvable]);
+        let root2 = data.add(&[&a], &[&d, &unresolvable]);
+        let root3 = data.add(&[&c], &[&b, &unresolvable]);
+
+        let roots: HashSet<Id> = HashSet::from_iter(data.project_items.get_roots().into_iter());
+
+        assert_eq!(3, roots.len());
+        assert!(roots.get(&root1).is_some());
+        assert!(roots.get(&root2).is_some());
+        assert!(roots.get(&root3).is_some());
     }
 }
