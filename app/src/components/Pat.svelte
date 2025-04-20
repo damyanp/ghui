@@ -1,46 +1,45 @@
 <script lang="ts">
-  import { TriangleAlert } from "@lucide/svelte";
-  import { Avatar, Popover } from "@skeletonlabs/skeleton-svelte";
+  import { LoaderCircle, TriangleAlert } from "@lucide/svelte";
+  import { Avatar, Modal } from "@skeletonlabs/skeleton-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onDestroy } from "svelte";
 
-  let color = $state("secondary");
-  let text = $state("...");
-  let hasPat = $state(false);
-  let isOpen = $state(true);
-  let avatar = $state<string | undefined>(undefined);
+  type LoggedInStatus = { Set: { login: string; avatar_uri: string } };
 
-  type Status =
-    | "NotSet"
-    | { Set: { login: string; avatar_uri: string } }
-    | "Broken";
+  // This type has to match what is serialized from Rust, so it isn't
+  // necessarily ideal.
+  type Status = "NotSet" | LoggedInStatus | "Broken";
+
+  type State =
+    | { mode: "Checking" | "NotSet" | "Broken" }
+    | { mode: "OK"; status: LoggedInStatus };
+
+  let patState = $state<State>({ mode: "Checking" });
+  let isOpen = $state(false);
 
   function update_pat_status(pat_status: Status) {
-    switch (pat_status) {
-      case "NotSet":
-        color = "danger";
-        text = "Set PAT";
-        hasPat = false;
-        avatar = undefined;
+    if (typeof pat_status === "object" && "Set" in pat_status) {
+      patState = { mode: "OK", status: pat_status };
+    } else {
+      patState = { mode: pat_status };
+    }
+
+    switch (patState.mode) {
+      case "OK":
+        isOpen = false;
+        break;
+
+      case "Checking":
         break;
 
       case "Broken":
-        color = "danger";
-        text = "PAT broken";
-        hasPat = true;
-        avatar = undefined;
-        break;
-
-      default:
-        if (typeof pat_status === "object" && "Set" in pat_status) {
-          color = "success";
-          text = pat_status.Set.login;
-          hasPat = true;
-          avatar = pat_status.Set.avatar_uri;
-        }
+      case "NotSet":
+        isOpen = true;
         break;
     }
+
+    console.log(`New patState: ${JSON.stringify(patState)}`);
   }
 
   const unlistenStatus = listen<Status>("pat-status", (e) => {
@@ -51,49 +50,73 @@
 
   onDestroy(() => unlistenStatus.then((u) => u()));
 
-  const propsId = $props.id();
-  const buttonId = `${propsId}-button`;
-
   let pat = $state("");
 
   async function setPat() {
-    await invoke("set_pat", { pat: pat });
     isOpen = false;
+    patState = { mode: "Checking" };
+    await invoke("set_pat", { pat: pat });
     pat = "";
   }
 
   async function clearPat() {
-    await invoke("set_pat", { pat: "" });
     isOpen = false;
+    patState = { mode: "Checking" };
+    await invoke("set_pat", { pat: "" });
     pat = "";
   }
 
-  function setIsOpen(o: boolean) {
-    isOpen = o;
+  let avatar_uri = $derived.by(() => {
+    if (patState.mode === "OK") return patState.status.Set.avatar_uri;
+    else return undefined;
+  });
 
-    // Make sure that when the popover is opened that the PAT input is empty.
-    if (isOpen) pat = "";
+  function displayMode(mode: string) {
+    if (mode === "NotSet") return "Not Set";
+    else if (mode === "Broken") return "Invalid";
+    else if (mode === "Checking") return "";
+    return mode;
   }
 </script>
 
-<Popover
-  open={isOpen}
-  onOpenChange={(e) => (isOpen = e.open)}
-  positioning={{ placement: "bottom" }}
-  contentBase="card bg-primary-50-950 p-4 space-y-4 max-w-[640px]"
-  arrow
-  arrowBackground="!bg-primary-50 dark:!bg-primary-950"
->
-  {#snippet trigger()}
-    <Avatar src={avatar} name={text} size="size-12" fallbackBase="bg-error-500">
-      <div class="w-full h-full flex items-center justify-center">
+<button onclick={() => (isOpen = true)}>
+  <!--
+  For some reason the avatar doesn't get set correctly when the PAT is cleared.
+  Inspecting avatar_uri shows that it does get set to 'undefined', but the
+  fallback doesn't get shown.  Explicitly setting avatar_uri to a value and then
+  to undefined does seem to get noticed.  Using #key makes this work, but it
+  shouldn't be necessary.
+  -->
+  {#key avatar_uri}
+  <Avatar
+    src={avatar_uri}
+    name="unknown"
+    size="size-12"
+    fallbackBase="bg-error-500"
+  >
+    <div class="w-full h-full flex items-center justify-center">
+      {#if patState.mode === "Checking"}
+        <LoaderCircle class="animate-spin" size={32} />
+      {:else}
         <TriangleAlert class="text-error-500" size={32} />
-      </div>
-    </Avatar>
-  {/snippet}
+      {/if}
+    </div>
+  </Avatar>
+  {/key}
+</button>
+
+<Modal
+  open={isOpen}
+  contentBase="card bg-primary-50-950 p-4 space-y-4 max-w-[640px]"
+  modal
+  closeOnInteractOutside={false}
+>
   {#snippet content()}
     <header>
-      <p class="font-bold text-xl">Personal Access Token</p>
+      <p class="font-bold text-xl text-center">
+        Personal Access Token
+        {displayMode(patState.mode)}
+      </p>
     </header>
     <article>
       <p class="m-4">
@@ -105,8 +128,10 @@
       </p>
 
       <p class="m-4">
-        <a target="_blank" href="https://github.com/settings/tokens" class="anchor"
-          >Generate PAT here</a
+        <a
+          target="_blank"
+          href="https://github.com/settings/tokens"
+          class="anchor">Generate PAT here</a
         >. Tokens (classic) with access to projects seem to work well.
       </p>
 
@@ -124,10 +149,10 @@
         >
         <button
           class="btn preset-filled-warning-500"
-          disabled={!hasPat}
+          disabled={patState.mode === "NotSet"}
           onclick={clearPat}>Clear</button
-        >
+        >        
       </form>
     </article>
   {/snippet}
-</Popover>
+</Modal>
