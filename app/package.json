@@ -15,7 +15,8 @@
   "dependencies": {
     "@lucide/svelte": "^0.501.0",
     "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-window-state": "^2.2.2"
   },
   "devDependencies": {
     "@skeletonlabs/skeleton": "^3.1.2",

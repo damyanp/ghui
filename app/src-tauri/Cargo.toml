@@ -29,3 +29,4 @@ keyring = { version = "3", features = [
     "crypto-rust",
 ] }
 github-graphql = { path = "../../github-graphql" }
+tauri-plugin-window-state = "2.2.2"
