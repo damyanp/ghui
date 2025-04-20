@@ -45,7 +45,9 @@ impl Client for GithubClient {
             .client
             .post("https://api.github.com/graphql")
             .json(request)
-            .send().await?
-            .json().await?)
+            .send()
+            .await?
+            .json()
+            .await?)
     }
 }

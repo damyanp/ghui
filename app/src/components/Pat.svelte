@@ -2,81 +2,71 @@
   import { LoaderCircle, TriangleAlert } from "@lucide/svelte";
   import { Avatar, Modal } from "@skeletonlabs/skeleton-svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { listen } from "@tauri-apps/api/event";
-  import { onDestroy } from "svelte";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { onMount } from "svelte";
 
-  type LoggedInStatus = { Set: { login: string; avatar_uri: string } };
+  type PatStatus =
+    | { type: "set"; login: string; avatarUri: string }
+    | { type: "notSet" | "checking" | "broken" };
 
-  // This type has to match what is serialized from Rust, so it isn't
-  // necessarily ideal.
-  type Status = "NotSet" | LoggedInStatus | "Broken";
+  let patState = $state<PatStatus>({ type: "checking" });
+  $inspect(patState);
 
-  type State =
-    | { mode: "Checking" | "NotSet" | "Broken" }
-    | { mode: "OK"; status: LoggedInStatus };
-
-  let patState = $state<State>({ mode: "Checking" });
   let isOpen = $state(false);
 
-  function update_pat_status(pat_status: Status) {
-    if (typeof pat_status === "object" && "Set" in pat_status) {
-      patState = { mode: "OK", status: pat_status };
-    } else {
-      patState = { mode: pat_status };
-    }
+  function update_pat_status(pat_status: PatStatus) {
+    patState = pat_status;
 
-    switch (patState.mode) {
-      case "OK":
-        isOpen = false;
-        break;
-
-      case "Checking":
-        break;
-
-      case "Broken":
-      case "NotSet":
-        isOpen = true;
-        break;
-    }
-
-    console.log(`New patState: ${JSON.stringify(patState)}`);
+    if (patState.type === "set") isOpen = false;
+    else if (patState.type != "checking") isOpen = true;
   }
 
-  const unlistenStatus = listen<Status>("pat-status", (e) => {
-    console.log(`pat-status: ${JSON.stringify(e.payload)}`);
-    update_pat_status(e.payload);
-  });
-  invoke("check_pat_status");
+  onMount(() => {
+    let unregister: UnlistenFn | null = null;
 
-  onDestroy(() => unlistenStatus.then((u) => u()));
+    listen<PatStatus>("pat-status", (e) => {
+      update_pat_status(e.payload);
+    }).then((u) => (unregister = u));
+    invoke("check_pat_status");
+
+    return () => {
+      if (unregister) unregister();
+    };
+  });
 
   let pat = $state("");
 
   async function setPat() {
     isOpen = false;
-    patState = { mode: "Checking" };
+    patState = { type: "checking" };
     await invoke("set_pat", { pat: pat });
     pat = "";
   }
 
   async function clearPat() {
     isOpen = false;
-    patState = { mode: "Checking" };
+    patState = { type: "checking" };
     await invoke("set_pat", { pat: "" });
     pat = "";
   }
 
   let avatar_uri = $derived.by(() => {
-    if (patState.mode === "OK") return patState.status.Set.avatar_uri;
+    if (patState.type === "set") return patState.avatarUri;
     else return undefined;
   });
 
-  function displayMode(mode: string) {
-    if (mode === "NotSet") return "Not Set";
-    else if (mode === "Broken") return "Invalid";
-    else if (mode === "Checking") return "";
-    return mode;
-  }
+  let displayMode = $derived.by(() => {
+    switch (patState.type) {
+      case "notSet":
+        return "Not Set";
+      case "broken":
+        return "Invalid";
+      case "checking":
+        return "";
+      default:
+        return patState.type;
+    }
+  });
 </script>
 
 <button onclick={() => (isOpen = true)}>
@@ -88,20 +78,20 @@
   shouldn't be necessary.
   -->
   {#key avatar_uri}
-  <Avatar
-    src={avatar_uri}
-    name="unknown"
-    size="size-12"
-    fallbackBase="bg-error-500"
-  >
-    <div class="w-full h-full flex items-center justify-center">
-      {#if patState.mode === "Checking"}
-        <LoaderCircle class="animate-spin" size={32} />
-      {:else}
-        <TriangleAlert class="text-error-500" size={32} />
-      {/if}
-    </div>
-  </Avatar>
+    <Avatar
+      src={avatar_uri}
+      name="unknown"
+      size="size-12"
+      fallbackBase="bg-error-500"
+    >
+      <div class="w-full h-full flex items-center justify-center">
+        {#if patState.type === "checking"}
+          <LoaderCircle class="animate-spin" size={32} />
+        {:else}
+          <TriangleAlert class="text-error-500" size={32} />
+        {/if}
+      </div>
+    </Avatar>
   {/key}
 </button>
 
@@ -115,7 +105,7 @@
     <header>
       <p class="font-bold text-xl text-center">
         Personal Access Token
-        {displayMode(patState.mode)}
+        {displayMode}
       </p>
     </header>
     <article>
@@ -149,9 +139,9 @@
         >
         <button
           class="btn preset-filled-warning-500"
-          disabled={patState.mode === "NotSet"}
+          disabled={patState.type === "notSet"}
           onclick={clearPat}>Clear</button
-        >        
+        >
       </form>
     </article>
   {/snippet}

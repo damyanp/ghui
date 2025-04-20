@@ -3,17 +3,18 @@ use github_graphql::client::{
     transport::GithubClient,
 };
 use serde::Serialize;
-use tauri::{
-    async_runtime::Mutex,
-    AppHandle, Emitter, Manager, State,
-};
+use tauri::{async_runtime::Mutex, AppHandle, Emitter, Manager, State};
 
 #[derive(Clone, Serialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 enum PatStatus {
     NotSet,
     Checking,
     Set(ViewerInfo),
-    #[allow(dead_code)]
     Broken,
 }
 
@@ -52,21 +53,19 @@ async fn update_pat_status(
     app: &AppHandle,
     password: &keyring::Result<String>,
 ) -> Result<(), String> {
-    notify_pat_status(&app, PatStatus::Checking);
+    notify_pat_status(app, PatStatus::Checking);
 
     if let Ok(password) = password {
         let client = GithubClient::new(password).map_err(|e| e.to_string())?;
         let info = get_viewer_info(&client).await;
 
         if let Ok(info) = info {
-            notify_pat_status(&app, PatStatus::Set(info));
+            notify_pat_status(app, PatStatus::Set(info));
+        } else {
+            notify_pat_status(app, PatStatus::Broken);
         }
-        else {
-            notify_pat_status(&app, PatStatus::Broken);
-        }
-    }
-    else {
-        notify_pat_status(&app, PatStatus::NotSet);
+    } else {
+        notify_pat_status(app, PatStatus::NotSet);
     }
 
     Ok(())

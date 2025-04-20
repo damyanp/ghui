@@ -44,8 +44,7 @@ pub async fn get_all_items<ClientType: crate::client::transport::Client>(
     Box<dyn std::error::Error>,
 > {
     let mut request_body = build_query();
-    let mut all_items: Vec<project_items::ProjectItemsOrganizationProjectV2ItemsNodes> =
-        Vec::new();
+    let mut all_items: Vec<project_items::ProjectItemsOrganizationProjectV2ItemsNodes> = Vec::new();
     loop {
         let response: Response<project_items::ResponseData> = client.request(&request_body).await?;
 
@@ -135,22 +134,20 @@ impl data::ProjectItems {
 
 fn build_content(
     content: Option<
-    crate::client::graphql::project_items::ProjectItemsOrganizationProjectV2ItemsNodesContent,
->,
+        crate::client::graphql::project_items::ProjectItemsOrganizationProjectV2ItemsNodesContent,
+    >,
 ) -> Result<ProjectItemContent, String> {
     let content = content.ok_or("project item without content")?;
 
     Ok(match content {
-        ProjectItemsOrganizationProjectV2ItemsNodesContent::DraftIssue(c) => {
-            ProjectItemContent {
-                id: Id(c.id),
-                title: c.title,
-                updated_at: Some(c.updated_at),
-                resource_path: None,
-                repository: None,
-                kind: ContentKind::DraftIssue,
-            }
-        }
+        ProjectItemsOrganizationProjectV2ItemsNodesContent::DraftIssue(c) => ProjectItemContent {
+            id: Id(c.id),
+            title: c.title,
+            updated_at: Some(c.updated_at),
+            resource_path: None,
+            repository: None,
+            kind: ContentKind::DraftIssue,
+        },
         ProjectItemsOrganizationProjectV2ItemsNodesContent::Issue(c) => ProjectItemContent {
             id: Id(c.id),
             title: c.title,
@@ -163,18 +160,16 @@ fn build_content(
                 tracked_issues: build_issue_id_vector(c.tracked_issues.nodes),
             }),
         },
-        ProjectItemsOrganizationProjectV2ItemsNodesContent::PullRequest(c) => {
-            ProjectItemContent {
-                id: Id(c.id),
-                title: c.title,
-                updated_at: Some(c.updated_at),
-                resource_path: Some(c.resource_path),
-                repository: Some(c.repository.owner.login),
-                kind: ContentKind::PullRequest(PullRequest {
-                    state: c.state.into(),
-                }),
-            }
-        }
+        ProjectItemsOrganizationProjectV2ItemsNodesContent::PullRequest(c) => ProjectItemContent {
+            id: Id(c.id),
+            title: c.title,
+            updated_at: Some(c.updated_at),
+            resource_path: Some(c.resource_path),
+            repository: Some(c.repository.owner.login),
+            kind: ContentKind::PullRequest(PullRequest {
+                state: c.state.into(),
+            }),
+        },
     })
 }
 
@@ -316,8 +311,7 @@ mod tests {
 "#;
 
         let project_items =
-            data::ProjectItems::from_graphql(serde_json::from_str(items_json).unwrap())
-                .unwrap();
+            data::ProjectItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
         let mut items_iterator = project_items.iter();
 
         let draft_issue = items_iterator.next().unwrap();
@@ -353,9 +347,8 @@ mod tests {
             project_milestone: Some("(old)3: Compute Shaders (1)".into()),
             content: ProjectItemContent {
                 id: Id("I_kwDOBITxeM6tjuXs".into()),
-                title:
-                    "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite"
-                        .into(),
+                title: "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite"
+                    .into(),
                 updated_at: Some("2025-03-27T21:01:40Z".into()),
                 resource_path: Some("/llvm/llvm-project/issues/130826".into()),
                 repository: Some("llvm".into()),
@@ -453,8 +446,7 @@ mod tests {
   }]
 "#;
         let project_items =
-            data::ProjectItems::from_graphql(serde_json::from_str(items_json).unwrap())
-                .unwrap();
+            data::ProjectItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
 
         let item = project_items
             .get(&Id("PVTI_lADOAQWwKc4ABQXFzgOXzwE".into()))
