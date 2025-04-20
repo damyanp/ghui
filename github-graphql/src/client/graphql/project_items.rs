@@ -1,4 +1,6 @@
-use crate::data::{self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, ProjectItemRef, PullRequest};
+use crate::data::{
+    self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, ProjectItemRef, PullRequest,
+};
 use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
@@ -331,10 +333,14 @@ mod tests {
                 kind: ContentKind::DraftIssue,
             },
         };
-        assert_eq!(draft_issue.as_ref(), &expected_draft_issue);
+
+        assert_eq!(*draft_issue.borrow(), expected_draft_issue);
         assert_eq!(
-            project_items.get(&draft_issue.id).unwrap().as_ref(),
-            &expected_draft_issue
+            *project_items
+                .get(&expected_draft_issue.id)
+                .unwrap()
+                .borrow(),
+            expected_draft_issue
         );
 
         let issue = items_iterator.next().unwrap();
@@ -359,10 +365,10 @@ mod tests {
                 }),
             },
         };
-        assert_eq!(issue.as_ref(), &expected_issue);
+        assert_eq!(*issue.borrow(), expected_issue);
         assert_eq!(
-            project_items.get(&issue.id).unwrap().as_ref(),
-            &expected_issue
+            *project_items.get(&expected_issue.id).unwrap().borrow(),
+            expected_issue
         );
 
         let pull_request = items_iterator.next().unwrap();
@@ -384,10 +390,13 @@ mod tests {
                 }),
             },
         };
-        assert_eq!(pull_request.as_ref(), &expected_pull_request);
+        assert_eq!(*pull_request.borrow(), expected_pull_request);
         assert_eq!(
-            project_items.get(&pull_request.id).unwrap().as_ref(),
-            &expected_pull_request
+            *project_items
+                .get(&expected_pull_request.id)
+                .unwrap()
+                .borrow(),
+            expected_pull_request
         );
     }
 
@@ -458,20 +467,22 @@ mod tests {
                 ProjectItemContent {
                     kind:
                         ContentKind::Issue(Issue {
-                            sub_issues,
-                            tracked_issues,
+                            ref sub_issues,
+                            ref tracked_issues,
                             ..
                         }),
                     ..
                 },
             ..
-        } = item
+        } = *item.borrow()
         else {
             panic!("ProjectItem doesn't match")
         };
 
         fn to_id_vec(vec: Vec<&str>) -> Vec<ProjectItemRef> {
-            vec.into_iter().map(|id| ProjectItemRef::Unresolved(Id(id.to_owned()))).collect()
+            vec.into_iter()
+                .map(|id| ProjectItemRef::Unresolved(Id(id.to_owned())))
+                .collect()
         }
 
         assert_eq!(
