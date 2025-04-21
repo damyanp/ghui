@@ -1,4 +1,6 @@
-use crate::data::{self, ContentKind, Id, Issue, ProjectItem, ProjectItemContent, PullRequest};
+use crate::data::{
+    self, ContentId, ContentKind, Issue, ItemId, ProjectItem, ProjectItemContent, PullRequest,
+};
 use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
@@ -118,7 +120,7 @@ impl data::ProjectItems {
         }).flatten();
 
             project_items.add(ProjectItem {
-                id: Id(item.id),
+                id: ItemId(item.id),
                 updated_at: item.updated_at,
                 status,
                 category,
@@ -141,7 +143,7 @@ fn build_content(
 
     Ok(match content {
         ProjectItemsOrganizationProjectV2ItemsNodesContent::DraftIssue(c) => ProjectItemContent {
-            id: Id(c.id),
+            id: ContentId(c.id),
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: None,
@@ -149,7 +151,7 @@ fn build_content(
             kind: ContentKind::DraftIssue,
         },
         ProjectItemsOrganizationProjectV2ItemsNodesContent::Issue(c) => ProjectItemContent {
-            id: Id(c.id),
+            id: ContentId(c.id),
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
@@ -161,7 +163,7 @@ fn build_content(
             }),
         },
         ProjectItemsOrganizationProjectV2ItemsNodesContent::PullRequest(c) => ProjectItemContent {
-            id: Id(c.id),
+            id: ContentId(c.id),
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
@@ -194,23 +196,23 @@ impl From<project_items::PullRequestState> for data::PullRequestState {
     }
 }
 
-trait HasId {
-    fn id(&self) -> Id;
+trait HasContentId {
+    fn id(&self) -> ContentId;
 }
 
-impl HasId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes {
-    fn id(&self) -> Id {
-        Id(self.id.clone())
+impl HasContentId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes {
+    fn id(&self) -> ContentId {
+        ContentId(self.id.clone())
     }
 }
 
-impl HasId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes {
-    fn id(&self) -> Id {
-        Id(self.id.clone())
+impl HasContentId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes {
+    fn id(&self) -> ContentId {
+        ContentId(self.id.clone())
     }
 }
 
-fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<Id> {
+fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<ContentId> {
     if let Some(nodes) = nodes {
         let nodes = nodes.iter().filter_map(|i| i.as_ref());
         nodes.map(|n| n.id()).collect()
@@ -221,6 +223,7 @@ fn build_issue_id_vector<T: HasId>(nodes: Option<Vec<Option<T>>>) -> Vec<Id> {
 
 #[cfg(test)]
 mod tests {
+    use crate::data::ContentId;
     use crate::data::IssueState;
     use crate::data::PullRequestState;
 
@@ -316,14 +319,14 @@ mod tests {
 
         let draft_issue = items_iterator.next().unwrap();
         let expected_draft_issue = ProjectItem {
-            id: Id("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
+            id: ItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
             updated_at: "2024-08-05T21:47:26Z".into(),
             status: None,
             category: None,
             workstream: Some("Language".into()),
             project_milestone: None,
             content: ProjectItemContent {
-                id: Id("DI_lADOAQWwKc4ABQXFzgHLyWE".into()),
+                id: ContentId("DI_lADOAQWwKc4ABQXFzgHLyWE".into()),
                 title: "[HLSL] Disallow multiple inheritance".into(),
                 updated_at: Some("2024-08-05T21:47:26Z".into()),
                 resource_path: None,
@@ -341,14 +344,14 @@ mod tests {
 
         let issue = items_iterator.next().unwrap();
         let expected_issue = ProjectItem {
-            id: Id("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
+            id: ItemId("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
             updated_at: "2025-03-27T21:01:45Z".into(),
             status: Some("Closed".into()),
             category: None,
             workstream: Some("Root Signatures".into()),
             project_milestone: Some("(old)3: Compute Shaders (1)".into()),
             content: ProjectItemContent {
-                id: Id("I_kwDOBITxeM6tjuXs".into()),
+                id: ContentId("I_kwDOBITxeM6tjuXs".into()),
                 title: "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite"
                     .into(),
                 updated_at: Some("2025-03-27T21:01:40Z".into()),
@@ -369,14 +372,14 @@ mod tests {
 
         let pull_request = items_iterator.next().unwrap();
         let expected_pull_request = ProjectItem {
-            id: Id("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
+            id: ItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
             updated_at: "2025-04-07T20:00:01Z".into(),
             status: Some("Needs Review".into()),
             category: None,
             workstream: None,
             project_milestone: None,
             content: ProjectItemContent {
-                id: Id("PR_kwDOMbLzis6KxhQb".into()),
+                id: ContentId("PR_kwDOMbLzis6KxhQb".into()),
                 title: "Add a proposal for how to explicitly specify struct layouts".into(),
                 updated_at: Some("2025-02-24T19:33:41Z".into()),
                 resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
@@ -451,7 +454,7 @@ mod tests {
             data::ProjectItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
 
         let item = project_items
-            .get(&Id("PVTI_lADOAQWwKc4ABQXFzgOXzwE".into()))
+            .get(&ItemId("PVTI_lADOAQWwKc4ABQXFzgOXzwE".into()))
             .unwrap();
 
         let ProjectItem {
@@ -471,8 +474,8 @@ mod tests {
             panic!("ProjectItem doesn't match")
         };
 
-        fn to_id_vec(ids: &[&str]) -> Vec<Id> {
-            ids.iter().map(|id| Id((*id).to_owned())).collect()
+        fn to_id_vec(ids: &[&str]) -> Vec<ContentId> {
+            ids.iter().map(|id| ContentId((*id).to_owned())).collect()
         }
 
         assert_eq!(
