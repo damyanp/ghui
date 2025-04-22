@@ -1,6 +1,5 @@
 use crate::data::{
-    self, ContentId, ContentKind, Issue, ProjectItem, ProjectItemContent, ProjectItemId,
-    PullRequest,
+    self, ContentKind, Issue, IssueId, ProjectItem, ProjectItemContent, ProjectItemId, PullRequest,
 };
 use graphql_client::{GraphQLQuery, Response};
 
@@ -144,7 +143,7 @@ fn build_content(
 
     Ok(match content {
         ProjectItemsOrganizationProjectV2ItemsNodesContent::DraftIssue(c) => ProjectItemContent {
-            id: ContentId(c.id),
+            id: IssueId(c.id),
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: None,
@@ -152,7 +151,7 @@ fn build_content(
             kind: ContentKind::DraftIssue,
         },
         ProjectItemsOrganizationProjectV2ItemsNodesContent::Issue(c) => ProjectItemContent {
-            id: ContentId(c.id),
+            id: IssueId(c.id),
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
@@ -164,7 +163,7 @@ fn build_content(
             }),
         },
         ProjectItemsOrganizationProjectV2ItemsNodesContent::PullRequest(c) => ProjectItemContent {
-            id: ContentId(c.id),
+            id: IssueId(c.id),
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
@@ -198,22 +197,22 @@ impl From<project_items::PullRequestState> for data::PullRequestState {
 }
 
 trait HasContentId {
-    fn id(&self) -> ContentId;
+    fn id(&self) -> IssueId;
 }
 
 impl HasContentId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes {
-    fn id(&self) -> ContentId {
-        ContentId(self.id.clone())
+    fn id(&self) -> IssueId {
+        IssueId(self.id.clone())
     }
 }
 
 impl HasContentId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes {
-    fn id(&self) -> ContentId {
-        ContentId(self.id.clone())
+    fn id(&self) -> IssueId {
+        IssueId(self.id.clone())
     }
 }
 
-fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<ContentId> {
+fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<IssueId> {
     if let Some(nodes) = nodes {
         let nodes = nodes.iter().filter_map(|i| i.as_ref());
         nodes.map(|n| n.id()).collect()
@@ -224,7 +223,7 @@ fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<
 
 #[cfg(test)]
 mod tests {
-    use crate::data::ContentId;
+    use crate::data::IssueId;
     use crate::data::IssueState;
     use crate::data::PullRequestState;
 
@@ -327,7 +326,7 @@ mod tests {
             workstream: Some("Language".into()),
             project_milestone: None,
             content: ProjectItemContent {
-                id: ContentId("DI_lADOAQWwKc4ABQXFzgHLyWE".into()),
+                id: IssueId("DI_lADOAQWwKc4ABQXFzgHLyWE".into()),
                 title: "[HLSL] Disallow multiple inheritance".into(),
                 updated_at: Some("2024-08-05T21:47:26Z".into()),
                 resource_path: None,
@@ -352,7 +351,7 @@ mod tests {
             workstream: Some("Root Signatures".into()),
             project_milestone: Some("(old)3: Compute Shaders (1)".into()),
             content: ProjectItemContent {
-                id: ContentId("I_kwDOBITxeM6tjuXs".into()),
+                id: IssueId("I_kwDOBITxeM6tjuXs".into()),
                 title: "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite"
                     .into(),
                 updated_at: Some("2025-03-27T21:01:40Z".into()),
@@ -380,7 +379,7 @@ mod tests {
             workstream: None,
             project_milestone: None,
             content: ProjectItemContent {
-                id: ContentId("PR_kwDOMbLzis6KxhQb".into()),
+                id: IssueId("PR_kwDOMbLzis6KxhQb".into()),
                 title: "Add a proposal for how to explicitly specify struct layouts".into(),
                 updated_at: Some("2025-02-24T19:33:41Z".into()),
                 resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
@@ -475,8 +474,8 @@ mod tests {
             panic!("ProjectItem doesn't match")
         };
 
-        fn to_id_vec(ids: &[&str]) -> Vec<ContentId> {
-            ids.iter().map(|id| ContentId((*id).to_owned())).collect()
+        fn to_id_vec(ids: &[&str]) -> Vec<IssueId> {
+            ids.iter().map(|id| IssueId((*id).to_owned())).collect()
         }
 
         assert_eq!(

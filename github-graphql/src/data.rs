@@ -23,7 +23,7 @@ pub enum PullRequestState {
 pub struct ProjectItemId(pub String);
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
-pub struct ContentId(pub String);
+pub struct IssueId(pub String);
 
 impl From<String> for ProjectItemId {
     fn from(value: String) -> Self {
@@ -31,9 +31,9 @@ impl From<String> for ProjectItemId {
     }
 }
 
-impl From<String> for ContentId {
+impl From<String> for IssueId {
     fn from(value: String) -> Self {
-        ContentId(value)
+        IssueId(value)
     }
 }
 
@@ -58,7 +58,7 @@ pub struct ProjectItem {
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub struct ProjectItemContent {
-    pub id: ContentId,
+    pub id: IssueId,
     pub title: String,
     pub updated_at: Option<String>,
     pub resource_path: Option<String>,
@@ -69,8 +69,8 @@ pub struct ProjectItemContent {
 #[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
 pub struct Issue {
     pub state: IssueState,
-    pub sub_issues: Vec<ContentId>,
-    pub tracked_issues: Vec<ContentId>,
+    pub sub_issues: Vec<IssueId>,
+    pub tracked_issues: Vec<IssueId>,
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
@@ -82,7 +82,7 @@ pub struct PullRequest {
 pub struct ProjectItems {
     ordered_items: Vec<ProjectItemId>,
     project_items: HashMap<ProjectItemId, ProjectItem>,
-    content_id_to_item_id: HashMap<ContentId, ProjectItemId>,
+    content_id_to_item_id: HashMap<IssueId, ProjectItemId>,
 }
 
 impl ProjectItems {
@@ -157,9 +157,9 @@ mod tests {
             T::from(format!("{}", self.next_id))
         }
 
-        fn add(&mut self, sub_issues: &[&ContentId], tracked_issues: &[&ContentId]) -> ContentId {
+        fn add(&mut self, sub_issues: &[&IssueId], tracked_issues: &[&IssueId]) -> IssueId {
             let item_id: ProjectItemId = self.next_id();
-            let content_id: ContentId = self.next_id();
+            let content_id: IssueId = self.next_id();
 
             let item = ProjectItem {
                 id: item_id,
@@ -180,7 +180,7 @@ mod tests {
         }
     }
 
-    fn to_project_item_ref_vec(ids: &[&ContentId]) -> Vec<ContentId> {
+    fn to_project_item_ref_vec(ids: &[&IssueId]) -> Vec<IssueId> {
         ids.iter().map(|id| (*id).to_owned()).collect()
     }
 
