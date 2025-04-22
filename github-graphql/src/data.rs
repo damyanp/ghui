@@ -23,7 +23,7 @@ pub enum PullRequestState {
 pub struct ProjectItemId(pub String);
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
-pub struct IssueId(pub String);
+pub struct WorkItemId(pub String);
 
 impl From<String> for ProjectItemId {
     fn from(value: String) -> Self {
@@ -31,14 +31,14 @@ impl From<String> for ProjectItemId {
     }
 }
 
-impl From<String> for IssueId {
+impl From<String> for WorkItemId {
     fn from(value: String) -> Self {
-        IssueId(value)
+        WorkItemId(value)
     }
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
-pub enum ContentKind {
+pub enum WorkItemKind {
     #[default]
     DraftIssue,
     Issue(Issue),
@@ -53,24 +53,24 @@ pub struct ProjectItem {
     pub category: Option<String>,
     pub workstream: Option<String>,
     pub project_milestone: Option<String>,
-    pub content: ProjectItemContent,
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
-pub struct ProjectItemContent {
-    pub id: IssueId,
+pub struct WorkItem {
+    pub id: WorkItemId,
     pub title: String,
     pub updated_at: Option<String>,
     pub resource_path: Option<String>,
     pub repository: Option<String>,
-    pub kind: ContentKind,
+    pub kind: WorkItemKind,
+    pub project_item: ProjectItem,
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
 pub struct Issue {
     pub state: IssueState,
-    pub sub_issues: Vec<IssueId>,
-    pub tracked_issues: Vec<IssueId>,
+    pub sub_issues: Vec<WorkItemId>,
+    pub tracked_issues: Vec<WorkItemId>,
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
@@ -79,49 +79,49 @@ pub struct PullRequest {
 }
 
 #[derive(Default)]
-pub struct ProjectItems {
-    ordered_items: Vec<ProjectItemId>,
-    project_items: HashMap<ProjectItemId, ProjectItem>,
-    content_id_to_item_id: HashMap<IssueId, ProjectItemId>,
+pub struct WorkItems {
+    ordered_items: Vec<WorkItemId>,
+    work_items: HashMap<WorkItemId, WorkItem>,
 }
 
-impl ProjectItems {
-    pub fn add(&mut self, item: ProjectItem) {
-        let item_id = item.id.clone();
-        let content_id = item.content.id.clone();
+impl WorkItem {
+    fn get_sub_issues(&self) -> Option<&Vec<WorkItemId>> {
+        if let WorkItem {
+            kind: WorkItemKind::Issue(Issue { sub_issues, .. }),
+            ..
+        } = self
+        {
+            Some(sub_issues)
+        } else {
+            None
+        }
+    }
+}
 
-        self.project_items.insert(item_id.clone(), item);
-        self.content_id_to_item_id
-            .insert(content_id, item_id.clone());
-        self.ordered_items.push(item_id);
+impl WorkItems {
+    pub fn add(&mut self, item: WorkItem) {
+        let issue_id = item.id.clone();
+
+        self.work_items.insert(issue_id.clone(), item);
+        self.ordered_items.push(issue_id);
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, ProjectItemId> {
+    pub fn iter(&self) -> std::slice::Iter<'_, WorkItemId> {
         self.ordered_items.iter()
     }
 
-    pub fn get(&self, id: &ProjectItemId) -> Option<&ProjectItem> {
-        self.project_items.get(id)
+    pub fn get(&self, id: &WorkItemId) -> Option<&WorkItem> {
+        self.work_items.get(id)
     }
 
-    pub fn get_roots(&self) -> Vec<ProjectItemId> {
-        let mut unreferenced_items: HashSet<&ProjectItemId> =
+    pub fn get_roots(&self) -> Vec<WorkItemId> {
+        let mut unreferenced_items: HashSet<&WorkItemId> =
             HashSet::from_iter(self.ordered_items.iter());
 
-        for item in self.project_items.values() {
-            if let ProjectItem {
-                content:
-                    ProjectItemContent {
-                        kind: ContentKind::Issue(Issue { sub_issues, .. }),
-                        ..
-                    },
-                ..
-            } = item
-            {
-                for content_id in sub_issues {
-                    if let Some(issue_id) = self.content_id_to_item_id.get(content_id) {
-                        unreferenced_items.remove(issue_id);
-                    }
+        for item in self.work_items.values() {
+            if let Some(sub_issues) = item.get_sub_issues() {
+                for issue_id in sub_issues {
+                    unreferenced_items.remove(issue_id);
                 }
             }
         }
@@ -137,14 +137,14 @@ mod tests {
     use super::*;
 
     struct TestData {
-        project_items: ProjectItems,
+        work_items: WorkItems,
         next_id: i32,
     }
 
     impl TestData {
         fn new() -> Self {
             TestData {
-                project_items: ProjectItems::default(),
+                work_items: WorkItems::default(),
                 next_id: 0,
             }
         }
@@ -157,30 +157,27 @@ mod tests {
             T::from(format!("{}", self.next_id))
         }
 
-        fn add(&mut self, sub_issues: &[&IssueId], tracked_issues: &[&IssueId]) -> IssueId {
-            let item_id: ProjectItemId = self.next_id();
-            let content_id: IssueId = self.next_id();
+        fn add(&mut self, sub_issues: &[&WorkItemId], tracked_issues: &[&WorkItemId]) -> WorkItemId {
+            let issue_id: WorkItemId = self.next_id();
 
-            let item = ProjectItem {
-                id: item_id,
-                content: ProjectItemContent {
-                    id: content_id.clone(),
-                    kind: ContentKind::Issue(Issue {
-                        sub_issues: to_project_item_ref_vec(sub_issues),
-                        tracked_issues: to_project_item_ref_vec(tracked_issues),
-                        ..Default::default()
-                    }),
+            let item = WorkItem {
+                id: issue_id.clone(),
+                kind: WorkItemKind::Issue(Issue {
+                    sub_issues: to_project_item_ref_vec(sub_issues),
+                    tracked_issues: to_project_item_ref_vec(tracked_issues),
+
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             };
-            self.project_items.add(item);
 
-            content_id
+            self.work_items.add(item);
+
+            issue_id
         }
     }
 
-    fn to_project_item_ref_vec(ids: &[&IssueId]) -> Vec<IssueId> {
+    fn to_project_item_ref_vec(ids: &[&WorkItemId]) -> Vec<WorkItemId> {
         ids.iter().map(|id| (*id).to_owned()).collect()
     }
 
@@ -200,17 +197,14 @@ mod tests {
         let root2 = data.add(&[&a], &[&d, &unresolvable]);
         let root3 = data.add(&[&c, &unresolvable], &[&b, &unresolvable]);
 
-        let roots: HashSet<ProjectItemId> =
-            HashSet::from_iter(data.project_items.get_roots().into_iter());
+        let roots: HashSet<WorkItemId> =
+            HashSet::from_iter(data.work_items.get_roots().into_iter());
 
         // Roots only looks at sub_issues
-        let [d, root1, root2, root3] = [d, root1, root2, root3]
-            .map(|id| data.project_items.content_id_to_item_id.get(&id).unwrap());
-
         assert_eq!(4, roots.len());
-        assert!(roots.get(d).is_some());
-        assert!(roots.get(root1).is_some());
-        assert!(roots.get(root2).is_some());
-        assert!(roots.get(root3).is_some());
+        assert!(roots.get(&d).is_some());
+        assert!(roots.get(&root1).is_some());
+        assert!(roots.get(&root2).is_some());
+        assert!(roots.get(&root3).is_some());
     }
 }
