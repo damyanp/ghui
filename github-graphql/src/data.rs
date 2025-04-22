@@ -2,34 +2,33 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
-pub enum IssueState {
-    CLOSED,
-    #[default]
-    OPEN,
-    Other(String),
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
+pub struct WorkItem {
+    pub id: WorkItemId,
+    pub title: String,
+    pub updated_at: Option<String>,
+    pub resource_path: Option<String>,
+    pub repository: Option<String>,
+    pub kind: WorkItemKind,
+    pub project_item: ProjectItem,
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
-pub enum PullRequestState {
-    CLOSED,
-    #[default]
-    MERGED,
-    OPEN,
-    Other(String),
+impl WorkItem {
+    fn get_sub_issues(&self) -> Option<&Vec<WorkItemId>> {
+        if let WorkItem {
+            kind: WorkItemKind::Issue(Issue { sub_issues, .. }),
+            ..
+        } = self
+        {
+            Some(sub_issues)
+        } else {
+            None
+        }
+    }
 }
-
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
-pub struct ProjectItemId(pub String);
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
 pub struct WorkItemId(pub String);
-
-impl From<String> for ProjectItemId {
-    fn from(value: String) -> Self {
-        ProjectItemId(value)
-    }
-}
 
 impl From<String> for WorkItemId {
     fn from(value: String) -> Self {
@@ -45,6 +44,35 @@ pub enum WorkItemKind {
     PullRequest(PullRequest),
 }
 
+#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
+pub struct Issue {
+    pub state: IssueState,
+    pub sub_issues: Vec<WorkItemId>,
+    pub tracked_issues: Vec<WorkItemId>,
+}
+
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
+pub enum IssueState {
+    CLOSED,
+    #[default]
+    OPEN,
+    Other(String),
+}
+
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
+pub struct PullRequest {
+    pub state: PullRequestState,
+}
+
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
+pub enum PullRequestState {
+    CLOSED,
+    #[default]
+    MERGED,
+    OPEN,
+    Other(String),
+}
+
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub struct ProjectItem {
     pub id: ProjectItemId,
@@ -55,47 +83,19 @@ pub struct ProjectItem {
     pub project_milestone: Option<String>,
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize)]
-pub struct WorkItem {
-    pub id: WorkItemId,
-    pub title: String,
-    pub updated_at: Option<String>,
-    pub resource_path: Option<String>,
-    pub repository: Option<String>,
-    pub kind: WorkItemKind,
-    pub project_item: ProjectItem,
-}
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
+pub struct ProjectItemId(pub String);
 
-#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
-pub struct Issue {
-    pub state: IssueState,
-    pub sub_issues: Vec<WorkItemId>,
-    pub tracked_issues: Vec<WorkItemId>,
-}
-
-#[derive(Default, PartialEq, Eq, Debug, Serialize)]
-pub struct PullRequest {
-    pub state: PullRequestState,
+impl From<String> for ProjectItemId {
+    fn from(value: String) -> Self {
+        ProjectItemId(value)
+    }
 }
 
 #[derive(Default)]
 pub struct WorkItems {
     ordered_items: Vec<WorkItemId>,
     work_items: HashMap<WorkItemId, WorkItem>,
-}
-
-impl WorkItem {
-    fn get_sub_issues(&self) -> Option<&Vec<WorkItemId>> {
-        if let WorkItem {
-            kind: WorkItemKind::Issue(Issue { sub_issues, .. }),
-            ..
-        } = self
-        {
-            Some(sub_issues)
-        } else {
-            None
-        }
-    }
 }
 
 impl WorkItems {
@@ -157,7 +157,11 @@ mod tests {
             T::from(format!("{}", self.next_id))
         }
 
-        fn add(&mut self, sub_issues: &[&WorkItemId], tracked_issues: &[&WorkItemId]) -> WorkItemId {
+        fn add(
+            &mut self,
+            sub_issues: &[&WorkItemId],
+            tracked_issues: &[&WorkItemId],
+        ) -> WorkItemId {
             let issue_id: WorkItemId = self.next_id();
 
             let item = WorkItem {
