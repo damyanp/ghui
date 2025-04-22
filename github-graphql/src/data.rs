@@ -149,16 +149,6 @@ mod tests {
             }
         }
 
-        // fn next_item_id(&mut self) -> ItemId {
-        //     self.next_id += 1;
-        //     ItemId(format!("{}", self.next_id).to_owned())
-        // }
-
-        // fn next_content_id(&mut self) -> ContentId {
-        //     self.next_id += 1;
-        //     ContentId(format!("{}", self.next_id).to_owned())
-        // }
-
         fn next_id<T>(&mut self) -> T
         where
             T: From<String>,
