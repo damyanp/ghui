@@ -20,14 +20,14 @@ pub enum PullRequestState {
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
-pub struct ItemId(pub String);
+pub struct ProjectItemId(pub String);
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
 pub struct ContentId(pub String);
 
-impl From<String> for ItemId {
+impl From<String> for ProjectItemId {
     fn from(value: String) -> Self {
-        ItemId(value)
+        ProjectItemId(value)
     }
 }
 
@@ -47,7 +47,7 @@ pub enum ContentKind {
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
 pub struct ProjectItem {
-    pub id: ItemId,
+    pub id: ProjectItemId,
     pub updated_at: String,
     pub status: Option<String>,
     pub category: Option<String>,
@@ -80,9 +80,9 @@ pub struct PullRequest {
 
 #[derive(Default)]
 pub struct ProjectItems {
-    ordered_items: Vec<ItemId>,
-    project_items: HashMap<ItemId, ProjectItem>,
-    content_id_to_item_id: HashMap<ContentId, ItemId>,
+    ordered_items: Vec<ProjectItemId>,
+    project_items: HashMap<ProjectItemId, ProjectItem>,
+    content_id_to_item_id: HashMap<ContentId, ProjectItemId>,
 }
 
 impl ProjectItems {
@@ -96,16 +96,16 @@ impl ProjectItems {
         self.ordered_items.push(item_id);
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, ItemId> {
+    pub fn iter(&self) -> std::slice::Iter<'_, ProjectItemId> {
         self.ordered_items.iter()
     }
 
-    pub fn get(&self, id: &ItemId) -> Option<&ProjectItem> {
+    pub fn get(&self, id: &ProjectItemId) -> Option<&ProjectItem> {
         self.project_items.get(id)
     }
 
-    pub fn get_roots(&self) -> Vec<ItemId> {
-        let mut unreferenced_items: HashSet<&ItemId> =
+    pub fn get_roots(&self) -> Vec<ProjectItemId> {
+        let mut unreferenced_items: HashSet<&ProjectItemId> =
             HashSet::from_iter(self.ordered_items.iter());
 
         for item in self.project_items.values() {
@@ -158,7 +158,7 @@ mod tests {
         }
 
         fn add(&mut self, sub_issues: &[&ContentId], tracked_issues: &[&ContentId]) -> ContentId {
-            let item_id: ItemId = self.next_id();
+            let item_id: ProjectItemId = self.next_id();
             let content_id: ContentId = self.next_id();
 
             let item = ProjectItem {
@@ -200,7 +200,8 @@ mod tests {
         let root2 = data.add(&[&a], &[&d, &unresolvable]);
         let root3 = data.add(&[&c, &unresolvable], &[&b, &unresolvable]);
 
-        let roots: HashSet<ItemId> = HashSet::from_iter(data.project_items.get_roots().into_iter());
+        let roots: HashSet<ProjectItemId> =
+            HashSet::from_iter(data.project_items.get_roots().into_iter());
 
         // Roots only looks at sub_issues
         let [d, root1, root2, root3] = [d, root1, root2, root3]

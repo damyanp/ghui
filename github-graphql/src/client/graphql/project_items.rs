@@ -1,5 +1,6 @@
 use crate::data::{
-    self, ContentId, ContentKind, Issue, ItemId, ProjectItem, ProjectItemContent, PullRequest,
+    self, ContentId, ContentKind, Issue, ProjectItem, ProjectItemContent, ProjectItemId,
+    PullRequest,
 };
 use graphql_client::{GraphQLQuery, Response};
 
@@ -120,7 +121,7 @@ impl data::ProjectItems {
         }).flatten();
 
             project_items.add(ProjectItem {
-                id: ItemId(item.id),
+                id: ProjectItemId(item.id),
                 updated_at: item.updated_at,
                 status,
                 category,
@@ -319,7 +320,7 @@ mod tests {
 
         let draft_issue = items_iterator.next().unwrap();
         let expected_draft_issue = ProjectItem {
-            id: ItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
+            id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
             updated_at: "2024-08-05T21:47:26Z".into(),
             status: None,
             category: None,
@@ -344,7 +345,7 @@ mod tests {
 
         let issue = items_iterator.next().unwrap();
         let expected_issue = ProjectItem {
-            id: ItemId("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
+            id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
             updated_at: "2025-03-27T21:01:45Z".into(),
             status: Some("Closed".into()),
             category: None,
@@ -372,7 +373,7 @@ mod tests {
 
         let pull_request = items_iterator.next().unwrap();
         let expected_pull_request = ProjectItem {
-            id: ItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
+            id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
             updated_at: "2025-04-07T20:00:01Z".into(),
             status: Some("Needs Review".into()),
             category: None,
@@ -454,7 +455,7 @@ mod tests {
             data::ProjectItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
 
         let item = project_items
-            .get(&ItemId("PVTI_lADOAQWwKc4ABQXFzgOXzwE".into()))
+            .get(&ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgOXzwE".into()))
             .unwrap();
 
         let ProjectItem {
