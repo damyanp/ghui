@@ -1,6 +1,7 @@
 use pat::PATState;
 use tauri::{async_runtime::Mutex, Manager};
 
+mod data;
 mod pat;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,7 +15,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             pat::check_pat_status,
-            pat::set_pat
+            pat::set_pat,
+            data::get_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

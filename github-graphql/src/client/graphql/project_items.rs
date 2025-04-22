@@ -1,5 +1,5 @@
 use crate::data::{
-    self, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem, WorkItemId, WorkItemKind,
+    self, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem, WorkItemData, WorkItemId,
 };
 use graphql_client::{GraphQLQuery, Response};
 
@@ -152,7 +152,7 @@ fn build_work_item(
             updated_at: Some(c.updated_at),
             resource_path: None,
             repository: None,
-            kind: WorkItemKind::DraftIssue,
+            data: WorkItemData::DraftIssue,
             project_item: ProjectItem::default(),
         },
         ProjectItemsOrganizationProjectV2ItemsNodesContent::Issue(c) => WorkItem {
@@ -161,7 +161,7 @@ fn build_work_item(
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
             repository: Some(c.repository.owner.login),
-            kind: WorkItemKind::Issue(Issue {
+            data: WorkItemData::Issue(Issue {
                 state: c.state.into(),
                 sub_issues: build_issue_id_vector(c.sub_issues.nodes),
                 tracked_issues: build_issue_id_vector(c.tracked_issues.nodes),
@@ -174,7 +174,7 @@ fn build_work_item(
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
             repository: Some(c.repository.owner.login),
-            kind: WorkItemKind::PullRequest(PullRequest {
+            data: WorkItemData::PullRequest(PullRequest {
                 state: c.state.into(),
             }),
             project_item: ProjectItem::default(),
@@ -331,7 +331,7 @@ mod tests {
             updated_at: Some("2024-08-05T21:47:26Z".into()),
             resource_path: None,
             repository: None,
-            kind: WorkItemKind::DraftIssue,
+            data: WorkItemData::DraftIssue,
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
                 updated_at: "2024-08-05T21:47:26Z".into(),
@@ -357,7 +357,7 @@ mod tests {
             updated_at: Some("2025-03-27T21:01:40Z".into()),
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
             repository: Some("llvm".into()),
-            kind: WorkItemKind::Issue(Issue {
+            data: WorkItemData::Issue(Issue {
                 state: IssueState::CLOSED,
                 sub_issues: vec![],
                 tracked_issues: vec![],
@@ -384,7 +384,7 @@ mod tests {
             updated_at: Some("2025-02-24T19:33:41Z".into()),
             resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
             repository: Some("llvm".into()),
-            kind: WorkItemKind::PullRequest(PullRequest {
+            data: WorkItemData::PullRequest(PullRequest {
                 state: PullRequestState::OPEN,
             }),
             project_item: ProjectItem {
@@ -465,8 +465,8 @@ mod tests {
             .unwrap();
 
         let WorkItem {
-            kind:
-                WorkItemKind::Issue(Issue {
+            data:
+                WorkItemData::Issue(Issue {
                     ref sub_issues,
                     ref tracked_issues,
                     ..

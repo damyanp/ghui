@@ -3,20 +3,21 @@ use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkItem {
     pub id: WorkItemId,
     pub title: String,
     pub updated_at: Option<String>,
     pub resource_path: Option<String>,
     pub repository: Option<String>,
-    pub kind: WorkItemKind,
+    pub data: WorkItemData,
     pub project_item: ProjectItem,
 }
 
 impl WorkItem {
     fn get_sub_issues(&self) -> Option<&Vec<WorkItemId>> {
         if let WorkItem {
-            kind: WorkItemKind::Issue(Issue { sub_issues, .. }),
+            data: WorkItemData::Issue(Issue { sub_issues, .. }),
             ..
         } = self
         {
@@ -37,7 +38,9 @@ impl From<String> for WorkItemId {
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
-pub enum WorkItemKind {
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+pub enum WorkItemData {
     #[default]
     DraftIssue,
     Issue(Issue),
@@ -45,6 +48,7 @@ pub enum WorkItemKind {
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Issue {
     pub state: IssueState,
     pub sub_issues: Vec<WorkItemId>,
@@ -52,6 +56,7 @@ pub struct Issue {
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
+#[serde(rename_all_fields = "camelCase")]
 pub enum IssueState {
     CLOSED,
     #[default]
@@ -60,11 +65,13 @@ pub enum IssueState {
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PullRequest {
     pub state: PullRequestState,
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
+#[serde(rename_all_fields = "camelCase")]
 pub enum PullRequestState {
     CLOSED,
     #[default]
@@ -74,6 +81,7 @@ pub enum PullRequestState {
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,
@@ -95,7 +103,7 @@ impl From<String> for ProjectItemId {
 #[derive(Default)]
 pub struct WorkItems {
     ordered_items: Vec<WorkItemId>,
-    work_items: HashMap<WorkItemId, WorkItem>,
+    pub work_items: HashMap<WorkItemId, WorkItem>,
 }
 
 impl WorkItems {
@@ -166,7 +174,7 @@ mod tests {
 
             let item = WorkItem {
                 id: issue_id.clone(),
-                kind: WorkItemKind::Issue(Issue {
+                data: WorkItemData::Issue(Issue {
                     sub_issues: to_project_item_ref_vec(sub_issues),
                     tracked_issues: to_project_item_ref_vec(tracked_issues),
 
