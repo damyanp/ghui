@@ -5,10 +5,13 @@ use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
     ProjectItemsOrganizationProjectV2ItemsNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesKind,
+    ProjectItemsOrganizationProjectV2ItemsNodesBlocked,
     ProjectItemsOrganizationProjectV2ItemsNodesContent,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
+    ProjectItemsOrganizationProjectV2ItemsNodesEpic,
+    ProjectItemsOrganizationProjectV2ItemsNodesIteration,
+    ProjectItemsOrganizationProjectV2ItemsNodesKind,
     ProjectItemsOrganizationProjectV2ItemsNodesProjectMilestone,
     ProjectItemsOrganizationProjectV2ItemsNodesStatus,
     ProjectItemsOrganizationProjectV2ItemsNodesWorkstream,
@@ -80,6 +83,54 @@ pub async fn get_all_items<ClientType: crate::client::transport::Client>(
     Ok(all_items)
 }
 
+trait SingleSelectField {
+    fn get_single_select_field_value(&self) -> Option<String>;
+}
+
+macro_rules! make_single_select_field_helpers {
+    ($type:ident) => {
+        impl From<&$type> for Option<String> {
+            fn from(value: &$type) -> Self {
+                if let $type::ProjectV2ItemFieldSingleSelectValue(v) = value {
+                    v.name.clone()
+                } else {
+                    None
+                }
+            }
+        }
+
+        impl SingleSelectField for Option<$type> {
+            fn get_single_select_field_value(&self) -> Option<String> {
+                self.as_ref().and_then(|v| v.into())
+            }
+        }
+    };
+}
+
+make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesStatus);
+make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesBlocked);
+make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesKind);
+make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesEpic);
+make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesWorkstream);
+make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesProjectMilestone);
+
+trait IterationField {
+    fn get_iteration_title(&self) -> Option<String>;
+}
+
+impl IterationField for Option<ProjectItemsOrganizationProjectV2ItemsNodesIteration> {
+    fn get_iteration_title(&self) -> Option<String> {
+        use ProjectItemsOrganizationProjectV2ItemsNodesIteration as I;
+        self.as_ref().and_then(|v| {
+            if let I::ProjectV2ItemFieldIterationValue(v) = v {
+                Some(v.title.clone())
+            } else {
+                None
+            }
+        })
+    }
+}
+
 impl data::WorkItems {
     pub fn from_graphql(
         items: Vec<ProjectItemsOrganizationProjectV2ItemsNodes>,
@@ -87,43 +138,22 @@ impl data::WorkItems {
         let mut work_items = data::WorkItems::default();
 
         for item in items {
-            let status = item.status.as_ref().and_then(|v| {
-            if let ProjectItemsOrganizationProjectV2ItemsNodesStatus::ProjectV2ItemFieldSingleSelectValue(v) = v {
-                Some(v.name.clone())
-            } else {
-                None
-            }
-        }).flatten();
-
-            let category = item.kind.as_ref().and_then(|c| {
-            if let ProjectItemsOrganizationProjectV2ItemsNodesKind::ProjectV2ItemFieldSingleSelectValue(v) = c {
-                Some(v.name.clone())
-            } else {
-                None
-            }
-        }).flatten();
-
-            let workstream = item.workstream.as_ref().and_then(|c| {
-            if let ProjectItemsOrganizationProjectV2ItemsNodesWorkstream::ProjectV2ItemFieldSingleSelectValue(v) = c {
-                Some(v.name.clone())
-            } else {
-                None
-            }
-        }).flatten();
-
-            let project_milestone = item.project_milestone.as_ref().and_then(|c| {
-            if let ProjectItemsOrganizationProjectV2ItemsNodesProjectMilestone::ProjectV2ItemFieldSingleSelectValue(v) = c {
-                Some(v.name.clone())
-            } else {
-                None
-            }
-        }).flatten();
+            let status = item.status.get_single_select_field_value();
+            let iteration = item.iteration.get_iteration_title();
+            let blocked = item.blocked.get_single_select_field_value();
+            let kind = item.kind.get_single_select_field_value();
+            let epic = item.epic.get_single_select_field_value();
+            let workstream = item.workstream.get_single_select_field_value();
+            let project_milestone = item.project_milestone.get_single_select_field_value();
 
             let project_item = ProjectItem {
                 id: ProjectItemId(item.id),
                 updated_at: item.updated_at,
                 status,
-                category,
+                iteration,
+                blocked,
+                kind,
+                epic,
                 workstream,
                 project_milestone,
             };
@@ -336,9 +366,10 @@ mod tests {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
                 updated_at: "2024-08-05T21:47:26Z".into(),
                 status: None,
-                category: None,
+                kind: None,
                 workstream: Some("Language".into()),
                 project_milestone: None,
+                ..Default::default()
             },
         };
 
@@ -366,9 +397,10 @@ mod tests {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
                 updated_at: "2025-03-27T21:01:45Z".into(),
                 status: Some("Closed".into()),
-                category: None,
+                kind: None,
                 workstream: Some("Root Signatures".into()),
                 project_milestone: Some("(old)3: Compute Shaders (1)".into()),
+                ..Default::default()
             },
         };
         assert_eq!(*issue, expected_issue.id);
@@ -391,9 +423,10 @@ mod tests {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
                 updated_at: "2025-04-07T20:00:01Z".into(),
                 status: Some("Needs Review".into()),
-                category: None,
+                kind: None,
                 workstream: None,
                 project_milestone: None,
+                ..Default::default()
             },
         };
         assert_eq!(*pull_request, expected_pull_request.id);

@@ -86,7 +86,10 @@ pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,
     pub status: Option<String>,
-    pub category: Option<String>,
+    pub iteration: Option<String>,
+    pub blocked: Option<String>,
+    pub kind: Option<String>,
+    pub epic: Option<String>,
     pub workstream: Option<String>,
     pub project_milestone: Option<String>,
 }
