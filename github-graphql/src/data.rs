@@ -212,14 +212,13 @@ mod tests {
         let root2 = data.add(&[&a], &[&d, &unresolvable]);
         let root3 = data.add(&[&c, &unresolvable], &[&b, &unresolvable]);
 
-        let roots: HashSet<WorkItemId> =
-            HashSet::from_iter(data.work_items.get_roots().into_iter());
+        let roots: HashSet<WorkItemId> = HashSet::from_iter(data.work_items.get_roots());
 
         // Roots only looks at sub_issues
         assert_eq!(4, roots.len());
-        assert!(roots.get(&d).is_some());
-        assert!(roots.get(&root1).is_some());
-        assert!(roots.get(&root2).is_some());
-        assert!(roots.get(&root3).is_some());
+        assert!(roots.contains(&d));
+        assert!(roots.contains(&root1));
+        assert!(roots.contains(&root2));
+        assert!(roots.contains(&root3));
     }
 }

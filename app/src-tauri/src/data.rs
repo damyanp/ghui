@@ -12,7 +12,7 @@ pub struct Data {
 }
 
 #[tauri::command]
-pub async fn get_data<'a>(_app: AppHandle) -> Result<Data, String> {
+pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
     let all_items_str = include_str!("../../../all_items.json");
     let all_items_json =
         serde_json::from_str(all_items_str).map_err(|e| e.to_string().to_owned())?;
@@ -21,7 +21,7 @@ pub async fn get_data<'a>(_app: AppHandle) -> Result<Data, String> {
     let root_items = work_items.get_roots();
 
     Ok(Data {
-        root_items: root_items,
+        root_items,
         work_items: work_items.work_items,
     })
 }
