@@ -4,17 +4,11 @@ use crate::data::{
 use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
-    ProjectItemsOrganizationProjectV2ItemsNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesBlocked,
+    CustomField, ProjectItemsOrganizationProjectV2ItemsNodes,
     ProjectItemsOrganizationProjectV2ItemsNodesContent,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesEpic,
     ProjectItemsOrganizationProjectV2ItemsNodesIteration,
-    ProjectItemsOrganizationProjectV2ItemsNodesKind,
-    ProjectItemsOrganizationProjectV2ItemsNodesProjectMilestone,
-    ProjectItemsOrganizationProjectV2ItemsNodesStatus,
-    ProjectItemsOrganizationProjectV2ItemsNodesWorkstream,
 };
 
 use super::URI;
@@ -83,42 +77,22 @@ pub async fn get_all_items<ClientType: crate::client::transport::Client>(
     Ok(all_items)
 }
 
-trait SingleSelectField {
+trait CustomFieldAccessors {
     fn get_single_select_field_value(&self) -> Option<String>;
-}
-
-macro_rules! make_single_select_field_helpers {
-    ($type:ident) => {
-        impl From<&$type> for Option<String> {
-            fn from(value: &$type) -> Self {
-                if let $type::ProjectV2ItemFieldSingleSelectValue(v) = value {
-                    v.name.clone()
-                } else {
-                    None
-                }
-            }
-        }
-
-        impl SingleSelectField for Option<$type> {
-            fn get_single_select_field_value(&self) -> Option<String> {
-                self.as_ref().and_then(|v| v.into())
-            }
-        }
-    };
-}
-
-make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesStatus);
-make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesBlocked);
-make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesKind);
-make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesEpic);
-make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesWorkstream);
-make_single_select_field_helpers!(ProjectItemsOrganizationProjectV2ItemsNodesProjectMilestone);
-
-trait IterationField {
     fn get_iteration_title(&self) -> Option<String>;
 }
 
-impl IterationField for Option<ProjectItemsOrganizationProjectV2ItemsNodesIteration> {
+impl CustomFieldAccessors for Option<CustomField> {
+    fn get_single_select_field_value(&self) -> Option<String> {
+        self.as_ref().and_then(|v| {
+            if let CustomField::ProjectV2ItemFieldSingleSelectValue(v) = v {
+                v.name.clone()
+            } else {
+                None
+            }
+        })
+    }
+
     fn get_iteration_title(&self) -> Option<String> {
         use ProjectItemsOrganizationProjectV2ItemsNodesIteration as I;
         self.as_ref().and_then(|v| {

@@ -13,46 +13,25 @@ query ProjectItems(
           id
           updatedAt
           Status: fieldValueByName(name: "Status") {
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              name
-            }
+            ...CustomField
           }
           Iteration: fieldValueByName(name: "Iteration") {
-            __typename
-            ... on ProjectV2ItemFieldIterationValue {
-              title
-            }
+            ...CustomField
           }
           Blocked: fieldValueByName(name: "Blocked") {
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              name
-            }
+            ...CustomField
           }
           Kind: fieldValueByName(name: "Kind") {
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              name
-            }
+            ...CustomField
           }
           Epic: fieldValueByName(name: "Epic") {
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              name
-            }
+            ...CustomField
           }
           Workstream: fieldValueByName(name: "Workstream") {
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              name
-            }
+            ...CustomField
           }
           ProjectMilestone: fieldValueByName(name: "ProjectMilestone") {
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              name
-            }
+            ...CustomField
           }
           content {
             __typename
@@ -108,5 +87,15 @@ query ProjectItems(
         }
       }
     }
+  }
+}
+
+fragment CustomField on ProjectV2ItemFieldValue {
+  __typename
+  ... on ProjectV2ItemFieldSingleSelectValue {
+    name
+  }
+  ... on ProjectV2ItemFieldIterationValue {
+    title
   }
 }

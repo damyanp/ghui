@@ -44510,5 +44510,45 @@
       "updatedAt": "2025-04-23T01:01:42Z",
       "state": "OPEN"
     }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZo-0Q",
+    "updatedAt": "2025-04-23T04:18:36Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "name": "Resource Binding"
+    },
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zkTwd",
+      "resourcePath": "/llvm/llvm-project/issues/136809",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-23T04:17:49Z",
+      "title": "[HLSL] Report error when register binding range overflows UINT32_MAX value",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
   }
 ]
