@@ -18,7 +18,25 @@ query ProjectItems(
               name
             }
           }
-          Category: fieldValueByName(name: "Category") {
+          Iteration: fieldValueByName(name: "Iteration") {
+            __typename
+            ... on ProjectV2ItemFieldIterationValue {
+              title
+            }
+          }
+          Blocked: fieldValueByName(name: "Blocked") {
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          Kind: fieldValueByName(name: "Kind") {
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          Epic: fieldValueByName(name: "Epic") {
             __typename
             ... on ProjectV2ItemFieldSingleSelectValue {
               name

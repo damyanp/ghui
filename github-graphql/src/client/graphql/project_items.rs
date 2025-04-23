@@ -5,7 +5,7 @@ use graphql_client::{GraphQLQuery, Response};
 
 use project_items::{
     ProjectItemsOrganizationProjectV2ItemsNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesCategory,
+    ProjectItemsOrganizationProjectV2ItemsNodesKind,
     ProjectItemsOrganizationProjectV2ItemsNodesContent,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
@@ -95,8 +95,8 @@ impl data::WorkItems {
             }
         }).flatten();
 
-            let category = item.category.as_ref().and_then(|c| {
-            if let ProjectItemsOrganizationProjectV2ItemsNodesCategory::ProjectV2ItemFieldSingleSelectValue(v) = c {
+            let category = item.kind.as_ref().and_then(|c| {
+            if let ProjectItemsOrganizationProjectV2ItemsNodesKind::ProjectV2ItemFieldSingleSelectValue(v) = c {
                 Some(v.name.clone())
             } else {
                 None
