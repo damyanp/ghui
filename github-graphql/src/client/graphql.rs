@@ -1,5 +1,4 @@
 pub mod custom_fields_query;
-pub mod hygiene_query;
 pub mod project_items;
 mod viewer_info;
 
@@ -8,7 +7,6 @@ pub use custom_fields_query::{
     FieldConfigOnProjectV2SingleSelectField,
 };
 use graphql_client::{GraphQLQuery, Response};
-pub use hygiene_query::HygieneQuery;
 pub use project_items::ProjectItems;
 pub use viewer_info::{get_viewer_info, ViewerInfo};
 

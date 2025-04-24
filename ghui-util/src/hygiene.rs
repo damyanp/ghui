@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use github_graphql::client::{
-    graphql::{custom_fields_query, get_all_items, get_custom_fields, hygiene_query},
-    transport::GithubClient,
+use github_graphql::{
+    client::{
+        graphql::{custom_fields_query, get_all_items, get_custom_fields, project_items},
+        transport::GithubClient,
+    },
+    data::{self, HasFieldValue, SingleSelectFieldValue},
 };
 
 use crate::Result;
@@ -24,7 +27,6 @@ impl From<Option<custom_fields_query::FieldConfig>> for Field {
                 FieldConfig::ProjectV2IterationField(f) => f.id.clone(),
                 FieldConfig::ProjectV2SingleSelectField(f) => f.id.clone(),
             };
-            
 
             let mut id_to_name = HashMap::new();
             let mut name_to_id = HashMap::new();
@@ -71,104 +73,108 @@ async fn get_fields(client: &GithubClient) -> Result<Fields> {
     })
 }
 
-async fn get_items(
-    client: &GithubClient,
-) -> Result<Vec<hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes>> {
-    let variables = hygiene_query::Variables {
+async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
+    let variables = project_items::Variables {
         page_size: 100,
         after: None,
     };
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    let items: Vec<hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes> =
-        get_all_items::<hygiene_query::HygieneQuery, GithubClient>(
-            client,
-            variables,
-            report_progress,
-        )
-        .await?;
+    let items = get_all_items::<project_items::ProjectItems, GithubClient>(
+        client,
+        variables,
+        report_progress,
+    )
+    .await?;
 
-    Ok(items)
+    Ok(data::WorkItems::from_graphql(items)?)
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, clap::ValueEnum, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RunHygieneMode {
     Default,
-    Save,
     Load,
 }
 
-#[derive(Default, Debug)]
-struct Change {
-    id: String,
+#[derive(Debug)]
+struct Change<'a> {
+    work_item: &'a data::WorkItem,
     status: Option<Option<String>>,
     blocked: Option<Option<String>>,
 }
 
+impl<'a> Change<'a> {
+    fn describe(&self) -> String {
+        let mut s = Vec::new();
+
+        if let Some(status) = &self.status {
+            s.push(format!(
+                "status({} -> {})",
+                self.work_item
+                    .project_item
+                    .status
+                    .field_value()
+                    .unwrap_or("<>"),
+                status.as_ref().map(|i| i.as_str()).unwrap_or("<>")
+            ));
+        }
+
+        if let Some(blocked) = &self.blocked {
+            s.push(format!(
+                "blocked({} -> {})",
+                self.work_item
+                    .project_item
+                    .status
+                    .field_value()
+                    .unwrap_or("<>"),
+                blocked.as_ref().map(|i| i.as_str()).unwrap_or("<>")
+            ));
+        }
+
+        s.join(", ")
+    }
+}
+
 pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {
-    let fields = get_fields(client).await?;
+    //let fields = get_fields(client).await?;
 
     let items = match mode {
         RunHygieneMode::Default => get_items(client).await?,
 
-        RunHygieneMode::Save => {
-            let items = get_items(client).await?;
-
-            let json_data = serde_json::to_string_pretty(&items)?;
-            let mut file = std::fs::File::create("hygiene.json")?;
-            std::io::Write::write_all(&mut file, json_data.as_bytes())?;
-            items
-        }
         RunHygieneMode::Load => {
-            let mut file = std::fs::File::open("hygiene.json")?;
-            let items: Vec<hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes> =
-                serde_json::from_reader(&mut file)?;
-            items
+            let mut file = std::fs::File::open("all_items.json")?;
+            data::WorkItems::from_graphql(serde_json::from_reader(&mut file)?)?
         }
     };
 
-    println!("{} items", items.len());
+    println!("{} items", items.work_items.len());
 
     items
-        .into_iter()
+        .work_items
+        .values()
         .map(|item| {
             let mut change = Change {
-                id: item.id.clone(),
-                ..Default::default()
+                work_item: item,
+                status: None,
+                blocked: None,
             };
 
-            if let Some(content) = item.content.as_ref() {
-                let is_closed = {
-                    use hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodesContent::*;
-                    use hygiene_query::IssueState;
-                    use hygiene_query::PullRequestState;
-
-                    match &content {
-                        DraftIssue(_) => false,
-                        Issue(issue) => issue.state == IssueState::CLOSED,
-                        PullRequest(pr) => {
-                            pr.state == PullRequestState::CLOSED
-                                || pr.state == PullRequestState::MERGED
-                        }
-                    }
-                };
-
-                if is_closed {
-                    let id_value = get_field_id_value(&item.status);
-                    let current_status = fields.status.name(id_value);
-                    if current_status != Some("Closed") {
-                        change.status = Some(Some("Closed".to_owned()));
-                    }
+            // Closed items should have status set to Closed
+            if item.is_closed() {
+                if !item.project_item.status.matches("Closed") {
+                    change.status = Some(Some("Closed".to_owned()));
                 }
             }
 
-            if item.iteration.is_some()
-                && fields.status.name(get_field_id_value(&item.status)) == Some("Designing")
+            // Items marked as Designing that aren't actually in an iteration
+            // have their status cleared
+            if item.project_item.status.matches("Designing")
+                && item.project_item.iteration.is_none()
             {
                 change.status = Some(None);
             }
 
-            if fields.status.name(get_field_id_value(&item.status)) == Some("Needs Review") {
+            if item.project_item.status.matches("Needs Review") {
                 change.status = Some(Some("Active".to_owned()));
                 change.blocked = Some(Some("PR".to_owned()));
             }
@@ -177,41 +183,12 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
         })
         .filter(|change| change.status.is_some() || change.blocked.is_some())
         .for_each(|change| {
-            println!("{:?}", change);
+            let work_item = change.work_item;
+
+            let resource_path = work_item.resource_path.clone().unwrap();
+
+            println!("https://github.com{} {}", resource_path, change.describe());
         });
 
     Ok(())
-}
-
-fn get_title(item: &hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes) -> &str {
-    use hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodesContent::*;
-    match item.content.as_ref().expect("All items must have content") {
-        DraftIssue(d) => d.title.as_str(),
-        Issue(i) => i.title.as_str(),
-        PullRequest(p) => p.title.as_str(),
-    }
-}
-
-fn get_resource_path(
-    item: &hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes,
-) -> Option<&str> {
-    use hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodesContent::*;
-    match item.content.as_ref().expect("All items must have content") {
-        Issue(i) => Some(i.resource_path.as_str()),
-        PullRequest(p) => Some(p.resource_path.as_str()),
-        _ => None,
-    }
-}
-
-fn get_field_id_value(value: &Option<hygiene_query::Field>) -> Option<&str> {
-    use hygiene_query::Field::*;
-
-    value
-        .as_ref()
-        .and_then(|value| match value {
-            ProjectV2ItemFieldIterationValue(v) => Some(&v.iteration_id),
-            ProjectV2ItemFieldSingleSelectValue(v) => v.option_id.as_ref(),
-            _ => None,
-        })
-        .map(|i| i.as_str())
 }

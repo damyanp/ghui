@@ -26,6 +26,17 @@ impl WorkItem {
             None
         }
     }
+
+    pub fn is_closed(&self) -> bool {
+        match &self.data {
+            WorkItemData::DraftIssue => false,
+            WorkItemData::Issue(issue) => issue.state == IssueState::CLOSED,
+            WorkItemData::PullRequest(pull_request) => {
+                pull_request.state == PullRequestState::MERGED
+                    || pull_request.state == PullRequestState::CLOSED
+            }
+        }
+    }
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
@@ -106,6 +117,27 @@ pub struct SingleSelectFieldValue {
 pub struct IterationFieldValue {
     pub iteration_id: String,
     pub title: String,
+}
+
+pub trait HasFieldValue {
+    fn matches(&self, value: &str) -> bool;
+    fn field_value(&self) -> Option<&str>;
+}
+
+impl HasFieldValue for Option<SingleSelectFieldValue> {
+    fn matches(&self, value: &str) -> bool {
+        match self {
+            Some(SingleSelectFieldValue{ name, ..}) => name == value,
+            None => false
+        }        
+    }
+
+    fn field_value(&self) -> Option<&str> {
+        match self {
+            Some(SingleSelectFieldValue{ name, ..}) => Some(name.as_str()),
+            None => None
+        }
+    }
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]
