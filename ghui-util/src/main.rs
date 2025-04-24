@@ -118,12 +118,14 @@ async fn run_get_custom_fields() -> Result {
     }
 
     fn dump_single_select_field(f: &FieldConfigOnProjectV2SingleSelectField) {
+        println!("Field ID: {}", f.id);
         for o in &f.options {
             println!("  {} = {}", o.id, o.name);
         }
     }
 
     fn dump_iteration_field(f: &FieldConfigOnProjectV2IterationField) {
+        println!("Field ID: {}", f.id);
         for o in &f.configuration.iterations {
             println!("  {} = {}", o.id, o.title);
         }

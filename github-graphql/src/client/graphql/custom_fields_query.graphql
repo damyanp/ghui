@@ -17,12 +17,14 @@ query CustomFieldsQuery {
 fragment FieldConfig on ProjectV2FieldConfiguration {
   __typename
   ... on ProjectV2SingleSelectField {
+    id
     options {
       name
       id
     }
   }
   ... on ProjectV2IterationField {
+    id
     configuration {
       iterations {
         title

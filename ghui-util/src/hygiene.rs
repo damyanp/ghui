@@ -9,6 +9,7 @@ use crate::Result;
 
 #[derive(Default)]
 struct Field {
+    id: String,
     id_to_name: HashMap<String, String>,
     name_to_id: HashMap<String, String>,
 }
@@ -17,19 +18,31 @@ impl From<Option<custom_fields_query::FieldConfig>> for Field {
     fn from(config: Option<custom_fields_query::FieldConfig>) -> Self {
         use custom_fields_query::FieldConfig;
 
-        let mut id_to_name = HashMap::new();
-        let mut name_to_id = HashMap::new();
+        if let Some(config) = &config {
+            let id = match config {
+                FieldConfig::ProjectV2Field => "<no id>".to_owned(),
+                FieldConfig::ProjectV2IterationField(f) => f.id.clone(),
+                FieldConfig::ProjectV2SingleSelectField(f) => f.id.clone(),
+            };
+            
 
-        if let Some(FieldConfig::ProjectV2SingleSelectField(config)) = config {
-            for option in &config.options {
-                id_to_name.insert(option.id.clone(), option.name.clone());
-                name_to_id.insert(option.name.clone(), option.id.clone());
+            let mut id_to_name = HashMap::new();
+            let mut name_to_id = HashMap::new();
+
+            if let FieldConfig::ProjectV2SingleSelectField(config) = config {
+                for option in &config.options {
+                    id_to_name.insert(option.id.clone(), option.name.clone());
+                    name_to_id.insert(option.name.clone(), option.id.clone());
+                }
             }
-        }
 
-        Field {
-            id_to_name,
-            name_to_id,
+            Field {
+                id,
+                id_to_name,
+                name_to_id,
+            }
+        } else {
+            Field::default()
         }
     }
 }
