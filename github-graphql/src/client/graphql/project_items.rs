@@ -1,17 +1,9 @@
 use crate::data::{
     self, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem, WorkItemData, WorkItemId,
 };
-use graphql_client::{GraphQLQuery, Response};
+use graphql_client::GraphQLQuery;
 
-use project_items::{
-    CustomField, ProjectItemsOrganizationProjectV2ItemsNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesContent,
-    ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesIteration,
-};
-
-use super::URI;
+use super::{PagedQuery, PagedQueryPageInfo, URI};
 
 type DateTime = String;
 
@@ -24,57 +16,45 @@ type DateTime = String;
 )]
 pub struct ProjectItems;
 
-fn build_query() -> graphql_client::QueryBody<project_items::Variables> {
-    let variables = project_items::Variables {
-        login: "llvm".into(),
-        project_number: 4,
-        page_size: 100,
-        after: None,
-    };
+pub use project_items::*;
 
-    ProjectItems::build_query(variables)
-}
+impl PagedQuery<ProjectItems> for ProjectItems {
+    type ItemType = ProjectItemsOrganizationProjectV2ItemsNodes;
 
-pub async fn get_all_items<ClientType: crate::client::transport::Client>(
-    client: &ClientType,
-    report_progress: fn(count: usize, total: usize),
-) -> Result<
-    Vec<project_items::ProjectItemsOrganizationProjectV2ItemsNodes>,
-    Box<dyn std::error::Error>,
-> {
-    let mut request_body = build_query();
-    let mut all_items: Vec<project_items::ProjectItemsOrganizationProjectV2ItemsNodes> = Vec::new();
-    loop {
-        let response: Response<project_items::ResponseData> = client.request(&request_body).await?;
+    fn set_after(variables: &mut <ProjectItems as GraphQLQuery>::Variables, after: Option<String>) {
+        variables.after = after;
+    }
 
-        let items = response
-            .data
-            .and_then(|d| d.organization)
-            .and_then(|d| d.project_v2)
-            .map(|d| d.items);
-
-        let end_cursor = items.as_ref().map(|d| &d.page_info).and_then(|d| {
-            if d.has_next_page {
-                d.end_cursor.clone()
-            } else {
-                None
+    fn get_page_info(
+        response: &<ProjectItems as GraphQLQuery>::ResponseData,
+    ) -> super::PagedQueryPageInfo {
+        if let Some(items) = &response
+            .organization
+            .as_ref()
+            .and_then(|d| d.project_v2.as_ref())
+            .map(|d| &d.items)
+        {
+            PagedQueryPageInfo {
+                total_items: items.total_count.try_into().unwrap(),
+                end_cursor: items.page_info.end_cursor.clone(),
             }
-        });
-
-        if let Some(items) = items {
-            if let Some(nodes) = items.nodes {
-                all_items.extend(nodes.into_iter().flatten());
+        } else {
+            PagedQueryPageInfo {
+                total_items: 0,
+                end_cursor: None,
             }
-
-            report_progress(all_items.len(), items.total_count.try_into().unwrap());
-        }
-
-        request_body.variables.after = end_cursor;
-        if request_body.variables.after.is_none() {
-            break;
         }
     }
-    Ok(all_items)
+
+    fn get_items(
+        response: <ProjectItems as GraphQLQuery>::ResponseData,
+    ) -> Option<Vec<Self::ItemType>> {
+        response
+            .organization
+            .and_then(|d| d.project_v2)
+            .and_then(|d| d.items.nodes)
+            .map(|d| d.into_iter().flatten().collect())
+    }
 }
 
 trait CustomFieldAccessors {

@@ -1,4 +1,4 @@
-use super::URI;
+use super::{PagedQuery, PagedQueryPageInfo, URI};
 use graphql_client::{GraphQLQuery, Response};
 
 #[derive(GraphQLQuery)]
@@ -11,6 +11,45 @@ use graphql_client::{GraphQLQuery, Response};
 pub struct HygieneQuery;
 
 pub use hygiene_query::*;
+
+impl PagedQuery<HygieneQuery> for HygieneQuery {
+    type ItemType = HygieneQueryOrganizationProjectV2ItemsNodes;
+
+    fn set_after(variables: &mut <HygieneQuery as GraphQLQuery>::Variables, after: Option<String>) {
+        variables.after = after;
+    }
+
+    fn get_page_info(
+        response: &<HygieneQuery as GraphQLQuery>::ResponseData,
+    ) -> super::PagedQueryPageInfo {
+        if let Some(items) = &response
+            .organization
+            .as_ref()
+            .and_then(|d| d.project_v2.as_ref())
+            .map(|d| &d.items)
+        {
+            PagedQueryPageInfo {
+                total_items: items.total_count.try_into().unwrap(),
+                end_cursor: items.page_info.end_cursor.clone(),
+            }
+        } else {
+            PagedQueryPageInfo {
+                total_items: 0,
+                end_cursor: None,
+            }
+        }
+    }
+
+    fn get_items(
+        response: <HygieneQuery as GraphQLQuery>::ResponseData,
+    ) -> Option<Vec<Self::ItemType>> {
+        response
+            .organization
+            .and_then(|d| d.project_v2)
+            .and_then(|d| d.items.nodes)
+            .map(|d| d.into_iter().flatten().collect())
+    }
+}
 
 fn build_query() -> graphql_client::QueryBody<Variables> {
     let variables = Variables {

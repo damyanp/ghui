@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{get_all_hygiene_items, get_all_items, get_custom_fields, get_viewer_info},
+    graphql::{get_all_items, get_custom_fields, get_viewer_info, hygiene_query, project_items},
     transport::GithubClient,
 };
 use std::env;
@@ -45,9 +45,19 @@ async fn main() -> Result {
 async fn run_get_all_items() -> Result {
     let client = client();
 
+    let variables = project_items::Variables {
+        page_size: 100,
+        after: None,
+    };
+
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
-    let all_items = get_all_items(&client, report_progress).await?;
+    let all_items = get_all_items::<project_items::ProjectItems, GithubClient>(
+        &client,
+        variables,
+        report_progress,
+    )
+    .await?;
 
     let json_data = serde_json::to_string_pretty(&all_items)?;
     let mut file = File::create("all_items.json")?;
@@ -116,7 +126,18 @@ async fn run_get_custom_fields() -> Result {
 async fn run_hygiene() -> Result {
     let client = client();
 
-    let items = get_all_hygiene_items(&client).await?;
+    let variables = hygiene_query::Variables {
+        page_size: 100,
+        after: None,
+    };
+
+    let report_progress = |c, t| println!("Retrieved {c} of {t} items");
+    let items = get_all_items::<hygiene_query::HygieneQuery, GithubClient>(
+        &client,
+        variables,
+        report_progress,
+    )
+    .await?;
 
     println!("Got {} items", items.len());
 

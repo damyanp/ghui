@@ -1,11 +1,9 @@
 query ProjectItems(
-  $login: String!
-  $projectNumber: Int!
   $pageSize: Int!
   $after: String
 ) {
-  organization(login: $login) {
-    projectV2(number: $projectNumber) {
+  organization(login: "llvm") {
+    projectV2(number: 4) {
       items(first: $pageSize, after: $after) {
         totalCount
         nodes {
