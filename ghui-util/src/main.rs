@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{get_all_items, get_custom_fields, get_viewer_info, hygiene_query, project_items},
+    graphql::{get_all_items, get_custom_fields, get_viewer_info, project_items},
     transport::GithubClient,
 };
 use std::env;
@@ -126,23 +126,12 @@ async fn run_get_custom_fields() -> Result {
 async fn run_hygiene() -> Result {
     let client = client();
 
-    let variables = hygiene_query::Variables {
-        page_size: 100,
-        after: None,
-    };
-
-    let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    let items = get_all_items::<hygiene_query::HygieneQuery, GithubClient>(
-        &client,
-        variables,
-        report_progress,
-    )
-    .await?;
-
-    println!("Got {} items", items.len());
+    hygiene::run_hygiene(&client, hygiene::RunHygieneMode::Load).await?;
 
     Ok(())
 }
+
+mod hygiene;
 
 fn client() -> GithubClient {
     GithubClient::new(&pat()).expect("create client")

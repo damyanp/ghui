@@ -1,4 +1,4 @@
-mod custom_fields_query;
+pub mod custom_fields_query;
 pub mod hygiene_query;
 pub mod project_items;
 mod viewer_info;

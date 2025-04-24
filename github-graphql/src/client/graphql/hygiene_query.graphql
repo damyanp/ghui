@@ -27,10 +27,12 @@ query HygieneQuery($pageSize: Int!, $after: String) {
             ... on Issue {
               resourcePath
               title
+              state
             }
             ... on PullRequest {
               resourcePath
               title
+              state
             }
           }
         }
