@@ -27,13 +27,10 @@ enum Commands {
 struct HygieneOptions {
     #[arg(short, long)]
     commit: bool,
-    
+
     #[arg(value_enum, default_value_t = hygiene::RunHygieneMode::Default, short, long)]
-    mode: hygiene::RunHygieneMode
+    mode: hygiene::RunHygieneMode,
 }
-
-
-
 
 type Error = Box<dyn std::error::Error>;
 type Result<T = ()> = core::result::Result<T, Error>;

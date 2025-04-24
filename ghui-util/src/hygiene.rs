@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 
 use github_graphql::{
@@ -5,7 +7,7 @@ use github_graphql::{
         graphql::{custom_fields_query, get_all_items, get_custom_fields, project_items},
         transport::GithubClient,
     },
-    data::{self, HasFieldValue, SingleSelectFieldValue},
+    data::{self, HasFieldValue},
 };
 
 use crate::Result;
@@ -86,10 +88,9 @@ async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     )
     .await?;
 
-    Ok(data::WorkItems::from_graphql(items)?)
+    data::WorkItems::from_graphql(items)
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, clap::ValueEnum, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RunHygieneMode {
     Default,
@@ -103,7 +104,7 @@ struct Change<'a> {
     blocked: Option<Option<String>>,
 }
 
-impl<'a> Change<'a> {
+impl Change<'_> {
     fn describe(&self) -> String {
         let mut s = Vec::new();
 
@@ -160,10 +161,8 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
             };
 
             // Closed items should have status set to Closed
-            if item.is_closed() {
-                if !item.project_item.status.matches("Closed") {
-                    change.status = Some(Some("Closed".to_owned()));
-                }
+            if item.is_closed() && !item.project_item.status.matches("Closed") {
+                change.status = Some(Some("Closed".to_owned()));
             }
 
             // Items marked as Designing that aren't actually in an iteration

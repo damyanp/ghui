@@ -127,15 +127,15 @@ pub trait HasFieldValue {
 impl HasFieldValue for Option<SingleSelectFieldValue> {
     fn matches(&self, value: &str) -> bool {
         match self {
-            Some(SingleSelectFieldValue{ name, ..}) => name == value,
-            None => false
-        }        
+            Some(SingleSelectFieldValue { name, .. }) => name == value,
+            None => false,
+        }
     }
 
     fn field_value(&self) -> Option<&str> {
         match self {
-            Some(SingleSelectFieldValue{ name, ..}) => Some(name.as_str()),
-            None => None
+            Some(SingleSelectFieldValue { name, .. }) => Some(name.as_str()),
+            None => None,
         }
     }
 }
