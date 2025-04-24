@@ -20,8 +20,20 @@ enum Commands {
     GetAllItems,
     Viewer,
     GetCustomFields,
-    Hygiene,
+    Hygiene(HygieneOptions),
 }
+
+#[derive(Debug, clap::Args)]
+struct HygieneOptions {
+    #[arg(short, long)]
+    commit: bool,
+    
+    #[arg(value_enum, default_value_t = hygiene::RunHygieneMode::Default, short, long)]
+    mode: hygiene::RunHygieneMode
+}
+
+
+
 
 type Error = Box<dyn std::error::Error>;
 type Result<T = ()> = core::result::Result<T, Error>;
@@ -36,7 +48,7 @@ async fn main() -> Result {
         Commands::GetAllItems => run_get_all_items().await?,
         Commands::Viewer => run_get_viewer().await?,
         Commands::GetCustomFields => run_get_custom_fields().await?,
-        Commands::Hygiene => run_hygiene().await?,
+        Commands::Hygiene(options) => run_hygiene(options).await?,
     }
 
     Ok(())
@@ -123,10 +135,10 @@ async fn run_get_custom_fields() -> Result {
     Ok(())
 }
 
-async fn run_hygiene() -> Result {
+async fn run_hygiene(options: HygieneOptions) -> Result {
     let client = client();
 
-    hygiene::run_hygiene(&client, hygiene::RunHygieneMode::Load).await?;
+    hygiene::run_hygiene(&client, options.mode).await?;
 
     Ok(())
 }

@@ -78,6 +78,7 @@ async fn get_items(
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, clap::ValueEnum, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RunHygieneMode {
     Default,
     Save,
