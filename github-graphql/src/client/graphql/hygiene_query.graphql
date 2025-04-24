@@ -1,0 +1,56 @@
+query HygieneQuery($pageSize: Int!, $after: String) {
+  organization(login: "llvm") {
+    projectV2(number: 4) {
+      items(first: $pageSize, after: $after) {
+        totalCount
+        nodes {
+          __typename
+          id
+
+          Status: fieldValueByName(name: "Status") {
+            ...Field
+          }
+
+          Blocked: fieldValueByName(name: "Blocked") {
+            ...Field
+          }
+
+          Iteration: fieldValueByName(name: "Iteration") {
+            ...Field
+          }
+
+          content {
+            __typename
+            ... on DraftIssue {
+              title
+            }
+            ... on Issue {
+              resourcePath
+              title
+            }
+            ... on PullRequest {
+              resourcePath
+              title
+            }
+          }
+        }
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+      }
+    }
+  }
+}
+
+fragment Field on ProjectV2ItemFieldValue {
+  __typename
+
+  ... on ProjectV2ItemFieldSingleSelectValue {
+    optionId
+  }
+  ... on ProjectV2ItemFieldIterationValue {
+    iterationId
+  }
+}
+

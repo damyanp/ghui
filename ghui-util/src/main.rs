@@ -1,7 +1,9 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
-use github_graphql::client::graphql::get_viewer_info;
-use github_graphql::{client::graphql::get_all_items, client::transport::GithubClient};
+use github_graphql::client::{
+    graphql::{get_all_hygiene_items, get_all_items, get_custom_fields, get_viewer_info},
+    transport::GithubClient,
+};
 use std::env;
 use std::fs::File;
 use std::io::Write;
@@ -17,10 +19,15 @@ struct Args {
 enum Commands {
     GetAllItems,
     Viewer,
+    GetCustomFields,
+    Hygiene,
 }
 
+type Error = Box<dyn std::error::Error>;
+type Result<T = ()> = core::result::Result<T, Error>;
+
 #[tokio::main]
-async fn main() -> Result<(), ()> {
+async fn main() -> Result {
     dotenv().ok();
 
     let arg = Args::parse();
@@ -28,44 +35,98 @@ async fn main() -> Result<(), ()> {
     match arg.command {
         Commands::GetAllItems => run_get_all_items().await?,
         Commands::Viewer => run_get_viewer().await?,
+        Commands::GetCustomFields => run_get_custom_fields().await?,
+        Commands::Hygiene => run_hygiene().await?,
     }
 
     Ok(())
 }
 
-async fn run_get_all_items() -> Result<(), ()> {
-    let github_pat =
-        env::var("GITHUB_PAT").expect("GITHUB_PAT needs to be set in environemnt or .env file");
-
-    let client = GithubClient::new(&github_pat).expect("create client");
+async fn run_get_all_items() -> Result {
+    let client = client();
 
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
-    let all_items = get_all_items(&client, report_progress)
-        .await
-        .expect("get_all_items failed");
+    let all_items = get_all_items(&client, report_progress).await?;
 
-    let json_data = serde_json::to_string_pretty(&all_items).expect("serialize to JSON failed");
-    let mut file = File::create("all_items.json").expect("create file failed");
-    file.write_all(json_data.as_bytes())
-        .expect("write to file failed");
+    let json_data = serde_json::to_string_pretty(&all_items)?;
+    let mut file = File::create("all_items.json")?;
+    file.write_all(json_data.as_bytes())?;
 
     println!("Retrieved {} items", all_items.len());
 
     Ok(())
 }
 
-async fn run_get_viewer() -> Result<(), ()> {
-    let github_pat =
-        env::var("GITHUB_PAT").expect("GITHUB_PAT needs to be set in environemnt or .env file");
+async fn run_get_viewer() -> Result {
+    let client = client();
 
-    let client = GithubClient::new(&github_pat).expect("create client");
-
-    let info = get_viewer_info(&client)
-        .await
-        .expect("get_viewer_info failed");
+    let info = get_viewer_info(&client).await?;
 
     println!("{:?}", info);
 
     Ok(())
+}
+
+async fn run_get_custom_fields() -> Result {
+    let fields = get_custom_fields(&client()).await?;
+
+    use github_graphql::client::graphql::{
+        FieldConfig, FieldConfigOnProjectV2IterationField, FieldConfigOnProjectV2SingleSelectField,
+    };
+
+    fn dump(name: &str, config: &Option<FieldConfig>) {
+        println!("{name}:");
+
+        if let Some(config) = config {
+            dump_field_config(config);
+        } else {
+            println!("  <no data>");
+        }
+
+        println!();
+    }
+
+    fn dump_field_config(config: &FieldConfig) {
+        match config {
+            FieldConfig::ProjectV2IterationField(f) => dump_iteration_field(f),
+            FieldConfig::ProjectV2SingleSelectField(f) => dump_single_select_field(f),
+            _ => println!("  <unexpected field type>"),
+        }
+    }
+
+    fn dump_single_select_field(f: &FieldConfigOnProjectV2SingleSelectField) {
+        for o in &f.options {
+            println!("  {} = {}", o.id, o.name);
+        }
+    }
+
+    fn dump_iteration_field(f: &FieldConfigOnProjectV2IterationField) {
+        for o in &f.configuration.iterations {
+            println!("  {} = {}", o.id, o.title);
+        }
+    }
+    dump("Status", &fields.status);
+    dump("Blocked", &fields.blocked);
+    dump("Iteration", &fields.iteration);
+
+    Ok(())
+}
+
+async fn run_hygiene() -> Result {
+    let client = client();
+
+    let items = get_all_hygiene_items(&client).await?;
+
+    println!("Got {} items", items.len());
+
+    Ok(())
+}
+
+fn client() -> GithubClient {
+    GithubClient::new(&pat()).expect("create client")
+}
+
+fn pat() -> String {
+    env::var("GITHUB_PAT").expect("GITHUB_PAT needs to be set in environemnt or .env file")
 }

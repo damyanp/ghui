@@ -1,0 +1,33 @@
+query CustomFieldsQuery {
+  organization(login: "llvm") {
+    projectV2(number: 4) {
+      Status: field(name: "Status") {
+        ...FieldConfig
+      }
+      Blocked: field(name: "Blocked") {
+        ...FieldConfig
+      }
+      Iteration: field(name: "Iteration") {
+        ...FieldConfig
+      }
+    }
+  }
+}
+
+fragment FieldConfig on ProjectV2FieldConfiguration {
+  __typename
+  ... on ProjectV2SingleSelectField {
+    options {
+      name
+      id
+    }
+  }
+  ... on ProjectV2IterationField {
+    configuration {
+      iterations {
+        title
+        id
+      }
+    }
+  }
+}
