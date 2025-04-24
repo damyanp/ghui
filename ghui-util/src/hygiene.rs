@@ -40,8 +40,7 @@ impl Field {
     }
 
     fn name(&self, id: Option<&str>) -> Option<&str> {
-        id.map(|id| self.id_to_name.get(id).map(|n| n.as_str()))
-            .flatten()
+        id.and_then(|id| self.id_to_name.get(id).map(|n| n.as_str()))
     }
 }
 
@@ -69,7 +68,7 @@ async fn get_items(
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
     let items: Vec<hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes> =
         get_all_items::<hygiene_query::HygieneQuery, GithubClient>(
-            &client,
+            client,
             variables,
             report_progress,
         )
@@ -146,10 +145,12 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
                     if current_status != Some("Closed") {
                         change.status = Some(Some("Closed".to_owned()));
                     }
-                }                
+                }
             }
 
-            if item.iteration.is_some() && fields.status.name(get_field_id_value(&item.status)) == Some("Designing") {
+            if item.iteration.is_some()
+                && fields.status.name(get_field_id_value(&item.status)) == Some("Designing")
+            {
                 change.status = Some(None);
             }
 
@@ -168,7 +169,6 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
     Ok(())
 }
 
-
 fn get_title(item: &hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodes) -> &str {
     use hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodesContent::*;
     match item.content.as_ref().expect("All items must have content") {
@@ -183,9 +183,9 @@ fn get_resource_path(
 ) -> Option<&str> {
     use hygiene_query::HygieneQueryOrganizationProjectV2ItemsNodesContent::*;
     match item.content.as_ref().expect("All items must have content") {
-        DraftIssue(d) => None,
         Issue(i) => Some(i.resource_path.as_str()),
         PullRequest(p) => Some(p.resource_path.as_str()),
+        _ => None,
     }
 }
 
@@ -194,11 +194,10 @@ fn get_field_id_value(value: &Option<hygiene_query::Field>) -> Option<&str> {
 
     value
         .as_ref()
-        .map(|value| match value {
+        .and_then(|value| match value {
             ProjectV2ItemFieldIterationValue(v) => Some(&v.iteration_id),
             ProjectV2ItemFieldSingleSelectValue(v) => v.option_id.as_ref(),
             _ => None,
         })
-        .flatten()
         .map(|i| i.as_str())
 }

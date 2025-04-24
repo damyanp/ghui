@@ -85,13 +85,27 @@ pub enum PullRequestState {
 pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,
-    pub status: Option<String>,
-    pub iteration: Option<String>,
-    pub blocked: Option<String>,
-    pub kind: Option<String>,
-    pub epic: Option<String>,
-    pub workstream: Option<String>,
-    pub project_milestone: Option<String>,
+    pub status: Option<SingleSelectFieldValue>,
+    pub iteration: Option<IterationFieldValue>,
+    pub blocked: Option<SingleSelectFieldValue>,
+    pub kind: Option<SingleSelectFieldValue>,
+    pub epic: Option<SingleSelectFieldValue>,
+    pub workstream: Option<SingleSelectFieldValue>,
+    pub project_milestone: Option<SingleSelectFieldValue>,
+}
+
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SingleSelectFieldValue {
+    pub option_id: String,
+    pub name: String,
+}
+
+#[derive(Default, PartialEq, Eq, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IterationFieldValue {
+    pub iteration_id: String,
+    pub title: String,
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize)]

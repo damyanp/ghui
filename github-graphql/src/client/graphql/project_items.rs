@@ -1,5 +1,6 @@
 use crate::data::{
-    self, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem, WorkItemData, WorkItemId,
+    self, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
+    SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId,
 };
 use graphql_client::GraphQLQuery;
 
@@ -58,26 +59,35 @@ impl PagedQuery<ProjectItems> for ProjectItems {
 }
 
 trait CustomFieldAccessors {
-    fn get_single_select_field_value(&self) -> Option<String>;
-    fn get_iteration_title(&self) -> Option<String>;
+    fn get_single_select_field_value(&self) -> Option<SingleSelectFieldValue>;
+    fn get_iteration_title(&self) -> Option<IterationFieldValue>;
 }
 
 impl CustomFieldAccessors for Option<CustomField> {
-    fn get_single_select_field_value(&self) -> Option<String> {
+    fn get_single_select_field_value(&self) -> Option<SingleSelectFieldValue> {
         self.as_ref().and_then(|v| {
             if let CustomField::ProjectV2ItemFieldSingleSelectValue(v) = v {
-                v.name.clone()
-            } else {
-                None
+                if let Some(option_id) = &v.option_id {
+                    if let Some(name) = &v.name {
+                        return Some(SingleSelectFieldValue {
+                            option_id: option_id.clone(),
+                            name: name.clone(),
+                        });
+                    }
+                }
             }
+            None
         })
     }
 
-    fn get_iteration_title(&self) -> Option<String> {
+    fn get_iteration_title(&self) -> Option<IterationFieldValue> {
         use ProjectItemsOrganizationProjectV2ItemsNodesIteration as I;
         self.as_ref().and_then(|v| {
             if let I::ProjectV2ItemFieldIterationValue(v) = v {
-                Some(v.title.clone())
+                Some(IterationFieldValue {
+                    iteration_id: v.iteration_id.clone(),
+                    title: v.title.clone(),
+                })
             } else {
                 None
             }
@@ -220,6 +230,13 @@ mod tests {
 
     use super::*;
 
+    fn single_select_value(value: &str) -> Option<SingleSelectFieldValue> {
+        Some(SingleSelectFieldValue {
+            option_id: value.to_owned(),
+            name: value.to_owned(),
+        })
+    }
+
     #[test]
     fn test_create_items() {
         let items_json = r#"
@@ -230,7 +247,8 @@ mod tests {
     "Category": null,
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Language"
+      "name": "Language",
+      "optionId": "Language"
     },
     "ProjectMilestone": null,
     "content": {
@@ -245,16 +263,19 @@ mod tests {
     "updatedAt": "2025-03-27T21:01:45Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Closed"
+      "name": "Closed",
+      "optionId": "Closed"
     },
     "Category": null,
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Root Signatures"
+      "name": "Root Signatures",
+      "optionId": "Root Signatures"
     },
     "ProjectMilestone": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "(old)3: Compute Shaders (1)"
+      "name": "(old)3: Compute Shaders (1)",
+      "optionId": "(old)3: Compute Shaders (1)"
     },
     "content": {
       "__typename": "Issue",
@@ -282,7 +303,8 @@ mod tests {
     "updatedAt": "2025-04-07T20:00:01Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Needs Review"
+      "name": "Needs Review",
+      "optionId": "Needs Review"
     },
     "Category": null,
     "Workstream": null,
@@ -321,7 +343,7 @@ mod tests {
                 updated_at: "2024-08-05T21:47:26Z".into(),
                 status: None,
                 kind: None,
-                workstream: Some("Language".into()),
+                workstream: single_select_value("Language"),
                 project_milestone: None,
                 ..Default::default()
             },
@@ -350,10 +372,10 @@ mod tests {
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
                 updated_at: "2025-03-27T21:01:45Z".into(),
-                status: Some("Closed".into()),
+                status: single_select_value("Closed"),
                 kind: None,
-                workstream: Some("Root Signatures".into()),
-                project_milestone: Some("(old)3: Compute Shaders (1)".into()),
+                workstream: single_select_value("Root Signatures"),
+                project_milestone: single_select_value("(old)3: Compute Shaders (1)"),
                 ..Default::default()
             },
         };
@@ -376,7 +398,7 @@ mod tests {
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
                 updated_at: "2025-04-07T20:00:01Z".into(),
-                status: Some("Needs Review".into()),
+                status: single_select_value("Needs Review"),
                 kind: None,
                 workstream: None,
                 project_milestone: None,
