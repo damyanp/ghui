@@ -164,16 +164,17 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
             if item.is_closed() && !item.project_item.status.matches("Closed") {
                 change.status = Some(Some("Closed".to_owned()));
             }
-
             // Items marked as Designing that aren't actually in an iteration
             // have their status cleared
-            if item.project_item.status.matches("Designing")
-                && item.project_item.iteration.is_none()
-            {
-                change.status = Some(None);
+            else if item.project_item.status.matches("Designing") {
+                if item.project_item.iteration.is_none() {
+                    change.status = Some(None);
+                } else {
+                    change.status = Some(Some("Planning".to_owned()));
+                }
             }
-
-            if item.project_item.status.matches("Needs Review") {
+            // Items marked as needing review are Active & blocked on PR
+            else if item.project_item.status.matches("Needs Review") {
                 change.status = Some(Some("Active".to_owned()));
                 change.blocked = Some(Some("PR".to_owned()));
             }
