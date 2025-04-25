@@ -4,7 +4,10 @@ use std::collections::HashMap;
 
 use github_graphql::{
     client::{
-        graphql::{custom_fields_query, get_all_items, get_custom_fields, project_items},
+        graphql::{
+            clear_project_field_value, custom_fields_query, get_all_items, get_custom_fields,
+            project_items, set_project_field_value,
+        },
         transport::GithubClient,
     },
     data::{self, HasFieldValue, SingleSelectFieldValue},
@@ -64,6 +67,7 @@ impl Field {
 }
 
 struct Fields {
+    project_id: String,
     status: Field,
     blocked: Field,
 }
@@ -72,6 +76,7 @@ async fn get_fields(client: &GithubClient) -> Result<Fields> {
     let fields = get_custom_fields(client).await?;
 
     Ok(Fields {
+        project_id: fields.id,
         status: fields.status.into(),
         blocked: fields.blocked.into(),
     })
@@ -164,23 +169,6 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
             if item.is_closed() && !item.project_item.status.matches("Closed") {
                 change.status = Some(Some("Closed".to_owned()));
             }
-            // Items marked as Designing that aren't actually in an iteration
-            // have their status cleared
-            else if item.project_item.status.matches("Designing") {
-                if item.project_item.iteration.is_none() {
-                    change.status = Some(None);
-                } else {
-                    change.status = Some(Some("Planning".to_owned()));
-                }
-            }
-            // Items marked as needing review are Active & blocked on PR
-            else if item.project_item.status.matches("Needs Review") {
-                change.status = Some(Some("Active".to_owned()));
-
-                if item.project_item.blocked.is_none() {
-                    change.blocked = Some(Some("PR".to_owned()));
-                }
-            }
 
             change
         })
@@ -207,10 +195,12 @@ where
     for change in changes {
         println!("{}", describe_item(change.work_item));
 
-        let id = &change.work_item.id;
+        let id = &change.work_item.project_item.id;
 
         if let Some(status) = &change.status {
             apply_change(
+                client,
+                &fields.project_id,
                 id,
                 &change.work_item.project_item.status,
                 &fields.status,
@@ -222,6 +212,8 @@ where
 
         if let Some(blocked) = &change.blocked {
             apply_change(
+                client,
+                &fields.project_id,
                 id,
                 &change.work_item.project_item.blocked,
                 &fields.blocked,
@@ -238,7 +230,9 @@ where
 }
 
 async fn apply_change(
-    work_item_id: &data::WorkItemId,
+    client: &GithubClient,
+    project_id: &str,
+    work_item_id: &data::ProjectItemId,
     old_value: &Option<SingleSelectFieldValue>,
     field: &Field,
     value: &Option<String>,
@@ -256,7 +250,26 @@ async fn apply_change(
         new_value_id.as_ref().map_or("<>", |v| v)
     );
 
-    if *mode == RunHygieneMode::Commit {}
+    if *mode == RunHygieneMode::Commit {
+        if let Some(new_value_id) = new_value_id {
+            set_project_field_value::set(
+                client,
+                project_id,
+                work_item_id.0.as_str(),
+                field.id.as_str(),
+                new_value_id,
+            )
+            .await?;
+        } else {
+            clear_project_field_value::clear(
+                client,
+                project_id,
+                work_item_id.0.as_str(),
+                field.id.as_str(),
+            )
+            .await?;
+        }
+    }
 
     Ok(())
 }

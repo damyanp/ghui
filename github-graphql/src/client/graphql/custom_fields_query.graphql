@@ -1,6 +1,7 @@
 query CustomFieldsQuery {
   organization(login: "llvm") {
     projectV2(number: 4) {
+      id
       Status: field(name: "Status") {
         ...FieldConfig
       }
