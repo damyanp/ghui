@@ -25,10 +25,7 @@ enum Commands {
 
 #[derive(Debug, clap::Args)]
 struct HygieneOptions {
-    #[arg(short, long)]
-    commit: bool,
-
-    #[arg(value_enum, default_value_t = hygiene::RunHygieneMode::Default, short, long)]
+    #[arg(value_enum, default_value_t = hygiene::RunHygieneMode::DryRun)]
     mode: hygiene::RunHygieneMode,
 }
 

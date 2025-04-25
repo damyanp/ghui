@@ -7,7 +7,7 @@ use github_graphql::{
         graphql::{custom_fields_query, get_all_items, get_custom_fields, project_items},
         transport::GithubClient,
     },
-    data::{self, HasFieldValue},
+    data::{self, HasFieldValue, SingleSelectFieldValue},
 };
 
 use crate::Result;
@@ -15,6 +15,7 @@ use crate::Result;
 #[derive(Default)]
 struct Field {
     id: String,
+    name: String,
     id_to_name: HashMap<String, String>,
     name_to_id: HashMap<String, String>,
 }
@@ -24,10 +25,10 @@ impl From<Option<custom_fields_query::FieldConfig>> for Field {
         use custom_fields_query::FieldConfig;
 
         if let Some(config) = &config {
-            let id = match config {
-                FieldConfig::ProjectV2Field => "<no id>".to_owned(),
-                FieldConfig::ProjectV2IterationField(f) => f.id.clone(),
-                FieldConfig::ProjectV2SingleSelectField(f) => f.id.clone(),
+            let (id, name) = match config {
+                FieldConfig::ProjectV2Field => ("<no id>".to_owned(), "<unknown>".to_owned()),
+                FieldConfig::ProjectV2IterationField(f) => (f.id.clone(), f.name.clone()),
+                FieldConfig::ProjectV2SingleSelectField(f) => (f.id.clone(), f.name.clone()),
             };
 
             let mut id_to_name = HashMap::new();
@@ -42,6 +43,7 @@ impl From<Option<custom_fields_query::FieldConfig>> for Field {
 
             Field {
                 id,
+                name,
                 id_to_name,
                 name_to_id,
             }
@@ -93,8 +95,9 @@ async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
 
 #[derive(Debug, Clone, clap::ValueEnum, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RunHygieneMode {
-    Default,
-    Load,
+    DryRun,
+    Commit,
+    TestData,
 }
 
 #[derive(Debug)]
@@ -137,20 +140,17 @@ impl Change<'_> {
 }
 
 pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {
-    //let fields = get_fields(client).await?;
-
     let items = match mode {
-        RunHygieneMode::Default => get_items(client).await?,
-
-        RunHygieneMode::Load => {
+        RunHygieneMode::TestData => {
             let mut file = std::fs::File::open("all_items.json")?;
             data::WorkItems::from_graphql(serde_json::from_reader(&mut file)?)?
         }
+        _ => get_items(client).await?,
     };
 
     println!("{} items", items.work_items.len());
 
-    items
+    let changes = items
         .work_items
         .values()
         .map(|item| {
@@ -176,19 +176,87 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
             // Items marked as needing review are Active & blocked on PR
             else if item.project_item.status.matches("Needs Review") {
                 change.status = Some(Some("Active".to_owned()));
-                change.blocked = Some(Some("PR".to_owned()));
+
+                if item.project_item.blocked.is_none() {
+                    change.blocked = Some(Some("PR".to_owned()));
+                }
             }
 
             change
         })
-        .filter(|change| change.status.is_some() || change.blocked.is_some())
-        .for_each(|change| {
-            let work_item = change.work_item;
+        .filter(|change| change.status.is_some() || change.blocked.is_some());
 
-            let resource_path = work_item.resource_path.clone().unwrap();
+    commit_changes(client, changes, &mode).await?;
 
-            println!("https://github.com{} {}", resource_path, change.describe());
-        });
+    Ok(())
+}
+
+fn describe_item(item: &data::WorkItem) -> String {
+    match &item.resource_path {
+        Some(resource_path) => format!("https://github.com{}", resource_path),
+        None => format!("[{}]", item.id.0),
+    }
+}
+
+async fn commit_changes<'a, I>(client: &GithubClient, changes: I, mode: &RunHygieneMode) -> Result
+where
+    I: std::iter::IntoIterator<Item = Change<'a>>,
+{
+    let fields = get_fields(client).await?;
+
+    for change in changes {
+        println!("{}", describe_item(change.work_item));
+
+        let id = &change.work_item.id;
+
+        if let Some(status) = &change.status {
+            apply_change(
+                id,
+                &change.work_item.project_item.status,
+                &fields.status,
+                status,
+                mode,
+            )
+            .await?;
+        }
+
+        if let Some(blocked) = &change.blocked {
+            apply_change(
+                id,
+                &change.work_item.project_item.blocked,
+                &fields.blocked,
+                blocked,
+                mode,
+            )
+            .await?;
+        }
+
+        println!();
+    }
+
+    Ok(())
+}
+
+async fn apply_change(
+    work_item_id: &data::WorkItemId,
+    old_value: &Option<SingleSelectFieldValue>,
+    field: &Field,
+    value: &Option<String>,
+    mode: &RunHygieneMode,
+) -> Result {
+    let old_value = old_value.as_ref().map_or("<>", |v| v.name.as_str());
+    let new_value_id = value.as_ref().and_then(|v| field.id(v));
+
+    println!(
+        "  {}({}) {} -> {}({})",
+        field.name,
+        field.id,
+        old_value,
+        value.as_ref().map_or("<>", |v| v.as_str()),
+        new_value_id.as_ref().map_or("<>", |v| v)
+    );
+
+    if *mode == RunHygieneMode::Commit {}
 
     Ok(())
 }
