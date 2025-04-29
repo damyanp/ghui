@@ -12,16 +12,36 @@
   import { CircleMinusIcon, CirclePlusIcon } from "@lucide/svelte";
   import { fade } from "svelte/transition";
   import { flip } from "svelte/animate";
+  import { onDestroy } from "svelte";
 
-  const data = invoke<Data>("get_data");
+  let raw_data = $state<Data | undefined>(undefined);
+
+  invoke<Data>("get_data").then((d) => (raw_data = d));
+
   let expanded = $state<string[]>([]);
 
-  function getSubItems(item: WorkItem): string[] | null {
-    if (item.data.type === "issue" && item.data.subIssues.length > 0)
-      return item.data.subIssues;
+  const data = $derived.by(() => {
+    if (!raw_data) return undefined;
 
-    return null;
-  }
+    let nodes = [];
+
+    let level = 0;
+
+    for (const node of raw_data.rootNodes) {
+      if (node.level > level) continue;
+
+      nodes.push(node);
+
+      if (node.hasChildren && expanded.includes(node.id)) {
+        level = node.level + 1;
+      }
+      else {
+        level = node.level;
+      }
+    }
+
+    return { ...raw_data, rootNodes: nodes };
+  });
 </script>
 
 <AppBar>
@@ -33,21 +53,21 @@
   {/snippet}
 </AppBar>
 
-{#await data}
+{#if data === undefined}
   Waiting for data...
-{:then result}
+{:else}
   {#snippet expander(node: Node)}
-    {#if node.children.length > 0}
+    {#if node.hasChildren}
       <button
         onclick={() => {
-          if (expanded.includes(node.data.id)) {
-            expanded = expanded.filter((i) => i !== node.data.id);
+          if (expanded.includes(node.id)) {
+            expanded = expanded.filter((i) => i !== node.id);
           } else {
-            expanded.push(node.data.id);
+            expanded.push(node.id);
           }
         }}
       >
-        {#if expanded.includes(node.data.id)}
+        {#if expanded.includes(node.id)}
           <CircleMinusIcon size="1em" class="hover:fill-primary-500" />
         {:else}
           <CirclePlusIcon size="1em" class="hover:fill-primary-500" />
@@ -58,9 +78,13 @@
 
   {#snippet itemList(nodes: Node[])}
     {#if nodes.length > 0}
-      <ul class="ps-4">
-        {#each nodes as node (node.data.id)}
-          <li transition:fade|global animate:flip={{ duration: 500}}>
+      <ul>
+        {#each nodes as node (node.id)}
+          <li
+            style={`padding-inline-start: ${1 * node.level}em`}
+            transition:fade|global
+            animate:flip={{ duration: 500 }}
+          >
             {#if node.data.type === "group"}
               <h1 class="text-2xl border-b-2">
                 <div class="relative">
@@ -75,7 +99,7 @@
               </h1>
             {/if}
             {#if node.data.type === "workItem"}
-              {@const item = result.workItems[node.data.id]}
+              {@const item = data.workItems[node.id]}
               {#if item}
                 <div class="relative">
                   &nbsp;
@@ -88,18 +112,16 @@
                 </div>
               {/if}
             {/if}
-            {#if expanded.includes(node.data.id)}
-              {@render itemList(node.children)}
-            {/if}
           </li>
         {/each}
       </ul>
     {/if}
   {/snippet}
 
-  {@render itemList(result.rootNodes)}
+  {@render itemList(data.rootNodes)}
+
   <!-- <pre>{JSON.stringify(expanded, null, " ")}</pre> -->
   <!-- <pre>{JSON.stringify(result, null, " ")}</pre> -->
-{:catch error}
-  Error: {JSON.stringify(error)}
-{/await}
+  <!-- <pre>{JSON.stringify(raw_data?.rootNodes, null, " ")}</pre> -->
+  <!-- <pre>{JSON.stringify(filteredNodes, null, " ")}</pre> -->
+{/if}

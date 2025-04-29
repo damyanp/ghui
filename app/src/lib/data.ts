@@ -3,10 +3,15 @@ export type Data = {
   rootNodes: Node[];
 };
 
-export type Node = { data: WorkItemNode | GroupNode; children: Node[] };
+export type Node = {
+  level: number;
+  id: string;
+  data: WorkItemNode | GroupNode;
+  hasChildren: boolean
+};
 
-export type WorkItemNode = { type: "workItem"; id: string };
-export type GroupNode = { type: "group"; name: string; id: string };
+export type WorkItemNode = { type: "workItem" };
+export type GroupNode = { type: "group"; name: string };
 
 export type WorkItemId = string;
 export type WorkItems = { [id: WorkItemId]: WorkItem };
@@ -16,6 +21,16 @@ export type WorkItem = {
   title: string;
   resourcePath: string;
   data: WorkItemData;
+  project_item: ProjectItem;
+};
+
+export type ProjectItem = {
+  epic?: SingleSelectValue
+};
+
+export type SingleSelectValue = {
+  optionId: string,
+  name: string
 };
 
 export type WorkItemData = IssueData | PullRequestData | DraftIssue;
