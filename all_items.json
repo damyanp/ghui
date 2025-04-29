@@ -1,5 +1,126 @@
 [
   {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqcDs",
+    "updatedAt": "2025-04-28T20:03:44Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d72f6612",
+      "name": "Deliverable"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqtY2",
+      "resourcePath": "/llvm/llvm-project/issues/136961",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T20:03:43Z",
+      "title": "[HLSL][SPIRV] Implement vertex shaders",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqcD8",
+    "updatedAt": "2025-04-28T20:05:02Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d72f6612",
+      "name": "Deliverable"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqtZR",
+      "resourcePath": "/llvm/llvm-project/issues/136962",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T20:05:00Z",
+      "title": "[HLSL][SPIRV] Implement fragment shaders",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZq6Bc",
+    "updatedAt": "2025-04-25T18:20:07Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "b7887447",
+      "name": "Resources"
+    },
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zs3Cf",
+      "resourcePath": "/llvm/llvm-project/issues/137032",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-23T18:09:48Z",
+      "title": "[HLSL][SPIRV] Generate and use the counter handle for RWStructuredBuffer",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqb5Q",
     "updatedAt": "2025-04-23T18:30:10Z",
     "Status": {
@@ -547,6 +668,52 @@
     }
   },
   {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb8w",
+    "updatedAt": "2025-04-28T20:08:29Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d72f6612",
+      "name": "Deliverable"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqtIf",
+      "resourcePath": "/llvm/llvm-project/issues/136932",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T15:20:37Z",
+      "title": "[HLSL][SPIRV] Implement -fspv-extension",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": [
+          {
+            "id": "I_kwDOBITxeM60UrfR"
+          },
+          {
+            "id": "I_kwDOBITxeM60U0zi"
+          }
+        ]
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgOfKgE",
     "updatedAt": "2025-04-25T02:34:42Z",
     "Status": {
@@ -650,6 +817,49 @@
     }
   },
   {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZv6Bs",
+    "updatedAt": "2025-04-25T18:12:28Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "e09f597f",
+      "name": "Tooling"
+    },
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60C1Jn",
+      "resourcePath": "/llvm/llvm-project/issues/137370",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-25T17:33:20Z",
+      "title": "[HLSL][SPIRV] Allow source files with extensions other than .hlsl in dxc mode.",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXNMG8",
     "updatedAt": "2025-04-24T21:23:19Z",
     "Status": {
@@ -698,17 +908,13 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXAaVY",
-    "updatedAt": "2025-04-22T01:16:29Z",
+    "updatedAt": "2025-04-25T17:28:17Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "c35a9b00",
       "name": "Ready"
     },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S08",
-      "iterationId": "a2347eb8"
-    },
+    "Iteration": null,
     "Blocked": null,
     "Kind": null,
     "Epic": null,
@@ -792,7 +998,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZYHek",
-    "updatedAt": "2025-04-21T19:14:40Z",
+    "updatedAt": "2025-04-28T23:36:18Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -805,8 +1011,8 @@
     },
     "Blocked": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "e94869c8",
-      "name": "Blocked"
+      "optionId": "80f1a2b1",
+      "name": "PR"
     },
     "Kind": null,
     "Epic": null,
@@ -1213,11 +1419,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXp3GA",
-    "updatedAt": "2025-04-22T17:13:05Z",
+    "updatedAt": "2025-04-25T17:29:21Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -1260,11 +1466,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZF3U8",
-    "updatedAt": "2025-04-21T19:11:19Z",
+    "updatedAt": "2025-04-28T19:43:42Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -1294,9 +1500,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-17T17:10:36Z",
+      "updatedAt": "2025-04-28T19:43:39Z",
       "title": "[DirectX] Strip loop metadata that will trip up the validator when generating DXIL",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -1530,11 +1736,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgOHdFU",
-    "updatedAt": "2025-02-18T23:44:02Z",
+    "updatedAt": "2025-04-25T20:32:29Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
     "Blocked": null,
@@ -2268,7 +2474,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgOX1uM",
-    "updatedAt": "2025-04-23T17:25:31Z",
+    "updatedAt": "2025-04-28T16:47:35Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -2294,7 +2500,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T17:25:29Z",
+      "updatedAt": "2025-04-28T16:47:34Z",
       "title": "[milestone] Compile a broad selection of compute shaders",
       "state": "OPEN",
       "subIssues": {
@@ -3522,45 +3728,6 @@
       "updatedAt": "2024-07-25T19:53:12Z",
       "title": "[HLSL] support HLSL matrix default orientation flags",
       "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgDY_lw",
-    "updatedAt": "2025-01-24T00:46:00Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "e47dc52b",
-      "name": "DXIL Generation"
-    },
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM5WMSjR",
-      "resourcePath": "/llvm/llvm-project/issues/58950",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-01-24T00:45:59Z",
-      "title": "[DirectX backend] fully support memory attribute",
-      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -4915,13 +5082,17 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgOBa6o",
-    "updatedAt": "2025-04-24T21:10:17Z",
+    "updatedAt": "2025-04-28T16:34:29Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
-    "Iteration": null,
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
     "Blocked": null,
     "Kind": null,
     "Epic": null,
@@ -4941,7 +5112,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T21:10:16Z",
+      "updatedAt": "2025-04-25T17:33:29Z",
       "title": "investigate how to use `llvm.is.fpclass` and replace `int_dx_isinf` with it",
       "state": "OPEN",
       "subIssues": {
@@ -10746,11 +10917,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgQ9uwI",
-    "updatedAt": "2025-02-18T23:44:15Z",
+    "updatedAt": "2025-04-25T20:33:15Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
     "Blocked": null,
@@ -10785,11 +10956,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgQ9uwg",
-    "updatedAt": "2025-02-18T23:44:15Z",
+    "updatedAt": "2025-04-25T20:33:22Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
     "Blocked": null,
@@ -10824,11 +10995,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgQ9uxM",
-    "updatedAt": "2025-02-18T23:44:16Z",
+    "updatedAt": "2025-04-25T20:33:26Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
     "Blocked": null,
@@ -14607,9 +14778,6 @@
       "subIssues": {
         "nodes": [
           {
-            "id": "I_kwDOBITxeM6TFpgs"
-          },
-          {
             "id": "I_kwDOBITxeM553PQn"
           }
         ]
@@ -15351,7 +15519,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgRi87c",
-    "updatedAt": "2025-04-25T02:34:46Z",
+    "updatedAt": "2025-04-28T16:47:35Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -15377,7 +15545,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-07T16:29:45Z",
+      "updatedAt": "2025-04-28T16:47:34Z",
       "title": "[workstream] Root Signatures",
       "state": "OPEN",
       "subIssues": {
@@ -16040,12 +16208,8 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgRi9DA",
-    "updatedAt": "2025-02-25T01:50:27Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
-    },
+    "updatedAt": "2025-04-25T17:27:25Z",
+    "Status": null,
     "Iteration": null,
     "Blocked": null,
     "Kind": {
@@ -16347,7 +16511,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgR2620",
-    "updatedAt": "2025-02-18T23:44:06Z",
+    "updatedAt": "2025-04-28T22:04:46Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "c35a9b00",
@@ -16356,7 +16520,11 @@
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
-    "Epic": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "b7887447",
@@ -18722,11 +18890,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgUFIk4",
-    "updatedAt": "2025-02-18T23:44:13Z",
+    "updatedAt": "2025-04-28T15:35:03Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": null,
     "Blocked": null,
@@ -18748,9 +18916,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2024-10-21T17:24:12Z",
+      "updatedAt": "2025-04-28T15:35:00Z",
       "title": "[HLSL] Poll Discourse and ping/revive older proposals for building a compiler library/compiler services to collect more information on the topic",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -20768,17 +20936,13 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgU0HDk",
-    "updatedAt": "2025-04-21T16:22:15Z",
+    "updatedAt": "2025-04-25T17:24:22Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "c35a9b00",
       "name": "Ready"
     },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S08",
-      "iterationId": "a2347eb8"
-    },
+    "Iteration": null,
     "Blocked": null,
     "Kind": null,
     "Epic": null,
@@ -20802,7 +20966,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-03T21:23:12Z",
+      "updatedAt": "2025-04-25T17:24:20Z",
       "title": "[DirectX] Implement Shader Flag Analysis for RequiresGroup",
       "state": "OPEN",
       "subIssues": {
@@ -22161,18 +22325,22 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgVd8CQ",
-    "updatedAt": "2025-04-16T17:06:32Z",
+    "updatedAt": "2025-04-28T20:35:27Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S07",
-      "iterationId": "904516f8"
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -22195,9 +22363,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-07T16:29:44Z",
+      "updatedAt": "2025-04-28T16:47:34Z",
       "title": "[HLSL] Generate AST for Root Signatures",
-      "state": "CLOSED",
+      "state": "OPEN",
       "subIssues": {
         "nodes": [
           {
@@ -22212,11 +22380,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgVd97E",
-    "updatedAt": "2025-04-25T02:33:23Z",
+    "updatedAt": "2025-04-28T16:46:03Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
     "Blocked": {
@@ -22266,11 +22434,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgVeAfo",
-    "updatedAt": "2025-03-31T19:43:35Z",
+    "updatedAt": "2025-04-28T16:45:52Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
     "Blocked": null,
@@ -22465,17 +22633,13 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgVuimA",
-    "updatedAt": "2025-04-21T17:55:01Z",
+    "updatedAt": "2025-04-25T17:24:35Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "c35a9b00",
       "name": "Ready"
     },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S08",
-      "iterationId": "a2347eb8"
-    },
+    "Iteration": null,
     "Blocked": null,
     "Kind": null,
     "Epic": null,
@@ -22499,7 +22663,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-21T17:32:13Z",
+      "updatedAt": "2025-04-25T17:24:33Z",
       "title": "[DirectX] Update DXContainerGlobals to get the shader flags from metadata rather than analysis",
       "state": "OPEN",
       "subIssues": {
@@ -23275,49 +23439,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgWTlm0",
-    "updatedAt": "2025-01-27T22:51:01Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S02",
-      "iterationId": "b154f75d"
-    },
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "3749efa9",
-      "name": "DXC"
-    },
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBIRuvs6l7PgN",
-      "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7058",
-      "repository": {
-        "owner": {
-          "login": "microsoft",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-01-27T22:50:59Z",
-      "title": "Dot products on unsigned integer vectors do not use umad",
-      "state": "CLOSED",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgWTmzk",
     "updatedAt": "2025-02-18T23:44:18Z",
     "Status": {
@@ -23422,49 +23543,6 @@
       "updatedAt": "2025-03-31T23:58:49Z",
       "title": "[HLSL] CodeGen for `ConstantBuffer<T>` resource class",
       "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgWT35Q",
-    "updatedAt": "2025-01-27T22:30:08Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "b7887447",
-      "name": "Resources"
-    },
-    "ProjectMilestone": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "3ba91c36",
-      "name": "2: particle_life"
-    },
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6mBlKi",
-      "resourcePath": "/llvm/llvm-project/issues/122792",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-01-27T22:29:28Z",
-      "title": "[DirectX] Add dx.CBuffer handling to DXILResourceAccess pass",
-      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -24226,18 +24304,22 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgV5a1I",
-    "updatedAt": "2025-04-24T17:21:03Z",
+    "updatedAt": "2025-04-28T21:18:15Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
       "iterationId": "a2347eb8"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -24260,9 +24342,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-19T22:02:32Z",
-      "title": "[HLSL] Treat structures in resources as packed",
-      "state": "OPEN",
+      "updatedAt": "2025-04-28T21:18:30Z",
+      "title": "[HLSL] Treat structures as packed",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -24841,45 +24923,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgWptjA",
-    "updatedAt": "2025-01-25T01:23:24Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S01",
-      "iterationId": "18e5b701"
-    },
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBIRuvs6nYwyR",
-      "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7083",
-      "repository": {
-        "owner": {
-          "login": "microsoft",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-01-25T01:23:22Z",
-      "title": "[Validator] Enable Preview ByPass Hash",
-      "state": "CLOSED",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgWrQ6o",
     "updatedAt": "2025-01-28T17:28:47Z",
     "Status": {
@@ -24937,35 +24980,6 @@
       "title": "Semantic index assignment spec",
       "updatedAt": "2025-01-24T23:51:49Z",
       "state": "OPEN"
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgWsEfI",
-    "updatedAt": "2025-01-25T15:14:42Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "PullRequest",
-      "id": "PR_kwDOBITxeM6I-SfR",
-      "resourcePath": "/llvm/llvm-project/pull/124398",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "title": "Clang / SemaHLSL: Fix unused variable in release build",
-      "updatedAt": "2025-01-25T15:14:39Z",
-      "state": "CLOSED"
     }
   },
   {
@@ -30043,11 +30057,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXMelI",
-    "updatedAt": "2025-04-22T17:10:11Z",
+    "updatedAt": "2025-04-28T16:46:15Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -30119,7 +30133,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXMicc",
-    "updatedAt": "2025-04-22T17:11:54Z",
+    "updatedAt": "2025-04-28T22:15:33Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -30130,7 +30144,11 @@
       "title": "Y25-S08",
       "iterationId": "a2347eb8"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -30153,8 +30171,8 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-03-07T16:40:07Z",
-      "title": "[HLSL] Add support for parsing floating-point literals in `RootSignatureLexer`",
+      "updatedAt": "2025-04-28T22:14:26Z",
+      "title": "[HLSL] Add support for lexing floating-point literals in `RootSignatureLexer`",
       "state": "OPEN",
       "subIssues": {
         "nodes": []
@@ -30260,11 +30278,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXMkTs",
-    "updatedAt": "2025-04-24T19:07:05Z",
+    "updatedAt": "2025-04-25T21:40:36Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -30298,9 +30316,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-02-10T19:21:28Z",
+      "updatedAt": "2025-04-25T21:40:33Z",
       "title": "[HLSL] Implement the Root Signature Parser for Descriptor Tables",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -30444,13 +30462,17 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXMozY",
-    "updatedAt": "2025-04-23T20:37:38Z",
+    "updatedAt": "2025-04-28T22:27:42Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
-    "Iteration": null,
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
     "Blocked": null,
     "Kind": null,
     "Epic": null,
@@ -30530,18 +30552,22 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXMuFM",
-    "updatedAt": "2025-04-22T17:12:10Z",
+    "updatedAt": "2025-04-28T20:51:07Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
       "iterationId": "a2347eb8"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "e94869c8",
+      "name": "Blocked"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -30564,7 +30590,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-02-10T19:36:48Z",
+      "updatedAt": "2025-04-28T22:16:33Z",
       "title": "[HLSL] Generate Root Signature Descriptor Table Metadata from AST",
       "state": "OPEN",
       "subIssues": {
@@ -30941,11 +30967,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXNLnQ",
-    "updatedAt": "2025-04-22T22:15:54Z",
+    "updatedAt": "2025-04-25T17:29:00Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -32727,18 +32753,10 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXg11c",
-    "updatedAt": "2025-04-24T21:20:42Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
-    },
+    "updatedAt": "2025-04-28T17:52:23Z",
+    "Status": null,
     "Iteration": null,
-    "Blocked": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "00f5b073",
-      "name": "Refinement"
-    },
+    "Blocked": null,
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -32761,7 +32779,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-03-31T23:53:38Z",
+      "updatedAt": "2025-04-25T20:32:54Z",
       "title": "Design `ConstantBuffer<T>`",
       "state": "OPEN",
       "subIssues": {
@@ -35872,7 +35890,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgX-Xd4",
-    "updatedAt": "2025-04-22T17:12:38Z",
+    "updatedAt": "2025-04-28T22:16:44Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -35880,10 +35898,14 @@
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S08",
-      "iterationId": "a2347eb8"
+      "title": "Y25-S09",
+      "iterationId": "0f34de36"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "e94869c8",
+      "name": "Blocked"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -35906,7 +35928,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-03-05T21:41:40Z",
+      "updatedAt": "2025-04-28T22:16:43Z",
       "title": "[HLSL] Root Signature semantic analysis - Bounded Parameter checks",
       "state": "OPEN",
       "subIssues": {
@@ -35919,7 +35941,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgX-XlU",
-    "updatedAt": "2025-04-22T17:12:34Z",
+    "updatedAt": "2025-04-28T22:16:47Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -35927,10 +35949,14 @@
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S08",
-      "iterationId": "a2347eb8"
+      "title": "Y25-S09",
+      "iterationId": "0f34de36"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "e94869c8",
+      "name": "Blocked"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -35953,7 +35979,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-03-07T19:18:45Z",
+      "updatedAt": "2025-04-28T22:16:46Z",
       "title": "[HLSL] Root Signature semantic analysis - Register Validations",
       "state": "OPEN",
       "subIssues": {
@@ -37492,11 +37518,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgYc9KA",
-    "updatedAt": "2025-04-25T02:32:20Z",
+    "updatedAt": "2025-04-28T23:35:43Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -38671,11 +38697,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgYxpSI",
-    "updatedAt": "2025-04-25T02:32:23Z",
+    "updatedAt": "2025-04-28T18:26:41Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -38688,7 +38714,11 @@
       "name": "PR"
     },
     "Kind": null,
-    "Epic": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "27a8d04a",
@@ -38709,9 +38739,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-03-27T17:26:18Z",
+      "updatedAt": "2025-04-28T18:26:40Z",
       "title": "[HLSL] Ensure all tests added for compatilibity overloads use -std=hlsl202x",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -39819,14 +39849,22 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY0Hes",
-    "updatedAt": "2025-04-16T17:48:05Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T17:29:13Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
       "iterationId": "a2347eb8"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
     "Kind": null,
     "Epic": null,
     "Workstream": {
@@ -39856,8 +39894,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY0HfU",
-    "updatedAt": "2025-04-17T14:45:20Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T17:26:53Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -40380,7 +40422,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY0oLU",
-    "updatedAt": "2025-04-03T21:18:39Z",
+    "updatedAt": "2025-04-28T19:11:25Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -40399,7 +40441,7 @@
         }
       },
       "title": "[DirectX] Revise descriptions of DXIL module flags",
-      "updatedAt": "2025-04-10T23:09:45Z",
+      "updatedAt": "2025-04-28T23:02:41Z",
       "state": "OPEN"
     }
   },
@@ -40866,7 +40908,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY46h0",
-    "updatedAt": "2025-04-25T02:32:31Z",
+    "updatedAt": "2025-04-25T20:23:31Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -40889,7 +40931,7 @@
         }
       },
       "title": "[HLSL][RootSignature] Implement initial parsing of the descriptor table clause params",
-      "updatedAt": "2025-04-18T15:00:36Z",
+      "updatedAt": "2025-04-25T20:23:31Z",
       "state": "MERGED"
     }
   },
@@ -41528,7 +41570,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY7z8A",
-    "updatedAt": "2025-04-25T02:32:47Z",
+    "updatedAt": "2025-04-28T20:52:40Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -41551,7 +41593,7 @@
         }
       },
       "title": "Reland \"[HLSL][RootSignature] Implement parsing of a DescriptorTable with empty clauses\"",
-      "updatedAt": "2025-04-02T06:33:23Z",
+      "updatedAt": "2025-04-28T20:52:40Z",
       "state": "MERGED"
     }
   },
@@ -41652,7 +41694,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY-Z0s",
-    "updatedAt": "2025-04-25T02:32:23Z",
+    "updatedAt": "2025-04-25T20:23:22Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -41675,7 +41717,7 @@
         }
       },
       "title": "[NFC][HLSL][RootSignature] Make the Lexer adhere to naming conventions",
-      "updatedAt": "2025-04-04T20:43:46Z",
+      "updatedAt": "2025-04-25T20:23:21Z",
       "state": "MERGED"
     }
   },
@@ -42766,7 +42808,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZIQz4",
-    "updatedAt": "2025-04-23T15:31:56Z",
+    "updatedAt": "2025-04-28T15:59:59Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -42779,7 +42821,11 @@
     },
     "Blocked": null,
     "Kind": null,
-    "Epic": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "27a8d04a",
@@ -43734,8 +43780,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZRGMo",
-    "updatedAt": "2025-04-23T21:00:00Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T20:46:32Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": {
@@ -44137,8 +44187,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZTU_I",
-    "updatedAt": "2025-04-12T01:15:54Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T19:21:44Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -44156,8 +44210,8 @@
         }
       },
       "title": "Resource binding: add another example and notes about resources in structs",
-      "updatedAt": "2025-04-12T01:15:54Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T19:21:43Z",
+      "state": "MERGED"
     }
   },
   {
@@ -44318,12 +44372,28 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZXkgk",
-    "updatedAt": "2025-04-14T16:23:11Z",
-    "Status": null,
-    "Iteration": null,
+    "updatedAt": "2025-04-28T20:45:56Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
     "Blocked": null,
-    "Kind": null,
-    "Epic": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d72f6612",
+      "name": "Deliverable"
+    },
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
     "Workstream": null,
     "ProjectMilestone": null,
     "content": {
@@ -44336,9 +44406,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-14T16:23:08Z",
-      "title": "[Deliverable] Planning",
-      "state": "OPEN",
+      "updatedAt": "2025-04-28T20:45:53Z",
+      "title": "[Deliverable] Intrinsics Functional Tests Scenario Planning",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": [
           {
@@ -44507,7 +44577,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZXmxs",
-    "updatedAt": "2025-04-16T16:18:07Z",
+    "updatedAt": "2025-04-28T15:57:08Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -44525,14 +44595,18 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-16T16:18:06Z",
+      "updatedAt": "2025-04-28T15:57:06Z",
       "title": "[Task] Perform engineering work to improve offload test suite result comparison",
       "state": "OPEN",
       "subIssues": {
         "nodes": []
       },
       "trackedIssues": {
-        "nodes": []
+        "nodes": [
+          {
+            "id": "I_kwDOK1nZ5c6yr2Au"
+          }
+        ]
       }
     }
   },
@@ -44598,37 +44672,6 @@
       "updatedAt": "2025-04-14T16:47:08Z",
       "title": "[Task] Create sub issues for intrinsics",
       "state": "CLOSED",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZXnzg",
-    "updatedAt": "2025-04-14T16:46:10Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOMbLzis6ybtl7",
-      "resourcePath": "/llvm/wg-hlsl/issues/223",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-04-14T16:46:08Z",
-      "title": "[Task] Create an issue for each intrinsic in the offload test suite",
-      "state": "OPEN",
       "subIssues": {
         "nodes": []
       },
@@ -44981,17 +45024,13 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXN2OI",
-    "updatedAt": "2025-04-25T02:33:28Z",
+    "updatedAt": "2025-04-28T16:31:03Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
       "name": "Active"
     },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S07",
-      "iterationId": "904516f8"
-    },
+    "Iteration": null,
     "Blocked": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "80f1a2b1",
@@ -45018,8 +45057,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgRi6Pc",
-    "updatedAt": "2025-04-19T22:04:03Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T17:29:30Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -45301,49 +45344,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZdd-8",
-    "updatedAt": "2025-04-25T02:34:56Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
-    },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S08",
-      "iterationId": "a2347eb8"
-    },
-    "Blocked": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "80f1a2b1",
-      "name": "PR"
-    },
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOK1nZ5c6yr2Au",
-      "resourcePath": "/llvm-beanz/offload-test-suite/issues/76",
-      "repository": {
-        "owner": {
-          "login": "llvm-beanz",
-          "__typename": "User"
-        }
-      },
-      "updatedAt": "2025-04-16T21:50:46Z",
-      "title": "Enhance offload test suite to verify test results",
-      "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZd9-Q",
     "updatedAt": "2025-04-25T02:32:28Z",
     "Status": {
@@ -45442,7 +45442,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZf4T4",
-    "updatedAt": "2025-04-24T19:30:24Z",
+    "updatedAt": "2025-04-28T19:43:40Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -45468,7 +45468,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T19:30:22Z",
+      "updatedAt": "2025-04-28T19:43:39Z",
       "title": "SER implementation tracker",
       "state": "OPEN",
       "subIssues": {
@@ -45789,8 +45789,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZgvdo",
-    "updatedAt": "2025-04-22T17:10:20Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T17:29:35Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -45832,8 +45836,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZgvvk",
-    "updatedAt": "2025-04-25T02:25:11Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T17:29:37Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -45902,11 +45910,19 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZiAt8",
-    "updatedAt": "2025-04-24T19:53:22Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T13:03:18Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": null,
     "Blocked": null,
-    "Kind": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "71900652",
+      "name": "Bug"
+    },
     "Epic": null,
     "Workstream": null,
     "ProjectMilestone": null,
@@ -45920,7 +45936,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T19:53:21Z",
+      "updatedAt": "2025-04-28T13:01:45Z",
       "title": "[HLSL] Fix failing SPIR-V backend tests that specify --target-env vulkan1.3",
       "state": "OPEN",
       "subIssues": {
@@ -45932,9 +45948,52 @@
     }
   },
   {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0FNg",
+    "updatedAt": "2025-04-28T20:08:13Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60UrfR",
+      "resourcePath": "/llvm/llvm-project/issues/137647",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T15:42:10Z",
+      "title": "[HLSL][SPIRV] Map the arguments in the DXC `spv-extension` option to the SPIR-V backend's `-spirv-ext` options.",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZiMAo",
-    "updatedAt": "2025-04-21T16:46:07Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T21:15:11Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -45952,14 +46011,18 @@
         }
       },
       "title": "Stop abusing Twine in DiagnosticInfo",
-      "updatedAt": "2025-04-21T16:46:07Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-25T21:15:07Z",
+      "state": "CLOSED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZiRMI",
-    "updatedAt": "2025-04-24T19:31:01Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T19:43:41Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -45977,8 +46040,8 @@
         }
       },
       "title": "[DXIL] Remove incompatible metadata types when preparing DXIL.",
-      "updatedAt": "2025-04-25T00:44:41Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T19:43:38Z",
+      "state": "MERGED"
     }
   },
   {
@@ -46236,7 +46299,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZlUpk",
-    "updatedAt": "2025-04-22T17:39:33Z",
+    "updatedAt": "2025-04-26T15:29:03Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -46254,7 +46317,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-22T17:39:31Z",
+      "updatedAt": "2025-04-26T15:29:01Z",
       "title": "[SPIRV][HLSL] Crash when calling exported function and targeting SPIRV",
       "state": "OPEN",
       "subIssues": {
@@ -46267,11 +46330,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZlU1U",
-    "updatedAt": "2025-04-24T17:19:20Z",
+    "updatedAt": "2025-04-25T17:56:58Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -46301,9 +46364,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T17:19:18Z",
+      "updatedAt": "2025-04-25T17:56:56Z",
       "title": "[SPIR-V]Raytracing shader no longer compiles with latest releast compiler",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -46365,11 +46428,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXqKjo",
-    "updatedAt": "2025-04-21T19:10:20Z",
+    "updatedAt": "2025-04-25T17:28:44Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "c35a9b00",
-      "name": "Ready"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -46399,9 +46462,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-03-28T17:27:53Z",
+      "updatedAt": "2025-04-25T17:28:40Z",
       "title": "[OMM] Review HLKs",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -46529,8 +46592,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZnKF4",
-    "updatedAt": "2025-04-23T15:36:36Z",
-    "Status": null,
+    "updatedAt": "2025-04-26T12:36:59Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -46548,8 +46615,8 @@
         }
       },
       "title": "[TTI] Simplify implementation (NFCI)",
-      "updatedAt": "2025-04-23T15:36:35Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-26T12:36:58Z",
+      "state": "MERGED"
     }
   },
   {
@@ -46583,7 +46650,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZoPWA",
-    "updatedAt": "2025-04-25T02:34:31Z",
+    "updatedAt": "2025-04-28T20:52:45Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -46606,13 +46673,13 @@
         }
       },
       "title": "Reland \"[HLSL][RootSignature] Implement initial parsing of the descriptor table clause params\"",
-      "updatedAt": "2025-04-23T19:54:00Z",
+      "updatedAt": "2025-04-28T20:52:45Z",
       "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZoTMM",
-    "updatedAt": "2025-04-24T16:55:33Z",
+    "updatedAt": "2025-04-25T20:23:34Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -46635,13 +46702,13 @@
         }
       },
       "title": "[NFC][RootSignatures] Conform to new std::optional calling conventions",
-      "updatedAt": "2025-04-24T16:55:31Z",
+      "updatedAt": "2025-04-25T20:23:34Z",
       "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZoXGg",
-    "updatedAt": "2025-04-24T19:32:56Z",
+    "updatedAt": "2025-04-25T20:23:36Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -46664,13 +46731,13 @@
         }
       },
       "title": "[HLSL][RootSignature] Add parsing of ShaderVisibility to DescriptorTable",
-      "updatedAt": "2025-04-24T19:32:55Z",
+      "updatedAt": "2025-04-25T20:23:36Z",
       "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZobL4",
-    "updatedAt": "2025-04-23T20:59:57Z",
+    "updatedAt": "2025-04-28T16:36:34Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -46700,7 +46767,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-22T20:23:02Z",
+      "updatedAt": "2025-04-28T16:36:33Z",
       "title": "[Scenario] Implicit Resource Binding",
       "state": "OPEN",
       "subIssues": {
@@ -46726,8 +46793,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZoiQc",
-    "updatedAt": "2025-04-24T21:09:33Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T20:52:46Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -46745,8 +46816,8 @@
         }
       },
       "title": "[HLSL][RootSignature] Add parsing of DescriptorRangeFlags",
-      "updatedAt": "2025-04-24T21:09:33Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T20:52:45Z",
+      "state": "MERGED"
     }
   },
   {
@@ -46780,22 +46851,18 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZopPo",
-    "updatedAt": "2025-04-24T21:20:40Z",
+    "updatedAt": "2025-04-28T17:55:21Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S09",
       "iterationId": "0f34de36"
     },
-    "Blocked": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "00f5b073",
-      "name": "Refinement"
-    },
+    "Blocked": null,
     "Kind": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "a2a60b34",
@@ -46826,7 +46893,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-22T23:18:41Z",
+      "updatedAt": "2025-04-25T20:32:01Z",
       "title": "[HLSL] Implement resource constructor with implicit binding",
       "state": "OPEN",
       "subIssues": {
@@ -46839,22 +46906,18 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZophU",
-    "updatedAt": "2025-04-24T21:20:44Z",
+    "updatedAt": "2025-04-28T17:55:18Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
       "iterationId": "a2347eb8"
     },
-    "Blocked": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "00f5b073",
-      "name": "Refinement"
-    },
+    "Blocked": null,
     "Kind": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "a2a60b34",
@@ -46898,8 +46961,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZoqb8",
-    "updatedAt": "2025-04-24T20:43:43Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T18:21:32Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -46917,14 +46984,18 @@
         }
       },
       "title": "[DirectX] Fix shader flag version-checking logic to match DXC",
-      "updatedAt": "2025-04-24T20:43:42Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-25T18:21:29Z",
+      "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZovcA",
-    "updatedAt": "2025-04-23T23:09:50Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T17:07:39Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -46942,24 +47013,20 @@
         }
       },
       "title": "Update issue_tracking.md for latest thinking",
-      "updatedAt": "2025-04-23T23:09:49Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T17:07:39Z",
+      "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZo-0Q",
-    "updatedAt": "2025-04-24T21:20:48Z",
+    "updatedAt": "2025-04-28T17:53:23Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
+      "optionId": "c35a9b00",
+      "name": "Ready"
     },
     "Iteration": null,
-    "Blocked": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "00f5b073",
-      "name": "Refinement"
-    },
+    "Blocked": null,
     "Kind": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "a2a60b34",
@@ -49056,41 +49123,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb8w",
-    "updatedAt": "2025-04-23T15:44:17Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "a2a60b34",
-      "name": "Task"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqtIf",
-      "resourcePath": "/llvm/llvm-project/issues/136932",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-04-23T14:55:19Z",
-      "title": "[HLSL][SPIRV] Implement -fspv-extension",
-      "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqb84",
     "updatedAt": "2025-04-23T15:47:50Z",
     "Status": null,
@@ -49337,7 +49369,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqb-Q",
-    "updatedAt": "2025-04-23T15:47:01Z",
+    "updatedAt": "2025-04-25T18:17:43Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -49359,7 +49391,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T14:55:24Z",
+      "updatedAt": "2025-04-25T18:17:38Z",
       "title": "[HLSL][SPIRV] Implement -fspv-target-env",
       "state": "OPEN",
       "subIssues": {
@@ -50093,41 +50125,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqcDs",
-    "updatedAt": "2025-04-23T15:50:58Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d72f6612",
-      "name": "Deliverable"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqtY2",
-      "resourcePath": "/llvm/llvm-project/issues/136961",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-04-23T14:55:37Z",
-      "title": "[HLSL][SPIRV] Implement vertex shaders",
-      "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqcD4",
     "updatedAt": "2025-04-23T15:51:09Z",
     "Status": null,
@@ -50153,41 +50150,6 @@
       },
       "updatedAt": "2025-04-23T14:55:38Z",
       "title": "[HLSL][SPIRV] Implement geometry shaders",
-      "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqcD8",
-    "updatedAt": "2025-04-23T15:51:02Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d72f6612",
-      "name": "Deliverable"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqtZR",
-      "resourcePath": "/llvm/llvm-project/issues/136962",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-04-23T14:55:37Z",
-      "title": "[HLSL][SPIRV] Implement fragment shaders",
       "state": "OPEN",
       "subIssues": {
         "nodes": []
@@ -50485,8 +50447,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqcE0",
-    "updatedAt": "2025-04-23T15:32:45Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T20:10:22Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": {
@@ -50507,7 +50473,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T14:55:42Z",
+      "updatedAt": "2025-04-28T20:10:17Z",
       "title": "[HLSL][SPIRV] Implement system value semantic SV_POSITION",
       "state": "OPEN",
       "subIssues": {
@@ -50835,8 +50801,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqcec",
-    "updatedAt": "2025-04-23T15:32:45Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T14:40:55Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": {
@@ -50857,9 +50827,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T14:57:51Z",
+      "updatedAt": "2025-04-28T14:40:51Z",
       "title": "[HLSL][SPIRV] Implement system value semantic SV_DispatchThreadID",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -51402,8 +51372,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqizE",
-    "updatedAt": "2025-04-23T17:48:56Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T18:02:14Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -51421,13 +51395,13 @@
         }
       },
       "title": "[HLSL] Put tests for compatibility overloads for 'clamp', 'isinf', 'min', and 'max' in own files",
-      "updatedAt": "2025-04-23T17:48:56Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T18:02:11Z",
+      "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqyMA",
-    "updatedAt": "2025-04-23T17:13:01Z",
+    "updatedAt": "2025-04-25T13:11:43Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -51449,7 +51423,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T17:13:01Z",
+      "updatedAt": "2025-04-25T13:11:42Z",
       "title": "[milestone][SPIRV] Sascha Wilems Vulkan samples",
       "state": "OPEN",
       "subIssues": {
@@ -51472,7 +51446,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqzNk",
-    "updatedAt": "2025-04-23T17:24:39Z",
+    "updatedAt": "2025-04-28T16:09:21Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -51494,7 +51468,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T17:24:38Z",
+      "updatedAt": "2025-04-28T16:09:19Z",
       "title": "[milestone][SPIRV] Headless Compute Vulkan sample",
       "state": "OPEN",
       "subIssues": {
@@ -51510,6 +51484,12 @@
           },
           {
             "id": "I_kwDOBITxeM6zqu1j"
+          },
+          {
+            "id": "I_kwDOBITxeM6zqtIf"
+          },
+          {
+            "id": "I_kwDOBITxeM60C1Jn"
           }
         ]
       }
@@ -51558,8 +51538,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqz6I",
-    "updatedAt": "2025-04-24T16:31:21Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T05:03:42Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -51589,14 +51573,18 @@
         }
       },
       "title": "[SER] Validate HitObject accessors",
-      "updatedAt": "2025-04-24T16:31:21Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T05:03:42Z",
+      "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqz7A",
-    "updatedAt": "2025-04-24T20:49:13Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T05:03:53Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -51626,8 +51614,8 @@
         }
       },
       "title": "[SER] Validate MakeMiss",
-      "updatedAt": "2025-04-24T20:49:12Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T05:03:52Z",
+      "state": "MERGED"
     }
   },
   {
@@ -51721,11 +51709,15 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZq3ug",
-    "updatedAt": "2025-04-23T17:51:36Z",
+    "updatedAt": "2025-04-28T14:40:54Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
-    "Kind": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "69a34c8d",
+      "name": "Project Milestone"
+    },
     "Epic": null,
     "Workstream": null,
     "ProjectMilestone": null,
@@ -51739,7 +51731,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-23T17:51:34Z",
+      "updatedAt": "2025-04-28T14:40:53Z",
       "title": "[milestone][SPIRV] GPU particle system Vulkan sample",
       "state": "OPEN",
       "subIssues": {
@@ -51785,47 +51777,8 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZq6Bc",
-    "updatedAt": "2025-04-23T18:10:15Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "a2a60b34",
-      "name": "Task"
-    },
-    "Epic": null,
-    "Workstream": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "b7887447",
-      "name": "Resources"
-    },
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zs3Cf",
-      "resourcePath": "/llvm/llvm-project/issues/137032",
-      "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
-      },
-      "updatedAt": "2025-04-23T18:09:48Z",
-      "title": "[HLSL][SPIRV] Generate and use the counter handle for RWStructuredBuffer",
-      "state": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      }
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZq7u8",
-    "updatedAt": "2025-04-24T22:33:41Z",
+    "updatedAt": "2025-04-25T12:18:33Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -51851,7 +51804,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T22:33:40Z",
+      "updatedAt": "2025-04-25T12:18:31Z",
       "title": "[HLSL][SPIRV] Propagate address space casts to their uses",
       "state": "OPEN",
       "subIssues": {
@@ -51864,8 +51817,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZq-ic",
-    "updatedAt": "2025-04-24T19:48:03Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T20:52:47Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -51883,13 +51840,13 @@
         }
       },
       "title": "[HLSL][RootSignature] Add parsing of remaining Descriptor Table params",
-      "updatedAt": "2025-04-24T19:48:03Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T20:52:47Z",
+      "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZrOZg",
-    "updatedAt": "2025-04-24T21:21:11Z",
+    "updatedAt": "2025-04-28T23:35:20Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "d56a747d",
@@ -52005,7 +51962,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZtWDo",
-    "updatedAt": "2025-04-24T15:46:01Z",
+    "updatedAt": "2025-04-26T15:28:12Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -52023,7 +51980,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T15:45:59Z",
+      "updatedAt": "2025-04-26T15:28:11Z",
       "title": "[DirectX] Legalize i8 allocas",
       "state": "OPEN",
       "subIssues": {
@@ -52036,8 +51993,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZtWHA",
-    "updatedAt": "2025-04-24T20:17:16Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T22:04:11Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": {
@@ -52070,67 +52031,53 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T20:17:13Z",
-      "title": "[Scenario] Bug fixes needed for DML Demo",
+      "updatedAt": "2025-04-28T22:04:07Z",
+      "title": "[Scenario] DML Demo finalization",
       "state": "OPEN",
       "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
         "nodes": [
-          {
-            "id": "I_kwDOBITxeM6TFpgs"
-          },
-          {
-            "id": "I_kwDOBITxeM6wMlJM"
-          },
-          {
-            "id": "I_kwDOBITxeM6x4O1i"
-          },
-          {
-            "id": "I_kwDOBITxeM6yAVMR"
-          },
-          {
-            "id": "I_kwDOBITxeM6yDZJU"
-          },
-          {
-            "id": "I_kwDOBITxeM6zCoeP"
-          },
           {
             "id": "I_kwDOBITxeM6zL3Ft"
           },
           {
-            "id": "I_kwDOBITxeM6zL4mP"
+            "id": "I_kwDOBITxeM60YRTw"
           },
           {
-            "id": "I_kwDOBITxeM6zXyA1"
-          },
-          {
-            "id": "I_kwDOBITxeM6z3Dbx"
-          },
-          {
-            "id": "I_kwDOBITxeM6z3pMw"
-          },
-          {
-            "id": "I_kwDOBITxeM6Ylhms"
-          },
-          {
-            "id": "I_kwDOBITxeM6z3_mW"
+            "id": "I_kwDOBITxeM60YZwj"
           }
         ]
+      },
+      "trackedIssues": {
+        "nodes": []
       }
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZtbWM",
-    "updatedAt": "2025-04-24T17:22:05Z",
-    "Status": null,
-    "Iteration": null,
+    "updatedAt": "2025-04-29T00:04:06Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S09",
+      "iterationId": "0f34de36"
+    },
     "Blocked": null,
     "Kind": null,
     "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "55c59cc4",
+      "name": "Intrinsics"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "17f59798",
+      "name": "5: ML preview implementation"
+    },
     "content": {
       "__typename": "Issue",
       "id": "I_kwDOBITxeM6z3_mW",
@@ -52141,7 +52088,7 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T17:22:03Z",
+      "updatedAt": "2025-04-28T23:51:17Z",
       "title": "[DirectX] Legalize the `llvm.is.fpclass` intrinsic",
       "state": "OPEN",
       "subIssues": {
@@ -52154,8 +52101,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZtnbA",
-    "updatedAt": "2025-04-24T18:04:34Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T16:46:24Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -52172,9 +52123,9 @@
           "__typename": "Organization"
         }
       },
-      "updatedAt": "2025-04-24T18:04:32Z",
+      "updatedAt": "2025-04-28T16:46:20Z",
       "title": "Update the internal HLSL ADO pipeline to publish a proper clang distribution",
-      "state": "OPEN",
+      "state": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -52185,8 +52136,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZtxc4",
-    "updatedAt": "2025-04-24T20:39:04Z",
-    "Status": null,
+    "updatedAt": "2025-04-25T17:26:44Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -52222,8 +52177,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZtz04",
-    "updatedAt": "2025-04-24T20:43:30Z",
-    "Status": null,
+    "updatedAt": "2025-04-28T05:04:00Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S08",
@@ -52253,19 +52212,23 @@
         }
       },
       "title": "Fix static member call instantiation",
-      "updatedAt": "2025-04-24T20:43:30Z",
-      "state": "OPEN"
+      "updatedAt": "2025-04-28T05:04:00Z",
+      "state": "MERGED"
     }
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZt_i4",
-    "updatedAt": "2025-04-24T22:06:17Z",
+    "updatedAt": "2025-04-28T17:50:23Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
-    "Iteration": null,
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S09",
+      "iterationId": "0f34de36"
+    },
     "Blocked": null,
     "Kind": null,
     "Epic": null,
@@ -52950,6 +52913,805 @@
             "id": "I_kwDOBITxeM6zshCE"
           }
         ]
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZv0EQ",
+    "updatedAt": "2025-04-25T20:11:04Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "4293ea77",
+      "name": "SER"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3c4991b5",
+      "name": "DXC: SM 6.9 Preview"
+    },
+    "content": {
+      "__typename": "PullRequest",
+      "id": "PR_kwDOBIRuvs6T74zO",
+      "resourcePath": "/microsoft/DirectXShaderCompiler/pull/7379",
+      "repository": {
+        "owner": {
+          "login": "microsoft",
+          "__typename": "Organization"
+        }
+      },
+      "title": "[SER] Basic execution tests",
+      "updatedAt": "2025-04-25T20:34:52Z",
+      "state": "OPEN"
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZv5no",
+    "updatedAt": "2025-04-25T17:28:03Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOMbLzis60CzLW",
+      "resourcePath": "/llvm/wg-hlsl/issues/256",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-25T17:27:59Z",
+      "title": "[HLSL][SPIRV] Allow source files with extensions other than `.hlsl` in dxc mode.",
+      "state": "CLOSED",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZwBbc",
+    "updatedAt": "2025-04-25T18:54:17Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S10",
+      "iterationId": "1ecc24c4"
+    },
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3749efa9",
+      "name": "DXC"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3c4991b5",
+      "name": "DXC: SM 6.9 Preview"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBIRuvs60Dbjq",
+      "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7382",
+      "repository": {
+        "owner": {
+          "login": "microsoft",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-25T18:54:15Z",
+      "title": "Release 1.x.xxxx SM 6.9 Preview Release",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZwHFM",
+    "updatedAt": "2025-04-28T17:55:31Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60Dzey",
+      "resourcePath": "/llvm/llvm-project/issues/137386",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-25T19:43:31Z",
+      "title": "[HLSL] Add appropriate validation for MD_tbaa metadata kind",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZwIMo",
+    "updatedAt": "2025-04-28T17:55:38Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60D3DG",
+      "resourcePath": "/llvm/llvm-project/issues/137387",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-25T19:53:26Z",
+      "title": "[HLSL] Add appropriate support for loop metadata kinds",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZwTxI",
+    "updatedAt": "2025-04-28T17:55:59Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60Euip",
+      "resourcePath": "/llvm/llvm-project/issues/137407",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-25T22:28:18Z",
+      "title": "[HLSL] Add appropriate validation for MD_range metadata kind",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0FDo",
+    "updatedAt": "2025-04-28T17:30:59Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "4293ea77",
+      "name": "SER"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3c4991b5",
+      "name": "DXC: SM 6.9 Preview"
+    },
+    "content": {
+      "__typename": "PullRequest",
+      "id": "PR_kwDOBIRuvs6UHl_U",
+      "resourcePath": "/microsoft/DirectXShaderCompiler/pull/7384",
+      "repository": {
+        "owner": {
+          "login": "microsoft",
+          "__typename": "Organization"
+        }
+      },
+      "title": "[SER] Validate HitObject::TraceRay|Invoke",
+      "updatedAt": "2025-04-28T17:30:59Z",
+      "state": "OPEN"
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0GJ0",
+    "updatedAt": "2025-04-28T15:59:49Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
+    "Kind": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOK1nZ5c6yr2Au",
+      "resourcePath": "/llvm-beanz/offload-test-suite/issues/76",
+      "repository": {
+        "owner": {
+          "login": "llvm-beanz",
+          "__typename": "User"
+        }
+      },
+      "updatedAt": "2025-04-16T21:50:46Z",
+      "title": "Enhance offload test suite to verify test results",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZXnzg",
+    "updatedAt": "2025-04-28T17:37:16Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S08",
+      "iterationId": "a2347eb8"
+    },
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOMbLzis6ybtl7",
+      "resourcePath": "/llvm/wg-hlsl/issues/223",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T17:28:13Z",
+      "title": "[Task] Create an issue for each intrinsic in the offload test suite",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0HFQ",
+    "updatedAt": "2025-04-28T15:34:44Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60U0zi",
+      "resourcePath": "/llvm/llvm-project/issues/137650",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T15:34:06Z",
+      "title": "[HLSL][SPIRV] Add a `KHR` special option to `spirv-ext` CLI option",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0frM",
+    "updatedAt": "2025-04-28T18:38:18Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60WlAN",
+      "resourcePath": "/llvm/llvm-project/issues/137685",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T18:38:17Z",
+      "title": "[DirectX] Move FNeg legalization to the DXILLegalization pass",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0i5s",
+    "updatedAt": "2025-04-28T19:03:37Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "4293ea77",
+      "name": "SER"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3c4991b5",
+      "name": "DXC: SM 6.9 Preview"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBIRuvs60Wnv5",
+      "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7387",
+      "repository": {
+        "owner": {
+          "login": "microsoft",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T19:03:36Z",
+      "title": "SER test files fail validation when compiled with -Od",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0xMQ",
+    "updatedAt": "2025-04-28T21:03:26Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3749efa9",
+      "name": "DXC"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3c4991b5",
+      "name": "DXC: SM 6.9 Preview"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBIRuvs60W--d",
+      "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7389",
+      "repository": {
+        "owner": {
+          "login": "microsoft",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T21:03:14Z",
+      "title": "[Validator] Use the internal validator by default",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0x-I",
+    "updatedAt": "2025-04-28T21:49:30Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "4293ea77",
+      "name": "SER"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "3c4991b5",
+      "name": "DXC: SM 6.9 Preview"
+    },
+    "content": {
+      "__typename": "PullRequest",
+      "id": "PR_kwDOBIRuvs6UORfR",
+      "resourcePath": "/microsoft/DirectXShaderCompiler/pull/7390",
+      "repository": {
+        "owner": {
+          "login": "microsoft",
+          "__typename": "Organization"
+        }
+      },
+      "title": "[SER] Validate %dx.types.HitObject as legal type same as handle",
+      "updatedAt": "2025-04-28T21:49:30Z",
+      "state": "OPEN"
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0ywM",
+    "updatedAt": "2025-04-28T21:22:50Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "71900652",
+      "name": "Bug"
+    },
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "92aa3893",
+      "name": "Resource Binding"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "17f59798",
+      "name": "5: ML preview implementation"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60YRTw",
+      "resourcePath": "/llvm/llvm-project/issues/137713",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T21:22:49Z",
+      "title": "[HLSL][GlobalOpt] Target extension type not allowed to have a zeroinitializer",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ0z9g",
+    "updatedAt": "2025-04-28T21:36:52Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "71900652",
+      "name": "Bug"
+    },
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "92aa3893",
+      "name": "Resource Binding"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "17f59798",
+      "name": "5: ML preview implementation"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60YZwj",
+      "resourcePath": "/llvm/llvm-project/issues/137715",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T21:36:50Z",
+      "title": "[DirectX] OpLowerer::cleanupHandleCasts incompatible cast trying to cast `TargetExtTyID` to `CallInst`",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ01R4",
+    "updatedAt": "2025-04-28T22:04:13Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "74d13314",
+      "name": "Scenario"
+    },
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOMbLzis60YgNE",
+      "resourcePath": "/llvm/wg-hlsl/issues/258",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T21:50:01Z",
+      "title": "[Scenario] Legalization for DML demo",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": [
+          {
+            "id": "I_kwDOBITxeM6zCoeP"
+          },
+          {
+            "id": "I_kwDOBITxeM6z3Dbx"
+          },
+          {
+            "id": "I_kwDOBITxeM6EzGHG"
+          },
+          {
+            "id": "I_kwDOBITxeM6z3_mW"
+          },
+          {
+            "id": "I_kwDOBITxeM6z3pMw"
+          }
+        ]
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ01s4",
+    "updatedAt": "2025-04-28T22:04:15Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "74d13314",
+      "name": "Scenario"
+    },
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOMbLzis60Yisu",
+      "resourcePath": "/llvm/wg-hlsl/issues/259",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-28T22:03:07Z",
+      "title": "[Senario] Resources for DML Demo",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": [
+          {
+            "id": "I_kwDOBITxeM6TFpgs"
+          }
+        ]
+      },
+      "trackedIssues": {
+        "nodes": []
+      }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZ08OU",
+    "updatedAt": "2025-04-29T01:25:44Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a190cd75",
+      "name": "MiniEngine Demo"
+    },
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "55c59cc4",
+      "name": "Intrinsics"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "f512c27c",
+      "name": "Graphics preview feature analysis"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM60ZLtD",
+      "resourcePath": "/llvm/llvm-project/issues/137733",
+      "repository": {
+        "owner": {
+          "login": "llvm",
+          "__typename": "Organization"
+        }
+      },
+      "updatedAt": "2025-04-29T01:25:43Z",
+      "title": "[HLSL] Ambiguous intrinsic uses in MiniEngine",
+      "state": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
       }
     }
   }

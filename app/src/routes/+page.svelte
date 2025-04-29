@@ -3,7 +3,12 @@
   import Pat from "../components/Pat.svelte";
   import { invoke } from "@tauri-apps/api/core";
 
-  import { type Data, type WorkItem, type WorkItemId } from "../lib/data";
+  import {
+    type Data,
+    type WorkItem,
+    type WorkItemId,
+    type Node,
+  } from "../lib/data";
 
   const data = invoke<Data>("get_data");
 
@@ -27,26 +32,28 @@
 {#await data}
   Waiting for data...
 {:then result}
-  Data:
-
-  {#snippet itemList(itemIds: WorkItemId[])}
-    <ul class="ps-4">
-      {#each itemIds as itemId}
-        {@const item = result.workItems[itemId]}
-        {#if item}
-          {@const subItems = getSubItems(item)}
+  {#snippet itemList(nodes: Node[])}
+    {#if nodes.length > 0}
+      <ul class="ps-4">
+        {#each nodes as node}
           <li>
-            {item.title}
-            {#if subItems}
-              {@render itemList(subItems!)}
+            {#if node.data.type === "group"}
+              <h1 class="text-2xl border-b-2">{node.data.name}</h1>
             {/if}
+            {#if node.data.type === "workItem"}
+              {@const item = result.workItems[node.data.id]}
+              {#if item}
+                {item.title}
+              {/if}
+            {/if}
+            {@render itemList(node.children)}
           </li>
-        {/if}
-      {/each}
-    </ul>
+        {/each}
+      </ul>
+    {/if}
   {/snippet}
 
-  {@render itemList(result.rootItems)}
+  {@render itemList(result.rootNodes)}
 
   <!-- <pre>{JSON.stringify(result, null, " ")}</pre> -->
 {:catch error}

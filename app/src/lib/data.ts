@@ -1,7 +1,12 @@
 export type Data = {
   workItems: WorkItems;
-  rootItems: WorkItemId[];
+  rootNodes: Node[];
 };
+
+export type Node = { data: WorkItemNode | GroupNode; children: Node[] };
+
+export type WorkItemNode = { type: "workItem"; id: string };
+export type GroupNode = { type: "group"; name: string };
 
 export type WorkItemId = string;
 export type WorkItems = { [id: WorkItemId]: WorkItem };
