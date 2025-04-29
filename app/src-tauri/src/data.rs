@@ -22,7 +22,7 @@ pub struct Node {
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum NodeData {
     WorkItem { id: WorkItemId },
-    Group { name: String },
+    Group { name: String, id: String },
 }
 
 #[tauri::command]
@@ -33,7 +33,7 @@ pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
 
     let work_items = WorkItems::from_graphql(all_items_json).map_err(|e| e.to_string())?;
     let root_items = work_items.get_roots();
-    let root_nodes = build_nodes(root_items, &work_items);
+    let root_nodes = build_nodes(&String::default(), root_items, &work_items);
 
     Ok(Data {
         root_nodes,
@@ -41,7 +41,7 @@ pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
     })
 }
 
-fn build_nodes(root_items: Vec<WorkItemId>, work_items: &WorkItems) -> Vec<Node> {
+fn build_nodes(path: &str, root_items: Vec<WorkItemId>, work_items: &WorkItems) -> Vec<Node> {
     // For now, group by "Epic"
 
     let group = |id| {
@@ -69,11 +69,15 @@ fn build_nodes(root_items: Vec<WorkItemId>, work_items: &WorkItems) -> Vec<Node>
                 groups.push(group.1);
             }
 
+            let name = key.clone().unwrap_or("None".to_owned());
+            let id = format!("{}/{}", path, name);
+            
             current_group = Some((
-                key.clone(),
+                key,
                 Node {
                     data: NodeData::Group {
-                        name: key.unwrap_or("None".to_owned()),
+                        name,
+                        id
                     },
                     children: Vec::new(),
                 },
@@ -81,7 +85,7 @@ fn build_nodes(root_items: Vec<WorkItemId>, work_items: &WorkItems) -> Vec<Node>
         }
         
         let current_group = current_group.as_mut().unwrap();
-        current_group.1.children.push(build_node(item, work_items));
+        current_group.1.children.push(build_node(format!("{}/{}", path, item.id.0).as_str(), item, work_items));
     }
 
     if groups.is_empty() {
@@ -106,7 +110,7 @@ fn start_new_group(current_group: &Option<(Option<String>, Node)>, key: &Option<
     current_group != key.as_ref()
 }
 
-fn build_node(item: &WorkItem, work_items: &WorkItems) -> Node {
+fn build_node(path: &str, item: &WorkItem, work_items: &WorkItems) -> Node {
     let children = if let WorkItemData::Issue(issue) = &item.data {
         issue.sub_issues.clone()
     } else {
@@ -117,6 +121,6 @@ fn build_node(item: &WorkItem, work_items: &WorkItems) -> Node {
         data: NodeData::WorkItem {
             id: item.id.clone(),
         },
-        children: build_nodes(children, work_items),
+        children: build_nodes(path, children, work_items),
     }
 }

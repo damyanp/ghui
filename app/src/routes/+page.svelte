@@ -11,6 +11,7 @@
   } from "../lib/data";
 
   const data = invoke<Data>("get_data");
+  let expanded = $state<string[]>([]);
 
   function getSubItems(item: WorkItem): string[] | null {
     if (item.data.type === "issue" && item.data.subIssues.length > 0)
@@ -37,8 +38,24 @@
       <ul class="ps-4">
         {#each nodes as node}
           <li>
+            {#if node.children.length > 0}
+              <button class="inline bg-blue-500 rounded"
+                onclick={() => {
+                  if (expanded.includes(node.data.id)) {
+                    expanded = expanded.filter((i) => i !== node.data.id);
+                  } else {
+                    expanded.push(node.data.id);
+                  }
+                }}
+              >
+                {#if expanded.includes(node.data.id)}-{:else}+{/if}
+              </button>
+            {/if}
+
             {#if node.data.type === "group"}
-              <h1 class="text-2xl border-b-2">{node.data.name}</h1>
+              <h1 class="text-2xl border-b-2">
+                {node.data.name}
+              </h1>
             {/if}
             {#if node.data.type === "workItem"}
               {@const item = result.workItems[node.data.id]}
@@ -46,7 +63,9 @@
                 {item.title}
               {/if}
             {/if}
-            {@render itemList(node.children)}
+            {#if expanded.includes(node.data.id)}
+              {@render itemList(node.children)}
+            {/if}
           </li>
         {/each}
       </ul>
@@ -54,7 +73,7 @@
   {/snippet}
 
   {@render itemList(result.rootNodes)}
-
+  <pre>{JSON.stringify(expanded, null, " ")}</pre>
   <!-- <pre>{JSON.stringify(result, null, " ")}</pre> -->
 {:catch error}
   Error: {JSON.stringify(error)}
