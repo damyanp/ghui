@@ -123,5 +123,5 @@
   <!-- <pre>{JSON.stringify(expanded, null, " ")}</pre> -->
   <!-- <pre>{JSON.stringify(result, null, " ")}</pre> -->
   <!-- <pre>{JSON.stringify(raw_data?.rootNodes, null, " ")}</pre> -->
-  <!-- <pre>{JSON.stringify(filteredNodes, null, " ")}</pre> -->
+  <!-- <pre>{JSON.stringify(data, null, " ")}</pre> -->
 {/if}

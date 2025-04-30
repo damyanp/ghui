@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, mem::take};
 
 use github_graphql::data::{WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
@@ -34,8 +34,8 @@ pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
         serde_json::from_str(all_items_str).map_err(|e| e.to_string().to_owned())?;
 
     let work_items = WorkItems::from_graphql(all_items_json).map_err(|e| e.to_string())?;
-    let root_items = work_items.get_roots();
-    let nodes = build_nodes(0, &String::default(), root_items, &work_items);
+
+    let nodes = NodeBuilder::new(&work_items).build();
 
     Ok(Data {
         nodes,
@@ -43,91 +43,94 @@ pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
     })
 }
 
-fn build_nodes(
-    level: u32,
-    path: &str,
-    root_items: Vec<WorkItemId>,
-    work_items: &WorkItems,
-) -> Vec<Node> {
-    // For now, group by "Epic"
+struct NodeBuilder<'a> {
+    work_items: &'a WorkItems,
+    nodes: Vec<Node>,
+}
 
-    let group = |id| {
-        work_items
-            .get(id)
-            .and_then(|item| item.project_item.epic.as_ref())
-            .map(|epic| epic.name.to_owned())
-    };
-
-    let mut group_item: Vec<_> = root_items.iter().map(|id| (group(id), id)).collect();
-    group_item.sort_by_key(|a| a.0.clone());
-
-    let has_multiple_groups =
-        !(group_item.is_empty() || group_item.iter().all(|i| i.0 == group_item[0].0));
-
-    let mut current_group: Option<Option<String>> = None;
-    let mut nodes = Vec::new();
-
-    for (key, id) in group_item {
-        let item = work_items.get(id);
-        if item.is_none() {
-            continue;
+impl<'a> NodeBuilder<'a> {
+    fn new(work_items: &'a WorkItems) -> Self {
+        NodeBuilder {
+            work_items,
+            nodes: Vec::new(),
         }
-        let item = item.unwrap();
+    }
 
-        if has_multiple_groups && start_new_group(&current_group, &key) {
-            let name = key.clone().unwrap_or("None".to_owned());
-            let id = format!("{}/{}", path, name);
+    fn build(&mut self) -> Vec<Node> {
+        self.add_nodes(&self.work_items.get_roots(), 0, "");
+        take(&mut self.nodes)
+    }
 
-            current_group = Some(key);
-            nodes.push(Node {
-                level,
-                id,
-                data: NodeData::Group { name },
-                has_children: true,
-            });
-        }
-
-        let level = if has_multiple_groups {
-            level + 1
-        } else {
-            level
+    fn add_nodes(&mut self, items: &[WorkItemId], level: u32, path: &str) {
+        // For now, group by "Epic"
+        let group = |id| {
+            self.work_items
+                .get(id)
+                .and_then(|item| item.project_item.epic.as_ref())
+                .map(|epic| epic.name.to_owned())
         };
 
-        nodes.append(&mut build_node(
-            level,
-            format!("{}/{}", path, item.id.0).as_str(),
-            item,
-            work_items,
-        ));
+        let mut group_item: Vec<_> = items.iter().map(|id| (group(id), id)).collect();
+        group_item.sort_by_key(|a| a.0.clone());
+
+        let has_multiple_groups =
+            !(group_item.is_empty() || group_item.iter().all(|i| i.0 == group_item[0].0));
+
+        let mut current_group: Option<Option<String>> = None;
+        let mut current_path = path.to_owned();
+
+        for (key, id) in group_item {
+            if has_multiple_groups {
+                let start_new = current_group
+                    .as_ref()
+                    .is_none_or(|group| group.as_ref() != key.as_ref());
+
+                if start_new {
+                    let name = key.clone().unwrap_or("None".to_owned());
+                    let id = format!("{}{}", path, name);
+
+                    current_group = Some(key);
+                    current_path = format!("{}/", id);
+
+                    self.nodes.push(Node {
+                        level,
+                        id,
+                        data: NodeData::Group { name },
+                        has_children: true,
+                    });
+                }
+            }
+
+            let level = if has_multiple_groups {
+                level + 1
+            } else {
+                level
+            };
+
+            self.add_node(id, level, current_path.as_str());
+        }
     }
 
-    nodes
-}
+    fn add_node(&mut self, id: &WorkItemId, level: u32, path: &str) {
+        if let Some(item) = self.work_items.get(id) {
+            let children = if let WorkItemData::Issue(issue) = &item.data {
+                issue.sub_issues.clone()
+            } else {
+                Vec::default()
+            };
 
-fn start_new_group(current_group: &Option<Option<String>>, key: &Option<String>) -> bool {
-    if current_group.is_none() {
-        return true;
+            self.nodes.push(Node {
+                level,
+                id: item.id.0.clone(),
+                data: NodeData::WorkItem,
+                has_children: !children.is_empty(),
+            });
+
+            self.add_nodes(
+                &children,
+                level + 1,
+                format!("{}{}/", path, item.id.0).as_str(),
+            );
+        }
     }
-
-    let current_group = current_group.as_ref().unwrap().as_ref();
-    current_group != key.as_ref()
-}
-
-fn build_node(level: u32, path: &str, item: &WorkItem, work_items: &WorkItems) -> Vec<Node> {
-    let children = if let WorkItemData::Issue(issue) = &item.data {
-        issue.sub_issues.clone()
-    } else {
-        Vec::default()
-    };
-
-    let mut nodes = Vec::new();
-
-    nodes.push(Node {
-        level,
-        id: item.id.0.clone(),
-        data: NodeData::WorkItem,
-        has_children: !children.is_empty(),
-    });
-    nodes.append(&mut build_nodes(level + 1, path, children, work_items));
-    nodes
 }
