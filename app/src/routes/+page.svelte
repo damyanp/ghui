@@ -34,8 +34,7 @@
 
       if (node.hasChildren && expanded.includes(node.id)) {
         level = node.level + 1;
-      }
-      else {
+      } else {
         level = node.level;
       }
     }
@@ -73,48 +72,57 @@
           <CirclePlusIcon size="1em" class="hover:fill-primary-500" />
         {/if}
       </button>
+    {:else}
+      <div class="inline-block size-[1em]">&nbsp;</div>
     {/if}
   {/snippet}
 
   {#snippet itemList(nodes: Node[])}
     {#if nodes.length > 0}
-      <ul>
-        {#each nodes as node (node.id)}
-          <li
-            style={`padding-inline-start: ${1 * node.level}em`}
-            transition:fade|global
-            animate:flip={{ duration: 500 }}
-          >
-            {#if node.data.type === "group"}
-              <h1 class="text-2xl border-b-2">
-                <div class="relative">
-                  &nbsp;
-                  <div class="absolute top-0 left-0">
+      <table class="w-full table-auto">
+        <thead>
+          <tr>
+            {#each ["Title", "Status", "Iteration", "Blocked", "Kind"] as heading}
+              <td>{heading}</td>
+            {/each}
+          </tr>
+        </thead>
+        <tbody>
+          {#each nodes as node (node.id)}
+            <tr transition:fade animate:flip={{ duration: 100 }}>
+              {#if node.data.type === "group"}
+                <td
+                  class="text-2xl border-b-2"
+                  style="padding-inline-start: {1 * node.level}rem"
+                  colspan="5"
+                >
+                  {@render expander(node)}
+                  {node.data.name}
+                </td>
+              {:else if node.data.type === "workItem"}
+                {@const item = data.workItems[node.id]}
+                {#if item}
+                {@const path = item.resourcePath?.split("/")}
+                  <td style="padding-inline-start: {1 * node.level}rem">
                     {@render expander(node)}
-                  </div>
-                  <div class="absolute top-0 left-8">
-                    {node.data.name}
-                  </div>
-                </div>
-              </h1>
-            {/if}
-            {#if node.data.type === "workItem"}
-              {@const item = data.workItems[node.id]}
-              {#if item}
-                <div class="relative">
-                  &nbsp;
-                  <div class="absolute top-0 left-0">
-                    {@render expander(node)}
-                  </div>
-                  <div class="absolute top-0 left-5">
                     {item.title}
-                  </div>
-                </div>
+                    <a
+                      class="underline text-blue-400"
+                      target="_blank"
+                      href="http://github.com{item.resourcePath}"
+                      >{path?.at(-3)}#{path?.at(-1)}</a
+                    >
+                  </td>
+                  <td>{item.projectItem.status?.name}</td>
+                  <td>{item.projectItem.iteration?.name}</td>
+                  <td>{item.projectItem.blocked?.name}</td>
+                  <td>{item.projectItem.kind?.name}</td>
+                {/if}
               {/if}
-            {/if}
-          </li>
-        {/each}
-      </ul>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     {/if}
   {/snippet}
 

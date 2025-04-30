@@ -7,7 +7,7 @@ export type Node = {
   level: number;
   id: string;
   data: WorkItemNode | GroupNode;
-  hasChildren: boolean
+  hasChildren: boolean;
 };
 
 export type WorkItemNode = { type: "workItem" };
@@ -19,18 +19,28 @@ export type WorkItems = { [id: WorkItemId]: WorkItem };
 export type WorkItem = {
   id: WorkItemId;
   title: string;
-  resourcePath: string;
+  updatedAt?: string;
+  resourcePath?: string;
+  repository?: string;
   data: WorkItemData;
-  project_item: ProjectItem;
+  projectItem: ProjectItem;
 };
 
 export type ProjectItem = {
-  epic?: SingleSelectValue
+  id: string;
+  updatedAt: string;
+  status?: SingleSelectValue;
+  iteration?: SingleSelectValue;
+  blocked?: SingleSelectValue;
+  kind?: SingleSelectValue;
+  epic?: SingleSelectValue;
+  workstream?: SingleSelectValue;
+  projectMilestone?: SingleSelectValue;
 };
 
 export type SingleSelectValue = {
-  optionId: string,
-  name: string
+  optionId: string;
+  name: string;
 };
 
 export type WorkItemData = IssueData | PullRequestData | DraftIssue;
