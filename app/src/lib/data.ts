@@ -1,6 +1,6 @@
 export type Data = {
   workItems: WorkItems;
-  rootNodes: Node[];
+  nodes: Node[];
 };
 
 export type Node = {

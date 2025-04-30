@@ -27,7 +27,7 @@
 
     let level = 0;
 
-    for (const node of raw_data.rootNodes) {
+    for (const node of raw_data.nodes) {
       if (node.level > level) continue;
 
       nodes.push(node);

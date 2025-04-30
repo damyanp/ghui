@@ -8,7 +8,7 @@ use tauri::AppHandle;
 #[serde(rename_all = "camelCase")]
 pub struct Data {
     work_items: HashMap<WorkItemId, WorkItem>,
-    root_nodes: Vec<Node>,
+    nodes: Vec<Node>,
 }
 
 #[derive(Serialize)]
@@ -35,10 +35,10 @@ pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
 
     let work_items = WorkItems::from_graphql(all_items_json).map_err(|e| e.to_string())?;
     let root_items = work_items.get_roots();
-    let root_nodes = build_nodes(0, &String::default(), root_items, &work_items);
+    let nodes = build_nodes(0, &String::default(), root_items, &work_items);
 
     Ok(Data {
-        root_nodes,
+        nodes,
         work_items: work_items.work_items,
     })
 }
