@@ -28,7 +28,9 @@ pub async fn set<ClientType: crate::client::transport::Client>(
     let response: Response<set_project_field_value::ResponseData> =
         client.request(&request_body).await?;
 
-    println!("{:?}", response);
+    if let Some(errors) = response.errors {
+        Err(format!("{:?}", errors))?
+    }
 
     Ok(())
 }

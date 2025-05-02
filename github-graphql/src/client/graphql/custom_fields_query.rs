@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::Result;
+use std::collections::HashMap;
 
 use graphql_client::{GraphQLQuery, Response};
 
@@ -29,7 +29,7 @@ pub async fn get_custom_fields<ClientType: crate::client::transport::Client>(
         .ok_or("Missing custom fields data")?)
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Field {
     pub id: String,
     pub name: String,
@@ -84,6 +84,7 @@ pub struct Fields {
     pub project_id: String,
     pub status: Field,
     pub blocked: Field,
+    pub epic: Field,
 }
 
 pub async fn get_fields(client: &impl Client) -> Result<Fields> {
@@ -93,5 +94,6 @@ pub async fn get_fields(client: &impl Client) -> Result<Fields> {
         project_id: fields.id,
         status: fields.status.into(),
         blocked: fields.blocked.into(),
+        epic: fields.epic.into(),
     })
 }

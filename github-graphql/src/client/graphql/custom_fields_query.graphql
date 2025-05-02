@@ -11,6 +11,9 @@ query CustomFieldsQuery {
       Iteration: field(name: "Iteration") {
         ...FieldConfig
       }
+      Epic: field(name: "Epic") {
+        ...FieldConfig
+      }
     }
   }
 }

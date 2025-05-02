@@ -21,6 +21,7 @@ enum Commands {
     Viewer,
     GetCustomFields,
     Hygiene(HygieneOptions),
+    AddItems(add_items::Options),
 }
 
 #[derive(Debug, clap::Args)]
@@ -43,6 +44,7 @@ async fn main() -> Result {
         Commands::Viewer => run_get_viewer().await?,
         Commands::GetCustomFields => run_get_custom_fields().await?,
         Commands::Hygiene(options) => run_hygiene(options).await?,
+        Commands::AddItems(options) => add_items::run(options).await?,
     }
 
     Ok(())
@@ -139,9 +141,10 @@ async fn run_hygiene(options: HygieneOptions) -> Result {
     Ok(())
 }
 
+mod add_items;
 mod hygiene;
 
-fn client() -> GithubClient {
+pub fn client() -> GithubClient {
     GithubClient::new(&pat()).expect("create client")
 }
 
