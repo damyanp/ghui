@@ -1,12 +1,11 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-
 use github_graphql::{
     client::{
         graphql::{
-            clear_project_field_value, custom_fields_query, get_all_items, get_custom_fields,
-            project_items, set_project_field_value,
+            clear_project_field_value,
+            custom_fields_query::{self, Field},
+            get_all_items, project_items, set_project_field_value,
         },
         transport::GithubClient,
     },
@@ -14,73 +13,6 @@ use github_graphql::{
 };
 
 use crate::Result;
-
-#[derive(Default)]
-struct Field {
-    id: String,
-    name: String,
-    id_to_name: HashMap<String, String>,
-    name_to_id: HashMap<String, String>,
-}
-
-impl From<Option<custom_fields_query::FieldConfig>> for Field {
-    fn from(config: Option<custom_fields_query::FieldConfig>) -> Self {
-        use custom_fields_query::FieldConfig;
-
-        if let Some(config) = &config {
-            let (id, name) = match config {
-                FieldConfig::ProjectV2Field => ("<no id>".to_owned(), "<unknown>".to_owned()),
-                FieldConfig::ProjectV2IterationField(f) => (f.id.clone(), f.name.clone()),
-                FieldConfig::ProjectV2SingleSelectField(f) => (f.id.clone(), f.name.clone()),
-            };
-
-            let mut id_to_name = HashMap::new();
-            let mut name_to_id = HashMap::new();
-
-            if let FieldConfig::ProjectV2SingleSelectField(config) = config {
-                for option in &config.options {
-                    id_to_name.insert(option.id.clone(), option.name.clone());
-                    name_to_id.insert(option.name.clone(), option.id.clone());
-                }
-            }
-
-            Field {
-                id,
-                name,
-                id_to_name,
-                name_to_id,
-            }
-        } else {
-            Field::default()
-        }
-    }
-}
-
-impl Field {
-    fn id(&self, name: &str) -> Option<&str> {
-        self.name_to_id.get(name).map(|n| n.as_str())
-    }
-
-    fn name(&self, id: Option<&str>) -> Option<&str> {
-        id.and_then(|id| self.id_to_name.get(id).map(|n| n.as_str()))
-    }
-}
-
-struct Fields {
-    project_id: String,
-    status: Field,
-    blocked: Field,
-}
-
-async fn get_fields(client: &GithubClient) -> Result<Fields> {
-    let fields = get_custom_fields(client).await?;
-
-    Ok(Fields {
-        project_id: fields.id,
-        status: fields.status.into(),
-        blocked: fields.blocked.into(),
-    })
-}
 
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let variables = project_items::Variables {
@@ -190,7 +122,7 @@ async fn commit_changes<'a, I>(client: &GithubClient, changes: I, mode: &RunHygi
 where
     I: std::iter::IntoIterator<Item = Change<'a>>,
 {
-    let fields = get_fields(client).await?;
+    let fields = custom_fields_query::get_fields(client).await?;
 
     for change in changes {
         println!("{}", describe_item(change.work_item));
