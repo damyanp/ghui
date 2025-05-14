@@ -20,14 +20,8 @@ enum Commands {
     GetAllItems,
     Viewer,
     GetCustomFields,
-    Hygiene(HygieneOptions),
+    Hygiene(hygiene::Options),
     AddItems(add_items::Options),
-}
-
-#[derive(Debug, clap::Args)]
-struct HygieneOptions {
-    #[arg(value_enum, default_value_t = hygiene::RunHygieneMode::DryRun)]
-    mode: hygiene::RunHygieneMode,
 }
 
 type Error = Box<dyn std::error::Error>;
@@ -40,14 +34,12 @@ async fn main() -> Result {
     let arg = Args::parse();
 
     match arg.command {
-        Commands::GetAllItems => run_get_all_items().await?,
-        Commands::Viewer => run_get_viewer().await?,
-        Commands::GetCustomFields => run_get_custom_fields().await?,
-        Commands::Hygiene(options) => run_hygiene(options).await?,
-        Commands::AddItems(options) => add_items::run(options).await?,
+        Commands::GetAllItems => run_get_all_items().await,
+        Commands::Viewer => run_get_viewer().await,
+        Commands::GetCustomFields => run_get_custom_fields().await,
+        Commands::Hygiene(options) => hygiene::run(options).await,
+        Commands::AddItems(options) => add_items::run(options).await,
     }
-
-    Ok(())
 }
 
 async fn run_get_all_items() -> Result {
@@ -129,14 +121,6 @@ async fn run_get_custom_fields() -> Result {
     dump("Status", &fields.status);
     dump("Blocked", &fields.blocked);
     dump("Iteration", &fields.iteration);
-
-    Ok(())
-}
-
-async fn run_hygiene(options: HygieneOptions) -> Result {
-    let client = client();
-
-    hygiene::run_hygiene(&client, options.mode).await?;
 
     Ok(())
 }

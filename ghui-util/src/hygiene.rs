@@ -14,6 +14,27 @@ use github_graphql::{
 
 use crate::Result;
 
+#[derive(Debug, clap::Args)]
+pub struct Options {
+    #[arg(value_enum, default_value_t = RunHygieneMode::DryRun)]
+    mode: RunHygieneMode,
+}
+
+#[derive(Debug, Clone, clap::ValueEnum, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RunHygieneMode {
+    DryRun,
+    Commit,
+    TestData,
+}
+
+pub async fn run(options: Options) -> Result {
+    let client = crate::client();
+
+    run_hygiene(&client, options.mode).await
+}
+
+
+
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let variables = project_items::Variables {
         page_size: 100,
@@ -28,13 +49,6 @@ async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     .await?;
 
     data::WorkItems::from_graphql(items)
-}
-
-#[derive(Debug, Clone, clap::ValueEnum, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum RunHygieneMode {
-    DryRun,
-    Commit,
-    TestData,
 }
 
 #[derive(Debug)]
