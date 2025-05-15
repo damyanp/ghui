@@ -187,26 +187,23 @@ impl WorkItems {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::collections::HashSet;
-
+pub mod test_helpers {
     use super::*;
 
-    struct TestData {
-        work_items: WorkItems,
+    pub struct TestData {
+        pub work_items: WorkItems,
         next_id: i32,
     }
 
     impl TestData {
-        fn new() -> Self {
+        pub fn new() -> Self {
             TestData {
                 work_items: WorkItems::default(),
                 next_id: 0,
             }
         }
 
-        fn next_id<T>(&mut self) -> T
+        pub fn next_id<T>(&mut self) -> T
         where
             T: From<String>,
         {
@@ -214,7 +211,7 @@ mod tests {
             T::from(format!("{}", self.next_id))
         }
 
-        fn add(
+        pub fn add_issue(
             &mut self,
             sub_issues: &[&WorkItemId],
             tracked_issues: &[&WorkItemId],
@@ -241,22 +238,30 @@ mod tests {
     fn to_project_item_ref_vec(ids: &[&WorkItemId]) -> Vec<WorkItemId> {
         ids.iter().map(|id| (*id).to_owned()).collect()
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::collections::HashSet;
+    use test_helpers::TestData;
+
+    use super::*;
 
     #[test]
     fn test_resolve() {
         let mut data = TestData::new();
 
-        let a = data.add(&[], &[]);
-        let b = data.add(&[], &[]);
+        let a = data.add_issue(&[], &[]);
+        let b = data.add_issue(&[], &[]);
 
-        let c = data.add(&[&a], &[&a]);
-        let d = data.add(&[&a, &b], &[&a, &b]);
+        let c = data.add_issue(&[&a], &[&a]);
+        let d = data.add_issue(&[&a, &b], &[&a, &b]);
 
         let unresolvable = data.next_id();
 
-        let root1 = data.add(&[&c], &[&d, &unresolvable]);
-        let root2 = data.add(&[&a], &[&d, &unresolvable]);
-        let root3 = data.add(&[&c, &unresolvable], &[&b, &unresolvable]);
+        let root1 = data.add_issue(&[&c], &[&d, &unresolvable]);
+        let root2 = data.add_issue(&[&a], &[&d, &unresolvable]);
+        let root3 = data.add_issue(&[&c, &unresolvable], &[&b, &unresolvable]);
 
         let roots: HashSet<WorkItemId> = HashSet::from_iter(data.work_items.get_roots());
 
