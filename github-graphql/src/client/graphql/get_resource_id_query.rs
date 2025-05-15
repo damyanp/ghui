@@ -20,8 +20,9 @@ pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<String> 
     let resource = data.resource.unwrap();
     match &resource {
         GetResourceIdQueryResource::Issue(i) => Some(i.id.clone()),
-        _ => None
-    }.ok_or(format!("Unable to match {} - got {:?}", url, resource).into())
+        _ => None,
+    }
+    .ok_or(format!("Unable to match {} - got {:?}", url, resource).into())
 }
 
 async fn get_resource_id_query(client: &impl Client, url: &str) -> Result<ResponseData> {

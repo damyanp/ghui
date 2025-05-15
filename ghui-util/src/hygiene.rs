@@ -33,8 +33,6 @@ pub async fn run(options: Options) -> Result {
     run_hygiene(&client, options.mode).await
 }
 
-
-
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let variables = project_items::Variables {
         page_size: 100,
@@ -56,9 +54,19 @@ struct Change<'a> {
     work_item: &'a data::WorkItem,
     status: Option<Option<String>>,
     blocked: Option<Option<String>>,
+    epic: Option<Option<String>>,
 }
 
-impl Change<'_> {
+impl<'a> Change<'a> {
+    fn new(work_item: &'a data::WorkItem) -> Self {
+        Change {
+            work_item,
+            status: None,
+            blocked: None,
+            epic: None,
+        }
+    }
+
     fn describe(&self) -> String {
         let mut s = Vec::new();
 
@@ -88,6 +96,10 @@ impl Change<'_> {
 
         s.join(", ")
     }
+
+    fn has_changes(&self) -> bool {
+        self.status.is_some() || self.blocked.is_some() || self.epic.is_some()
+    }
 }
 
 pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {
@@ -105,20 +117,31 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
         .work_items
         .values()
         .map(|item| {
-            let mut change = Change {
-                work_item: item,
-                status: None,
-                blocked: None,
-            };
+            let mut change = Change::new(item);
 
             // Closed items should have status set to Closed
             if item.is_closed() && !item.project_item.status.matches("Closed") {
                 change.status = Some(Some("Closed".to_owned()));
             }
 
+            // Map project milestones to epics
+            if item.project_item.epic.is_none() {
+                change.epic = match item.project_item.project_milestone.field_value() {
+                    Some("3: ML preview requirements")
+                    | Some("4: ML preview planning")
+                    | Some("5: ML preview implementation") => Some(Some("DML Demo".to_owned())),
+                    Some("Graphics preview feature analysis") => {
+                        Some(Some("MiniEngine Demo".to_owned()))
+                    }
+                    Some("DXC: SM 6.9 Preview") => Some(Some("SM 6.9 Preview".to_owned())),
+                    Some("DXC: SM 6.9 Release") => Some(Some("DXC 2025 Q4".to_owned())),
+                    _ => None,
+                };
+            }
+
             change
         })
-        .filter(|change| change.status.is_some() || change.blocked.is_some());
+        .filter(|change| change.has_changes());
 
     commit_changes(client, changes, &mode).await?;
 
@@ -164,6 +187,19 @@ where
                 &change.work_item.project_item.blocked,
                 &fields.blocked,
                 blocked,
+                mode,
+            )
+            .await?;
+        }
+
+        if let Some(epic) = &change.epic {
+            apply_change(
+                client,
+                &fields.project_id,
+                id,
+                &change.work_item.project_item.epic,
+                &fields.epic,
+                epic,
                 mode,
             )
             .await?;

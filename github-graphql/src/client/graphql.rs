@@ -1,19 +1,19 @@
+pub mod add_to_project;
 pub mod clear_project_field_value;
 pub mod custom_fields_query;
+mod get_resource_id_query;
 pub mod project_items;
 pub mod set_project_field_value;
-mod get_resource_id_query;
 mod viewer_info;
-pub mod add_to_project;
 
 pub use custom_fields_query::{
     get_custom_fields, FieldConfig, FieldConfigOnProjectV2IterationField,
     FieldConfigOnProjectV2SingleSelectField,
 };
+pub use get_resource_id_query::get_resource_id;
 use graphql_client::{GraphQLQuery, Response};
 pub use project_items::ProjectItems;
 pub use viewer_info::{get_viewer_info, ViewerInfo};
-pub use get_resource_id_query::get_resource_id;
 
 #[allow(clippy::upper_case_acronyms)]
 type URI = String;
