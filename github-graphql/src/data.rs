@@ -203,40 +203,42 @@ pub mod test_helpers {
             }
         }
 
-        pub fn next_id<T>(&mut self) -> T
-        where
-            T: From<String>,
-        {
+        pub fn next_id(&mut self) -> WorkItemId {
             self.next_id += 1;
-            T::from(format!("{}", self.next_id))
+            WorkItemId::from(format!("{}", self.next_id))
         }
 
-        pub fn add_issue(
+        pub fn add_work_item(&mut self, mut item: WorkItem) -> WorkItemId {
+            let id = self.next_id();
+            item.id = id.clone();
+            self.work_items.add(item);
+            id
+        }
+
+        pub fn add_blank_issue(
             &mut self,
             sub_issues: &[&WorkItemId],
             tracked_issues: &[&WorkItemId],
         ) -> WorkItemId {
-            let issue_id: WorkItemId = self.next_id();
-
-            let item = WorkItem {
-                id: issue_id.clone(),
-                data: WorkItemData::Issue(Issue {
-                    sub_issues: to_project_item_ref_vec(sub_issues),
-                    tracked_issues: to_project_item_ref_vec(tracked_issues),
-
-                    ..Default::default()
-                }),
-                ..Default::default()
-            };
-
-            self.work_items.add(item);
-
-            issue_id
+            self.add_work_item(WorkItem::new_blank_issue(sub_issues, tracked_issues))
         }
     }
 
     fn to_project_item_ref_vec(ids: &[&WorkItemId]) -> Vec<WorkItemId> {
         ids.iter().map(|id| (*id).to_owned()).collect()
+    }
+
+    impl WorkItem {
+        pub fn new_blank_issue(sub_issues: &[&WorkItemId], tracked_issues: &[&WorkItemId]) -> Self {
+            WorkItem {
+                data: WorkItemData::Issue(Issue {
+                    sub_issues: to_project_item_ref_vec(sub_issues),
+                    tracked_issues: to_project_item_ref_vec(tracked_issues),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+        }
     }
 }
 
@@ -251,17 +253,17 @@ pub mod tests {
     fn test_resolve() {
         let mut data = TestData::new();
 
-        let a = data.add_issue(&[], &[]);
-        let b = data.add_issue(&[], &[]);
+        let a = data.add_blank_issue(&[], &[]);
+        let b = data.add_blank_issue(&[], &[]);
 
-        let c = data.add_issue(&[&a], &[&a]);
-        let d = data.add_issue(&[&a, &b], &[&a, &b]);
+        let c = data.add_blank_issue(&[&a], &[&a]);
+        let d = data.add_blank_issue(&[&a, &b], &[&a, &b]);
 
         let unresolvable = data.next_id();
 
-        let root1 = data.add_issue(&[&c], &[&d, &unresolvable]);
-        let root2 = data.add_issue(&[&a], &[&d, &unresolvable]);
-        let root3 = data.add_issue(&[&c, &unresolvable], &[&b, &unresolvable]);
+        let root1 = data.add_blank_issue(&[&c], &[&d, &unresolvable]);
+        let root2 = data.add_blank_issue(&[&a], &[&d, &unresolvable]);
+        let root3 = data.add_blank_issue(&[&c, &unresolvable], &[&b, &unresolvable]);
 
         let roots: HashSet<WorkItemId> = HashSet::from_iter(data.work_items.get_roots());
 
