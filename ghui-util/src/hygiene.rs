@@ -375,4 +375,47 @@ mod tests {
 
         assert_eq!(actual_changes, expected_changes);
     }
+
+    #[test]
+    fn test_set_epic_from_grandparent() {
+        let mut data = TestData::default();
+
+        const EPIC: &str = "epic";
+
+        let child_a = data.build().add();
+        let parent_a = data.build().epic(EPIC).sub_issues(&[&child_a]).add();
+
+        let child_b = data.build().add();
+        let parent_b = data.build().sub_issues(&[&child_b]).add();
+
+        data.build()
+            .epic(EPIC)
+            .sub_issues(&[&parent_a, &parent_b])
+            .add();
+
+        let epic = Some(Some(EPIC.to_owned()));
+
+        let expected_changes: HashSet<Change> = HashSet::from_iter([
+            Change {
+                work_item_id: child_a,
+                epic: epic.clone(),
+                ..Default::default()
+            },
+            Change {
+                work_item_id: child_b,
+                epic: epic.clone(),
+                ..Default::default()
+            },
+            Change {
+                work_item_id: parent_b,
+                epic: epic.clone(),
+                ..Default::default()
+            },
+        ]);
+
+        let actual_changes: HashSet<Change> =
+            HashSet::from_iter(get_hygienic_changes(&data.work_items));
+
+        assert_eq!(actual_changes, expected_changes);
+    }
 }
