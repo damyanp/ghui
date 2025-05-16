@@ -14,7 +14,7 @@ use github_graphql::{
         },
         transport::GithubClient,
     },
-    data::{self, HasFieldValue, SingleSelectFieldValue, WorkItemId, WorkItems},
+    data::{self, HasFieldValue, SingleSelectFieldValue, WorkItemData, WorkItemId, WorkItems},
 };
 
 use crate::Result;
@@ -181,6 +181,44 @@ fn get_hygienic_changes(items: &WorkItems) -> Changes {
                     work_item_id: item.id.clone(),
                     data: ChangeData::Epic(Some(new_epic.to_owned())),
                 });
+            }
+        }
+    }
+
+    for root_item_id in items.get_roots() {
+        sanitize_issue_hierarchy(&items, &mut changes, &root_item_id, None);
+    }
+
+    fn sanitize_issue_hierarchy(
+        items: &WorkItems,
+        changes: &mut Changes,
+        id: &WorkItemId,
+        epic: Option<&str>,
+    ) {
+        if let Some(item) = items.get(id) {
+            if item.project_item.epic.field_value() != epic {
+                if let Some(epic) = epic {
+                    if let Some(current_epic) = &item.project_item.epic {
+                        println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
+                        describe_item(item), current_epic.name, epic);
+                    } else {
+                        changes.add(Change {
+                            work_item_id: id.clone(),
+                            data: ChangeData::Epic(Some(epic.to_owned())),
+                        });
+                    }
+                }
+            }
+
+            if let WorkItemData::Issue(issue) = &item.data {
+                for child_id in &issue.sub_issues {
+                    sanitize_issue_hierarchy(
+                        items,
+                        changes,
+                        child_id,
+                        epic.or(item.project_item.epic.field_value()),
+                    );
+                }
             }
         }
     }
@@ -372,7 +410,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_set_epic_from_parent() {
         let mut data = TestData::default();
 
@@ -400,7 +437,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_set_epic_from_grandparent() {
         let mut data = TestData::default();
 
