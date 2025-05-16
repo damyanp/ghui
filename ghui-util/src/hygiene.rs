@@ -298,9 +298,8 @@ async fn apply_change(
     let new_value_id = value.as_ref().and_then(|v| field.id(v));
 
     println!(
-        "  {}({}) {} -> {}({})",
+        "  {} {} -> {}({})",
         field.name,
-        field.id,
         old_value,
         value.as_ref().map_or("<>", |v| v.as_str()),
         new_value_id.as_ref().map_or("<>", |v| v)
