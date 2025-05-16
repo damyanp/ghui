@@ -9,7 +9,7 @@ use github_graphql::{
         },
         transport::GithubClient,
     },
-    data::{self, HasFieldValue, SingleSelectFieldValue},
+    data::{self, HasFieldValue, SingleSelectFieldValue, WorkItemId, WorkItems},
 };
 
 use crate::Result;
@@ -49,35 +49,31 @@ async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     data::WorkItems::from_graphql(items)
 }
 
-#[derive(Debug)]
-struct Change<'a> {
-    work_item: &'a data::WorkItem,
+#[derive(Debug, Default, Eq, Hash, PartialEq)]
+struct Change {
+    work_item_id: WorkItemId,
     status: Option<Option<String>>,
     blocked: Option<Option<String>>,
     epic: Option<Option<String>>,
 }
 
-impl<'a> Change<'a> {
-    fn new(work_item: &'a data::WorkItem) -> Self {
+impl Change {
+    fn new(id: WorkItemId) -> Self {
         Change {
-            work_item,
-            status: None,
-            blocked: None,
-            epic: None,
+            work_item_id: id,
+            ..Default::default()
         }
     }
 
-    fn describe(&self) -> String {
+    fn describe(&self, work_items: &WorkItems) -> String {
+        let work_item = work_items.get(&self.work_item_id).unwrap();
+
         let mut s = Vec::new();
 
         if let Some(status) = &self.status {
             s.push(format!(
                 "status({} -> {})",
-                self.work_item
-                    .project_item
-                    .status
-                    .field_value()
-                    .unwrap_or("<>"),
+                work_item.project_item.status.field_value().unwrap_or("<>"),
                 status.as_ref().map(|i| i.as_str()).unwrap_or("<>")
             ));
         }
@@ -85,12 +81,16 @@ impl<'a> Change<'a> {
         if let Some(blocked) = &self.blocked {
             s.push(format!(
                 "blocked({} -> {})",
-                self.work_item
-                    .project_item
-                    .status
-                    .field_value()
-                    .unwrap_or("<>"),
+                work_item.project_item.status.field_value().unwrap_or("<>"),
                 blocked.as_ref().map(|i| i.as_str()).unwrap_or("<>")
+            ));
+        }
+
+        if let Some(epic) = &self.epic {
+            s.push(format!(
+                "epic({} -> {})",
+                work_item.project_item.epic.field_value().unwrap_or("<>"),
+                epic.as_ref().map(|i| i.as_str()).unwrap_or("<>")
             ));
         }
 
@@ -115,17 +115,17 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     let changes = get_hygienic_changes(&items);
 
-    commit_changes(client, changes, &mode).await?;
+    commit_changes(client, &items, changes, &mode).await?;
 
     Ok(())
 }
 
-fn get_hygienic_changes<'a>(items: &'a data::WorkItems) -> impl Iterator<Item = Change<'a>> {
+fn get_hygienic_changes(items: &WorkItems) -> impl Iterator<Item = Change> + use<'_> {
     items
         .work_items
         .values()
         .map(|item| {
-            let mut change = Change::new(item);
+            let mut change = Change::new(item.id.clone());
 
             // Closed items should have status set to Closed
             if item.is_closed() && !item.project_item.status.matches("Closed") {
@@ -159,23 +159,30 @@ fn describe_item(item: &data::WorkItem) -> String {
     }
 }
 
-async fn commit_changes<'a, I>(client: &GithubClient, changes: I, mode: &RunHygieneMode) -> Result
+async fn commit_changes<I>(
+    client: &GithubClient,
+    work_items: &WorkItems,
+    changes: I,
+    mode: &RunHygieneMode,
+) -> Result
 where
-    I: std::iter::IntoIterator<Item = Change<'a>>,
+    I: std::iter::IntoIterator<Item = Change>,
 {
     let fields = custom_fields_query::get_fields(client).await?;
 
     for change in changes {
-        println!("{}", describe_item(change.work_item));
+        let work_item = work_items.get(&change.work_item_id).unwrap();
 
-        let id = &change.work_item.project_item.id;
+        println!("{}", describe_item(work_item));
+
+        let id = &work_item.project_item.id;
 
         if let Some(status) = &change.status {
             apply_change(
                 client,
                 &fields.project_id,
                 id,
-                &change.work_item.project_item.status,
+                &work_item.project_item.status,
                 &fields.status,
                 status,
                 mode,
@@ -188,7 +195,7 @@ where
                 client,
                 &fields.project_id,
                 id,
-                &change.work_item.project_item.blocked,
+                &work_item.project_item.blocked,
                 &fields.blocked,
                 blocked,
                 mode,
@@ -201,7 +208,7 @@ where
                 client,
                 &fields.project_id,
                 id,
-                &change.work_item.project_item.epic,
+                &work_item.project_item.epic,
                 &fields.epic,
                 epic,
                 mode,
@@ -262,13 +269,15 @@ async fn apply_change(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use github_graphql::data::{test_helpers::TestData, IssueState};
 
     use super::{get_hygienic_changes, Change};
 
     #[test]
     fn test_closed_issues_set_state_to_closed() {
-        let mut data = TestData::new();
+        let mut data = TestData::default();
 
         data.build()
             .issue_state(IssueState::OPEN)
@@ -286,7 +295,7 @@ mod tests {
         assert_eq!(changes.len(), 1);
 
         let change = &changes[0];
-        assert_eq!(change.work_item.id, closed_item_id);
+        assert_eq!(change.work_item_id, closed_item_id);
         assert_eq!(change.status, Some(Some("Closed".to_owned())));
         assert_eq!(change.blocked, None);
         assert_eq!(change.epic, None);
@@ -304,7 +313,7 @@ mod tests {
         ];
 
         for (project_milestone, epic) in mappings {
-            let mut data = TestData::new();
+            let mut data = TestData::default();
 
             // Existing epics shouldn't be changed
             data.build()
@@ -332,10 +341,38 @@ mod tests {
             assert_eq!(changes.len(), 1);
 
             let change = &changes[0];
-            assert_eq!(change.work_item.id, id);
+            assert_eq!(change.work_item_id, id);
             assert_eq!(change.status, None);
             assert_eq!(change.blocked, None);
             assert_eq!(change.epic, Some(Some(epic.to_owned())));
         }
+    }
+
+    #[test]
+    fn test_set_epic_from_parent() {
+        let mut data = TestData::default();
+
+        const RIGHT_EPIC: &str = "right epic";
+        const WRONG_EPIC: &str = "wrong epic";
+
+        let child_no_epic = data.build().add();
+        let child_wrong_epic = data.build().epic(WRONG_EPIC).add();
+        let child_right_epic = data.build().epic(RIGHT_EPIC).add();
+
+        data.build()
+            .epic(RIGHT_EPIC)
+            .sub_issues(&[&child_no_epic, &child_wrong_epic, &child_right_epic])
+            .add();
+
+        let expected_changes: HashSet<Change> = HashSet::from_iter([Change {
+            work_item_id: child_no_epic,
+            epic: Some(Some(RIGHT_EPIC.to_owned())),
+            ..Default::default()
+        }]);
+
+        let actual_changes: HashSet<Change> =
+            HashSet::from_iter(get_hygienic_changes(&data.work_items));
+
+        assert_eq!(actual_changes, expected_changes);
     }
 }

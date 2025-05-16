@@ -198,19 +198,13 @@ impl WorkItems {
 pub mod test_helpers {
     use super::*;
 
+    #[derive(Default)]
     pub struct TestData {
         pub work_items: WorkItems,
         next_id: i32,
     }
 
     impl TestData {
-        pub fn new() -> Self {
-            TestData {
-                work_items: WorkItems::default(),
-                next_id: 0,
-            }
-        }
-
         pub fn next_id(&mut self) -> WorkItemId {
             self.next_id += 1;
             WorkItemId::from(format!("{}", self.next_id))
@@ -220,7 +214,7 @@ pub mod test_helpers {
             self.work_items.add(item);
         }
 
-        pub fn build<'a>(&'a mut self) -> TestDataWorkItemBuilder<'a> {
+        pub fn build(&mut self) -> TestDataWorkItemBuilder {
             let id = self.next_id();
 
             TestDataWorkItemBuilder {
@@ -249,7 +243,7 @@ pub mod test_helpers {
         item: WorkItem,
     }
 
-    impl<'a> TestDataWorkItemBuilder<'a> {
+    impl TestDataWorkItemBuilder<'_> {
         pub fn add(self) -> WorkItemId {
             let id = self.item.id.clone();
             self.data.add_work_item(self.item);
@@ -331,7 +325,7 @@ pub mod tests {
 
     #[test]
     fn test_resolve() {
-        let mut data = TestData::new();
+        let mut data = TestData::default();
 
         let a = data.add_blank_issue([], []);
         let b = data.add_blank_issue([], []);
