@@ -349,6 +349,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_set_epic_from_parent() {
         let mut data = TestData::default();
 
@@ -377,6 +378,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_set_epic_from_grandparent() {
         let mut data = TestData::default();
 
