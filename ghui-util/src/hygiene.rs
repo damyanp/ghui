@@ -1,5 +1,10 @@
 #![allow(dead_code)]
 
+use std::{
+    collections::{hash_map, HashMap},
+    mem::Discriminant,
+};
+
 use github_graphql::{
     client::{
         graphql::{
@@ -49,56 +54,83 @@ async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     data::WorkItems::from_graphql(items)
 }
 
-#[derive(Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Default, Debug, Eq, PartialEq)]
+struct Changes {
+    data: HashMap<ChangeKey, Change>,
+}
+
+impl Changes {
+    fn add(&mut self, change: Change) {
+        if self.data.contains_key(&change.key()) {}
+        let old_value = self.data.insert(change.key(), change.clone());
+        if let Some(old_value) = old_value {
+            println!("WARNING! {:?} overrides {:?}", change, old_value);
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a Changes {
+    type Item = &'a Change;
+
+    type IntoIter = hash_map::Values<'a, ChangeKey, Change>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.values()
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Hash)]
+struct ChangeKey {
+    pub work_item_id: WorkItemId,
+    pub data_type: Discriminant<ChangeData>,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Change {
-    work_item_id: WorkItemId,
-    status: Option<Option<String>>,
-    blocked: Option<Option<String>>,
-    epic: Option<Option<String>>,
+    pub work_item_id: WorkItemId,
+    pub data: ChangeData,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+enum ChangeData {
+    Status(Option<String>),
+    Blocked(Option<String>),
+    Epic(Option<String>),
 }
 
 impl Change {
-    fn new(id: WorkItemId) -> Self {
-        Change {
-            work_item_id: id,
-            ..Default::default()
+    fn key(&self) -> ChangeKey {
+        ChangeKey {
+            work_item_id: self.work_item_id.clone(),
+            data_type: std::mem::discriminant(&self.data),
         }
     }
 
     fn describe(&self, work_items: &WorkItems) -> String {
         let work_item = work_items.get(&self.work_item_id).unwrap();
 
-        let mut s = Vec::new();
-
-        if let Some(status) = &self.status {
-            s.push(format!(
-                "status({} -> {})",
-                work_item.project_item.status.field_value().unwrap_or("<>"),
-                status.as_ref().map(|i| i.as_str()).unwrap_or("<>")
-            ));
+        let old_value = match self.data {
+            ChangeData::Status(_) => work_item.project_item.status.field_value(),
+            ChangeData::Blocked(_) => work_item.project_item.blocked.field_value(),
+            ChangeData::Epic(_) => work_item.project_item.epic.field_value(),
         }
+        .unwrap_or("<>");
 
-        if let Some(blocked) = &self.blocked {
-            s.push(format!(
-                "blocked({} -> {})",
-                work_item.project_item.status.field_value().unwrap_or("<>"),
-                blocked.as_ref().map(|i| i.as_str()).unwrap_or("<>")
-            ));
+        let name = match self.data {
+            ChangeData::Status(_) => "Status",
+            ChangeData::Blocked(_) => "Blocked",
+            ChangeData::Epic(_) => "Epic",
+        };
+
+        let new_value = match &self.data {
+            ChangeData::Status(value) => value.as_ref(),
+            ChangeData::Blocked(value) => value.as_ref(),
+            ChangeData::Epic(value) => value.as_ref(),
         }
+        .map(|v| v.as_str())
+        .unwrap_or("<>");
 
-        if let Some(epic) = &self.epic {
-            s.push(format!(
-                "epic({} -> {})",
-                work_item.project_item.epic.field_value().unwrap_or("<>"),
-                epic.as_ref().map(|i| i.as_str()).unwrap_or("<>")
-            ));
-        }
-
-        s.join(", ")
-    }
-
-    fn has_changes(&self) -> bool {
-        self.status.is_some() || self.blocked.is_some() || self.epic.is_some()
+        format!("{}({} -> {})", name, old_value, new_value).to_owned()
     }
 }
 
@@ -115,41 +147,45 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     let changes = get_hygienic_changes(&items);
 
-    commit_changes(client, &items, changes, &mode).await?;
+    commit_changes(client, &items, &changes, &mode).await?;
 
     Ok(())
 }
 
-fn get_hygienic_changes(items: &WorkItems) -> impl Iterator<Item = Change> + use<'_> {
-    items
-        .work_items
-        .values()
-        .map(|item| {
-            let mut change = Change::new(item.id.clone());
+fn get_hygienic_changes(items: &WorkItems) -> Changes {
+    let mut changes = Changes::default();
 
-            // Closed items should have status set to Closed
-            if item.is_closed() && !item.project_item.status.matches("Closed") {
-                change.status = Some(Some("Closed".to_owned()));
+    for item in items.work_items.values() {
+        // Closed items should have status set to Closed
+        if item.is_closed() && !item.project_item.status.matches("Closed") {
+            changes.add(Change {
+                work_item_id: item.id.clone(),
+                data: ChangeData::Status(Some("Closed".to_owned())),
+            });
+        }
+
+        // Map project milestones to epics
+        if item.project_item.epic.is_none() {
+            let new_epic = match item.project_item.project_milestone.field_value() {
+                Some("3: ML preview requirements")
+                | Some("4: ML preview planning")
+                | Some("5: ML preview implementation") => Some("DML Demo"),
+                Some("Graphics preview feature analysis") => Some("MiniEngine Demo"),
+                Some("DXC: SM 6.9 Preview") => Some("SM 6.9 Preview"),
+                Some("DXC: SM 6.9 Release") => Some("DXC 2025 Q4"),
+                _ => None,
+            };
+
+            if let Some(new_epic) = new_epic {
+                changes.add(Change {
+                    work_item_id: item.id.clone(),
+                    data: ChangeData::Epic(Some(new_epic.to_owned())),
+                });
             }
+        }
+    }
 
-            // Map project milestones to epics
-            if item.project_item.epic.is_none() {
-                change.epic = match item.project_item.project_milestone.field_value() {
-                    Some("3: ML preview requirements")
-                    | Some("4: ML preview planning")
-                    | Some("5: ML preview implementation") => Some(Some("DML Demo".to_owned())),
-                    Some("Graphics preview feature analysis") => {
-                        Some(Some("MiniEngine Demo".to_owned()))
-                    }
-                    Some("DXC: SM 6.9 Preview") => Some(Some("SM 6.9 Preview".to_owned())),
-                    Some("DXC: SM 6.9 Release") => Some(Some("DXC 2025 Q4".to_owned())),
-                    _ => None,
-                };
-            }
-
-            change
-        })
-        .filter(|change| change.has_changes())
+    changes
 }
 
 fn describe_item(item: &data::WorkItem) -> String {
@@ -159,15 +195,12 @@ fn describe_item(item: &data::WorkItem) -> String {
     }
 }
 
-async fn commit_changes<I>(
+async fn commit_changes(
     client: &GithubClient,
     work_items: &WorkItems,
-    changes: I,
+    changes: &Changes,
     mode: &RunHygieneMode,
-) -> Result
-where
-    I: std::iter::IntoIterator<Item = Change>,
-{
+) -> Result {
     let fields = custom_fields_query::get_fields(client).await?;
 
     for change in changes {
@@ -177,44 +210,36 @@ where
 
         let id = &work_item.project_item.id;
 
-        if let Some(status) = &change.status {
-            apply_change(
+        match &change.data {
+            ChangeData::Status(value) => apply_change(
                 client,
                 &fields.project_id,
                 id,
                 &work_item.project_item.status,
                 &fields.status,
-                status,
+                value,
                 mode,
-            )
-            .await?;
-        }
-
-        if let Some(blocked) = &change.blocked {
-            apply_change(
+            ),
+            ChangeData::Blocked(value) => apply_change(
                 client,
                 &fields.project_id,
                 id,
                 &work_item.project_item.blocked,
                 &fields.blocked,
-                blocked,
+                value,
                 mode,
-            )
-            .await?;
-        }
-
-        if let Some(epic) = &change.epic {
-            apply_change(
+            ),
+            ChangeData::Epic(value) => apply_change(
                 client,
                 &fields.project_id,
                 id,
                 &work_item.project_item.epic,
                 &fields.epic,
-                epic,
+                value,
                 mode,
-            )
-            .await?;
+            ),
         }
+        .await?;
 
         println!();
     }
@@ -269,11 +294,9 @@ async fn apply_change(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use github_graphql::data::{test_helpers::TestData, IssueState};
 
-    use super::{get_hygienic_changes, Change};
+    use super::{get_hygienic_changes, Change, ChangeData, Changes};
 
     #[test]
     fn test_closed_issues_set_state_to_closed() {
@@ -290,15 +313,15 @@ mod tests {
             .status("Active")
             .add();
 
-        let changes: Vec<Change> = get_hygienic_changes(&data.work_items).collect();
+        let actual_changes = get_hygienic_changes(&data.work_items);
 
-        assert_eq!(changes.len(), 1);
+        let mut expected_changes = Changes::default();
+        expected_changes.add(Change {
+            work_item_id: closed_item_id,
+            data: ChangeData::Status(Some("Closed".to_owned())),
+        });
 
-        let change = &changes[0];
-        assert_eq!(change.work_item_id, closed_item_id);
-        assert_eq!(change.status, Some(Some("Closed".to_owned())));
-        assert_eq!(change.blocked, None);
-        assert_eq!(change.epic, None);
+        assert_eq!(actual_changes, expected_changes);
     }
 
     #[test]
@@ -336,15 +359,15 @@ mod tests {
             // change
             let id = data.build().project_milestone(project_milestone).add();
 
-            let changes: Vec<Change> = get_hygienic_changes(&data.work_items).collect();
+            let actual_changes = get_hygienic_changes(&data.work_items);
 
-            assert_eq!(changes.len(), 1);
+            let mut expected_changes = Changes::default();
+            expected_changes.add(Change {
+                work_item_id: id,
+                data: ChangeData::Epic(Some(epic.to_owned())),
+            });
 
-            let change = &changes[0];
-            assert_eq!(change.work_item_id, id);
-            assert_eq!(change.status, None);
-            assert_eq!(change.blocked, None);
-            assert_eq!(change.epic, Some(Some(epic.to_owned())));
+            assert_eq!(actual_changes, expected_changes);
         }
     }
 
@@ -365,14 +388,13 @@ mod tests {
             .sub_issues(&[&child_no_epic, &child_wrong_epic, &child_right_epic])
             .add();
 
-        let expected_changes: HashSet<Change> = HashSet::from_iter([Change {
-            work_item_id: child_no_epic,
-            epic: Some(Some(RIGHT_EPIC.to_owned())),
-            ..Default::default()
-        }]);
+        let actual_changes = get_hygienic_changes(&data.work_items);
 
-        let actual_changes: HashSet<Change> =
-            HashSet::from_iter(get_hygienic_changes(&data.work_items));
+        let mut expected_changes = Changes::default();
+        expected_changes.add(Change {
+            work_item_id: child_no_epic,
+            data: ChangeData::Epic(Some(RIGHT_EPIC.to_owned())),
+        });
 
         assert_eq!(actual_changes, expected_changes);
     }
@@ -395,28 +417,23 @@ mod tests {
             .sub_issues(&[&parent_a, &parent_b])
             .add();
 
-        let epic = Some(Some(EPIC.to_owned()));
+        let epic = ChangeData::Epic(Some(EPIC.to_owned()));
 
-        let expected_changes: HashSet<Change> = HashSet::from_iter([
-            Change {
-                work_item_id: child_a,
-                epic: epic.clone(),
-                ..Default::default()
-            },
-            Change {
-                work_item_id: child_b,
-                epic: epic.clone(),
-                ..Default::default()
-            },
-            Change {
-                work_item_id: parent_b,
-                epic: epic.clone(),
-                ..Default::default()
-            },
-        ]);
+        let actual_changes = get_hygienic_changes(&data.work_items);
 
-        let actual_changes: HashSet<Change> =
-            HashSet::from_iter(get_hygienic_changes(&data.work_items));
+        let mut expected_changes = Changes::default();
+        expected_changes.add(Change {
+            work_item_id: child_a,
+            data: epic.clone(),
+        });
+        expected_changes.add(Change {
+            work_item_id: child_b,
+            data: epic.clone(),
+        });
+        expected_changes.add(Change {
+            work_item_id: parent_b,
+            data: epic.clone(),
+        });
 
         assert_eq!(actual_changes, expected_changes);
     }
