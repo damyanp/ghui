@@ -113,7 +113,15 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     println!("{} items", items.work_items.len());
 
-    let changes = items
+    let changes = get_hygienic_changes(&items);
+
+    commit_changes(client, changes, &mode).await?;
+
+    Ok(())
+}
+
+fn get_hygienic_changes<'a>(items: &'a data::WorkItems) -> impl Iterator<Item = Change<'a>> {
+    items
         .work_items
         .values()
         .map(|item| {
@@ -141,11 +149,7 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
             change
         })
-        .filter(|change| change.has_changes());
-
-    commit_changes(client, changes, &mode).await?;
-
-    Ok(())
+        .filter(|change| change.has_changes())
 }
 
 fn describe_item(item: &data::WorkItem) -> String {
@@ -254,4 +258,37 @@ async fn apply_change(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use github_graphql::data::{test_helpers::TestData, IssueState};
+
+    use super::{get_hygienic_changes, Change};
+
+    #[test]
+    fn test_closed_issues_set_state_to_closed() {
+        let mut data = TestData::new();
+
+        data.build()
+            .issue_state(IssueState::OPEN)
+            .status("Active")
+            .add();
+
+        let closed_item_id = data
+            .build()
+            .issue_state(IssueState::CLOSED)
+            .status("Active")
+            .add();
+
+        let changes: Vec<Change> = get_hygienic_changes(&data.work_items).collect();
+
+        assert_eq!(changes.len(), 1);
+
+        let change = &changes[0];
+        assert_eq!(change.work_item.id, closed_item_id);
+        assert_eq!(change.status, Some(Some("Closed".to_owned())));
+        assert_eq!(change.blocked, None);
+        assert_eq!(change.epic, None);
+    }
 }

@@ -208,19 +208,83 @@ pub mod test_helpers {
             WorkItemId::from(format!("{}", self.next_id))
         }
 
-        pub fn add_work_item(&mut self, mut item: WorkItem) -> WorkItemId {
-            let id = self.next_id();
-            item.id = id.clone();
+        pub fn add_work_item(&mut self, item: WorkItem) {
             self.work_items.add(item);
+        }
+
+        pub fn build<'a>(&'a mut self) -> TestDataWorkItemBuilder<'a> {
+            let id = self.next_id();
+
+            TestDataWorkItemBuilder {
+                data: self,
+                item: WorkItem {
+                    id,
+                    ..Default::default()
+                },
+            }
+        }
+
+        pub fn add_blank_issue<const S: usize, const T: usize>(
+            &mut self,
+            sub_issues: [&WorkItemId; S],
+            tracked_issues: [&WorkItemId; T],
+        ) -> WorkItemId {
+            self.build()
+                .sub_issues(&sub_issues)
+                .tracked_issues(&tracked_issues)
+                .add()
+        }
+    }
+
+    pub struct TestDataWorkItemBuilder<'a> {
+        data: &'a mut TestData,
+        item: WorkItem,
+    }
+
+    impl<'a> TestDataWorkItemBuilder<'a> {
+        pub fn add(self) -> WorkItemId {
+            let id = self.item.id.clone();
+            self.data.add_work_item(self.item);
             id
         }
 
-        pub fn add_blank_issue(
-            &mut self,
-            sub_issues: &[&WorkItemId],
-            tracked_issues: &[&WorkItemId],
-        ) -> WorkItemId {
-            self.add_work_item(WorkItem::new_blank_issue(sub_issues, tracked_issues))
+        pub fn issue_state(mut self, state: IssueState) -> Self {
+            self.get_issue().state = state;
+            self
+        }
+
+        pub fn sub_issues(mut self, ids: &[&WorkItemId]) -> Self {
+            self.get_issue().sub_issues = to_project_item_ref_vec(ids);
+            self
+        }
+
+        pub fn tracked_issues(mut self, ids: &[&WorkItemId]) -> Self {
+            self.get_issue().tracked_issues = to_project_item_ref_vec(ids);
+            self
+        }
+
+        fn get_issue(&mut self) -> &mut Issue {
+            if let WorkItemData::DraftIssue = self.item.data {
+                self.item.data = WorkItemData::Issue(Issue::default());
+            }
+
+            if let WorkItemData::PullRequest(_) = self.item.data {
+                panic!("Cannot set Issue field on PullRequest")
+            }
+
+            if let WorkItemData::Issue(issue) = &mut self.item.data {
+                return issue;
+            }
+
+            panic!("This shouldn't happen");
+        }
+
+        pub fn status(mut self, name: &str) -> Self {
+            self.item.project_item.status = Some(SingleSelectFieldValue {
+                name: name.to_owned(),
+                ..Default::default()
+            });
+            self
         }
     }
 
@@ -253,17 +317,17 @@ pub mod tests {
     fn test_resolve() {
         let mut data = TestData::new();
 
-        let a = data.add_blank_issue(&[], &[]);
-        let b = data.add_blank_issue(&[], &[]);
+        let a = data.add_blank_issue([], []);
+        let b = data.add_blank_issue([], []);
 
-        let c = data.add_blank_issue(&[&a], &[&a]);
-        let d = data.add_blank_issue(&[&a, &b], &[&a, &b]);
+        let c = data.add_blank_issue([&a], [&a]);
+        let d = data.add_blank_issue([&a, &b], [&a, &b]);
 
         let unresolvable = data.next_id();
 
-        let root1 = data.add_blank_issue(&[&c], &[&d, &unresolvable]);
-        let root2 = data.add_blank_issue(&[&a], &[&d, &unresolvable]);
-        let root3 = data.add_blank_issue(&[&c, &unresolvable], &[&b, &unresolvable]);
+        let root1 = data.add_blank_issue([&c], [&d, &unresolvable]);
+        let root2 = data.add_blank_issue([&a], [&d, &unresolvable]);
+        let root3 = data.add_blank_issue([&c, &unresolvable], [&b, &unresolvable]);
 
         let roots: HashSet<WorkItemId> = HashSet::from_iter(data.work_items.get_roots());
 
