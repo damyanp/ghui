@@ -111,6 +111,14 @@ pub struct SingleSelectFieldValue {
     pub option_id: String,
     pub name: String,
 }
+impl SingleSelectFieldValue {
+    fn from_name(name: &str) -> SingleSelectFieldValue {
+        SingleSelectFieldValue {
+            name: name.to_owned(),
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -280,10 +288,18 @@ pub mod test_helpers {
         }
 
         pub fn status(mut self, name: &str) -> Self {
-            self.item.project_item.status = Some(SingleSelectFieldValue {
-                name: name.to_owned(),
-                ..Default::default()
-            });
+            self.item.project_item.status = Some(SingleSelectFieldValue::from_name(name));
+            self
+        }
+
+        pub fn project_milestone(mut self, name: &str) -> Self {
+            self.item.project_item.project_milestone =
+                Some(SingleSelectFieldValue::from_name(name));
+            self
+        }
+
+        pub fn epic(mut self, name: &str) -> Self {
+            self.item.project_item.epic = Some(SingleSelectFieldValue::from_name(name));
             self
         }
     }

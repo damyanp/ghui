@@ -291,4 +291,51 @@ mod tests {
         assert_eq!(change.blocked, None);
         assert_eq!(change.epic, None);
     }
+
+    #[test]
+    fn test_set_epic_from_project_milestone() {
+        let mappings = [
+            ("3: ML preview requirements", "DML Demo"),
+            ("4: ML preview planning", "DML Demo"),
+            ("5: ML preview implementation", "DML Demo"),
+            ("Graphics preview feature analysis", "MiniEngine Demo"),
+            ("DXC: SM 6.9 Preview", "SM 6.9 Preview"),
+            ("DXC: SM 6.9 Release", "DXC 2025 Q4"),
+        ];
+
+        for (project_milestone, epic) in mappings {
+            let mut data = TestData::new();
+
+            // Existing epics shouldn't be changed
+            data.build()
+                .project_milestone(project_milestone)
+                .epic("Do Not Change")
+                .add();
+
+            // Unrecognized milestones shouldn't change epic
+            data.build()
+                .project_milestone(format!("{}-XXX", project_milestone).as_str())
+                .add();
+
+            // Already matching ones shouldn't change
+            data.build()
+                .project_milestone(project_milestone)
+                .epic(epic)
+                .add();
+
+            // But when there's a match and no epic is set, we should expect a
+            // change
+            let id = data.build().project_milestone(project_milestone).add();
+
+            let changes: Vec<Change> = get_hygienic_changes(&data.work_items).collect();
+
+            assert_eq!(changes.len(), 1);
+
+            let change = &changes[0];
+            assert_eq!(change.work_item.id, id);
+            assert_eq!(change.status, None);
+            assert_eq!(change.blocked, None);
+            assert_eq!(change.epic, Some(Some(epic.to_owned())));
+        }
+    }
 }
