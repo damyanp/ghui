@@ -61,7 +61,6 @@ struct Changes {
 
 impl Changes {
     fn add(&mut self, change: Change) {
-        if self.data.contains_key(&change.key()) {}
         let old_value = self.data.insert(change.key(), change.clone());
         if let Some(old_value) = old_value {
             println!("WARNING! {:?} overrides {:?}", change, old_value);
@@ -186,7 +185,7 @@ fn get_hygienic_changes(items: &WorkItems) -> Changes {
     }
 
     for root_item_id in items.get_roots() {
-        sanitize_issue_hierarchy(&items, &mut changes, &root_item_id, None);
+        sanitize_issue_hierarchy(items, &mut changes, &root_item_id, None);
     }
 
     fn sanitize_issue_hierarchy(
