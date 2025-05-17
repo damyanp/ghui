@@ -7,6 +7,13 @@ use crate::{
     Result,
 };
 use graphql_client::GraphQLQuery;
+use project_items::{
+    CustomField, ProjectItemsOrganizationProjectV2ItemsNodes,
+    ProjectItemsOrganizationProjectV2ItemsNodesContent,
+    ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes,
+    ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
+    ProjectItemsOrganizationProjectV2ItemsNodesIteration,
+};
 
 use super::{get_all_items, PagedQuery, PagedQueryPageInfo, URI};
 
@@ -20,8 +27,6 @@ type DateTime = String;
     variables_derives = "Debug"
 )]
 pub struct ProjectItems;
-
-pub use project_items::*;
 
 impl PagedQuery<ProjectItems> for ProjectItems {
     type ItemType = ProjectItemsOrganizationProjectV2ItemsNodes;
@@ -99,7 +104,7 @@ impl CustomFieldAccessors for Option<CustomField> {
     }
 }
 
-impl data::WorkItems {
+impl WorkItems {
     pub async fn from_client(
         client: &impl Client,
         report_progress: fn(count: usize, total: usize),
@@ -110,13 +115,13 @@ impl data::WorkItems {
         };
         let items = get_all_items::<ProjectItems>(client, variables, report_progress).await?;
 
-        data::WorkItems::from_graphql(items)
+        WorkItems::from_graphql(items)
     }
 
     pub fn from_graphql(
         items: Vec<ProjectItemsOrganizationProjectV2ItemsNodes>,
-    ) -> Result<data::WorkItems> {
-        let mut work_items = data::WorkItems::default();
+    ) -> Result<WorkItems> {
+        let mut work_items = WorkItems::default();
 
         for item in items {
             let status = item.status.get_single_select_field_value();
@@ -150,9 +155,7 @@ impl data::WorkItems {
 }
 
 fn build_work_item(
-    content: Option<
-        crate::client::graphql::project_items::ProjectItemsOrganizationProjectV2ItemsNodesContent,
-    >,
+    content: Option<ProjectItemsOrganizationProjectV2ItemsNodesContent>,
 ) -> Result<WorkItem> {
     let content = content.ok_or("project item without content")?;
 
@@ -241,10 +244,6 @@ fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<
 
 #[cfg(test)]
 mod tests {
-    use crate::data::IssueState;
-    use crate::data::PullRequestState;
-    use crate::data::WorkItemId;
-
     use super::*;
 
     fn single_select_value(value: &str) -> Option<SingleSelectFieldValue> {
@@ -344,7 +343,7 @@ mod tests {
 "#;
 
         let project_items =
-            data::WorkItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
+            WorkItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
         let mut items_iterator = project_items.iter();
 
         let draft_issue = items_iterator.next().unwrap();
@@ -382,7 +381,7 @@ mod tests {
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
             repository: Some("llvm".into()),
             data: WorkItemData::Issue(Issue {
-                state: IssueState::CLOSED,
+                state: data::IssueState::CLOSED,
                 sub_issues: vec![],
                 tracked_issues: vec![],
             }),
@@ -410,7 +409,7 @@ mod tests {
             resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
             repository: Some("llvm".into()),
             data: WorkItemData::PullRequest(PullRequest {
-                state: PullRequestState::OPEN,
+                state: data::PullRequestState::OPEN,
             }),
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
@@ -484,7 +483,7 @@ mod tests {
   }]
 "#;
         let project_items =
-            data::WorkItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
+            WorkItems::from_graphql(serde_json::from_str(items_json).unwrap()).unwrap();
 
         let item = project_items
             .get(&"I_kwDOMbLzis6RouY5".to_owned().into())

@@ -45,7 +45,7 @@ async fn main() -> Result {
 async fn run_get_all_items() -> Result {
     let client = client();
 
-    let variables = project_items::Variables {
+    let variables = project_items::project_items::Variables {
         page_size: 100,
         after: None,
     };
