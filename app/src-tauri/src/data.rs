@@ -1,7 +1,7 @@
-use std::{collections::HashMap, mem::take};
-
+use crate::pat::new_github_client;
 use github_graphql::data::{WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
+use std::{collections::HashMap, mem::take};
 use tauri::AppHandle;
 
 #[derive(Serialize)]
@@ -28,12 +28,18 @@ pub enum NodeData {
 }
 
 #[tauri::command]
-pub async fn get_data(_app: AppHandle) -> Result<Data, String> {
-    let all_items_str = include_str!("../../../all_items.json");
-    let all_items_json =
-        serde_json::from_str(all_items_str).map_err(|e| e.to_string().to_owned())?;
+pub async fn get_data(app: AppHandle) -> Result<Data, String> {
+    // let all_items_str = include_str!("../../../all_items.json");
+    // let all_items_json =
+    //     serde_json::from_str(all_items_str).map_err(|e| e.to_string().to_owned())?;
+    //let work_items = WorkItems::from_graphql(all_items_json).map_err(|e| e.to_string())?;
 
-    let work_items = WorkItems::from_graphql(all_items_json).map_err(|e| e.to_string())?;
+    let client = new_github_client(&app).await?;
+
+    let report_progress = |c, t| println!("Retrieved {c} of {t} items");
+    let work_items = WorkItems::from_client(&client, report_progress)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let nodes = NodeBuilder::new(&work_items).build();
 

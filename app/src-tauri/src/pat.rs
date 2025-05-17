@@ -3,7 +3,7 @@ use github_graphql::client::{
     transport::GithubClient,
 };
 use serde::Serialize;
-use tauri::{async_runtime::Mutex, AppHandle, Emitter, State};
+use tauri::{async_runtime::Mutex, AppHandle, Emitter, Manager, State};
 
 #[derive(Clone, Serialize)]
 #[serde(
@@ -47,6 +47,12 @@ async fn set_password(state: &Mutex<PATState>, password: &str) -> keyring::Resul
 async fn delete_password(state: &Mutex<PATState>) -> keyring::Result<()> {
     let state = state.lock().await;
     state.pat_entry.delete_credential()
+}
+
+pub async fn new_github_client(app: &AppHandle) -> Result<GithubClient, String> {
+    let state = app.state::<Mutex<PATState>>();
+    let password = get_password(&state).await.map_err(|e| e.to_string())?;
+    GithubClient::new(&password).map_err(|e| e.to_string())
 }
 
 async fn update_pat_status(
