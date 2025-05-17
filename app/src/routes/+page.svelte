@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AppBar } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
-  import { invoke } from "@tauri-apps/api/core";
+  import { Channel, invoke } from "@tauri-apps/api/core";
 
   import {
     type Data,
@@ -16,7 +16,18 @@
 
   let raw_data = $state<Data | undefined>(undefined);
 
-  invoke<Data>("get_data").then((d) => (raw_data = d));
+  type Progress = number[];
+
+  let progress = $state<Progress>([0,0]);
+  const getDataProgress = new Channel<Progress>();
+  getDataProgress.onmessage = (message) => {
+    console.log(`Message: ${JSON.stringify(message)}`);
+    progress = message;
+  };
+
+  invoke<Data>("get_data", { progress: getDataProgress }).then(
+    (d) => (raw_data = d)
+  );
 
   let expanded = $state<string[]>([]);
 
@@ -53,7 +64,7 @@
 </AppBar>
 
 {#if data === undefined}
-  Waiting for data...
+  Waiting for data... {progress[0]} / {progress[1]}
 {:else}
   {#snippet expander(node: Node)}
     {#if node.hasChildren}
@@ -102,7 +113,7 @@
               {:else if node.data.type === "workItem"}
                 {@const item = data.workItems[node.id]}
                 {#if item}
-                {@const path = item.resourcePath?.split("/")}
+                  {@const path = item.resourcePath?.split("/")}
                   <td style="padding-inline-start: {1 * node.level}rem">
                     {@render expander(node)}
                     {item.title}

@@ -107,7 +107,7 @@ impl CustomFieldAccessors for Option<CustomField> {
 impl WorkItems {
     pub async fn from_client(
         client: &impl Client,
-        report_progress: fn(count: usize, total: usize),
+        report_progress: &impl Fn(usize, usize),
     ) -> Result<WorkItems> {
         let variables = project_items::Variables {
             page_size: 100,

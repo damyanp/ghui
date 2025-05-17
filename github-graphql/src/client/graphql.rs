@@ -35,7 +35,7 @@ pub trait PagedQuery<Query: GraphQLQuery> {
 pub async fn get_all_items<Query>(
     client: &impl Client,
     variables: Query::Variables,
-    report_progress: fn(count: usize, total: usize),
+    report_progress: &impl Fn(usize, usize),
 ) -> Result<Vec<Query::ItemType>, Box<dyn std::error::Error>>
 where
     Query: GraphQLQuery + PagedQuery<Query>,
