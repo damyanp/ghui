@@ -1,10 +1,14 @@
-use crate::data::{
-    self, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
-    SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId,
+use crate::{
+    client::transport::Client,
+    data::{
+        self, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
+        SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId, WorkItems,
+    },
+    Result,
 };
 use graphql_client::GraphQLQuery;
 
-use super::{PagedQuery, PagedQueryPageInfo, URI};
+use super::{get_all_items, PagedQuery, PagedQueryPageInfo, URI};
 
 type DateTime = String;
 
@@ -96,9 +100,22 @@ impl CustomFieldAccessors for Option<CustomField> {
 }
 
 impl data::WorkItems {
+    pub async fn from_client(
+        client: &impl Client,
+        report_progress: fn(count: usize, total: usize),
+    ) -> Result<WorkItems> {
+        let variables = project_items::Variables {
+            page_size: 100,
+            after: None,
+        };
+        let items = get_all_items::<ProjectItems>(client, variables, report_progress).await?;
+
+        data::WorkItems::from_graphql(items)
+    }
+
     pub fn from_graphql(
         items: Vec<ProjectItemsOrganizationProjectV2ItemsNodes>,
-    ) -> Result<data::WorkItems, Box<dyn std::error::Error>> {
+    ) -> Result<data::WorkItems> {
         let mut work_items = data::WorkItems::default();
 
         for item in items {
@@ -136,7 +153,7 @@ fn build_work_item(
     content: Option<
         crate::client::graphql::project_items::ProjectItemsOrganizationProjectV2ItemsNodesContent,
     >,
-) -> Result<WorkItem, String> {
+) -> Result<WorkItem> {
     let content = content.ok_or("project item without content")?;
 
     Ok(match content {

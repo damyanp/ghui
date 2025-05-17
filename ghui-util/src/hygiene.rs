@@ -10,7 +10,7 @@ use github_graphql::{
         graphql::{
             clear_project_field_value,
             custom_fields_query::{self, Field},
-            get_all_items, project_items, set_project_field_value,
+            set_project_field_value,
         },
         transport::GithubClient,
     },
@@ -39,19 +39,8 @@ pub async fn run(options: Options) -> Result {
 }
 
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
-    let variables = project_items::Variables {
-        page_size: 100,
-        after: None,
-    };
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    let items = get_all_items::<project_items::ProjectItems, GithubClient>(
-        client,
-        variables,
-        report_progress,
-    )
-    .await?;
-
-    data::WorkItems::from_graphql(items)
+    data::WorkItems::from_client(client, report_progress).await
 }
 
 #[derive(Default, Debug, Eq, PartialEq)]

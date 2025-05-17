@@ -52,12 +52,8 @@ async fn run_get_all_items() -> Result {
 
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
-    let all_items = get_all_items::<project_items::ProjectItems, GithubClient>(
-        &client,
-        variables,
-        report_progress,
-    )
-    .await?;
+    let all_items =
+        get_all_items::<project_items::ProjectItems>(&client, variables, report_progress).await?;
 
     let json_data = serde_json::to_string_pretty(&all_items)?;
     let mut file = File::create("all_items.json")?;

@@ -15,6 +15,8 @@ use graphql_client::{GraphQLQuery, Response};
 pub use project_items::ProjectItems;
 pub use viewer_info::{get_viewer_info, ViewerInfo};
 
+use super::transport::Client;
+
 #[allow(clippy::upper_case_acronyms)]
 type URI = String;
 
@@ -30,14 +32,13 @@ pub trait PagedQuery<Query: GraphQLQuery> {
     fn get_items(response: Query::ResponseData) -> Option<Vec<Self::ItemType>>;
 }
 
-pub async fn get_all_items<Query, ClientType>(
-    client: &ClientType,
+pub async fn get_all_items<Query>(
+    client: &impl Client,
     variables: Query::Variables,
     report_progress: fn(count: usize, total: usize),
 ) -> Result<Vec<Query::ItemType>, Box<dyn std::error::Error>>
 where
     Query: GraphQLQuery + PagedQuery<Query>,
-    ClientType: crate::client::transport::Client,
 {
     let mut request_body = Query::build_query(variables);
     let mut all_items: Vec<Query::ItemType> = Vec::new();
