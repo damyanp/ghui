@@ -67,6 +67,8 @@
         return patState.type;
     }
   });
+
+  let canClose = $derived.by(() => patState.type == "set");
 </script>
 
 <button onclick={() => (isOpen = true)}>
@@ -99,7 +101,9 @@
   open={isOpen}
   contentBase="card bg-primary-50-950 p-4 space-y-4 max-w-[640px]"
   modal
-  closeOnInteractOutside={false}
+  onOpenChange={(details) => {
+    if (!details.open && canClose) isOpen = false;
+  }}
 >
   {#snippet content()}
     <header>
