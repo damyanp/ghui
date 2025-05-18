@@ -1473,6 +1473,7 @@ dependencies = [
 name = "ghui"
 version = "0.1.0"
 dependencies = [
+ "dirs",
  "github-graphql",
  "keyring",
  "serde",

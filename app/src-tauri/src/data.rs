@@ -1,8 +1,12 @@
 use crate::pat::new_github_client;
+use dirs::home_dir;
 use github_graphql::data::{WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
+use std::fs;
+use std::io::{BufReader, BufWriter};
+use std::path::PathBuf;
 use std::{collections::HashMap, mem::take};
-use tauri::{ipc::Channel, AppHandle};
+use tauri::{async_runtime::Mutex, ipc::Channel, AppHandle, State};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,25 +31,93 @@ pub enum NodeData {
     Group { name: String },
 }
 
+#[derive(Default)]
+pub struct DataState {
+    work_items: Option<WorkItems>,
+}
+
+impl DataState {
+    async fn refresh(
+        &mut self,
+        app: AppHandle,
+        force: bool,
+        report_progress: &impl Fn(usize, usize),
+    ) -> Result<WorkItems, String> {
+        if !force {
+            if self.work_items.is_some() {
+                return Ok(self.work_items.clone().unwrap());
+            }
+
+            // Try loading from the local cache
+            let load_result: Result<_, String> = load_workitems_from_appdata();
+
+            if let Ok(work_items) = load_result {
+                self.work_items = Some(work_items.clone());
+                return Ok(work_items);
+            } else {
+                println!(
+                    "WARNING: failed to load cached work items: {}",
+                    load_result.err().unwrap()
+                );
+            }
+        }
+
+        // Try retrieving from github
+        let client = new_github_client(&app).await?;
+
+        let work_items = WorkItems::from_client(&client, &report_progress)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let save_result = save_workitems_to_appdata(&work_items);
+        if let Err(error) = save_result {
+            println!("WARNING: failed to save cached work items: {error}");
+        }
+
+        self.work_items = Some(work_items.clone());
+        Ok(work_items)
+    }
+}
+
+fn load_workitems_from_appdata() -> Result<WorkItems, String> {
+    let path = get_appdata_path();
+    println!("Attempting to load work item cache from {path:?}");
+
+    let reader = fs::File::open(path).map_err(|e| e.to_string())?;
+    serde_json::from_reader(BufReader::new(reader)).map_err(|e| e.to_string())
+}
+
+fn save_workitems_to_appdata(work_items: &WorkItems) -> Result<(), String> {
+    let path = get_appdata_path();
+    println!("Attempting to save work item cache to {path:?}");
+
+    let writer = fs::File::create(path).map_err(|e| e.to_string())?;
+    serde_json::to_writer_pretty(BufWriter::new(writer), work_items).map_err(|e| e.to_string())
+}
+
+fn get_appdata_path() -> PathBuf {
+    let mut path = home_dir().unwrap();
+    path.push(".ghui.json");
+    path
+}
+
 #[tauri::command]
-pub async fn get_data(app: AppHandle, progress: Channel<(usize, usize)>) -> Result<Data, String> {
-    // let all_items_str = include_str!("../../../all_items.json");
-    // let all_items_json =
-    //     serde_json::from_str(all_items_str).map_err(|e| e.to_string().to_owned())?;
-    //let work_items = WorkItems::from_graphql(all_items_json).map_err(|e| e.to_string())?;
-
-    let client = new_github_client(&app).await?;
-
+pub async fn get_data(
+    app: AppHandle,
+    data_state: State<'_, Mutex<DataState>>,
+    force_refresh: bool,
+    progress: Channel<(usize, usize)>,
+) -> Result<Data, String> {
     let report_progress = |c, t| {
         progress.send((c, t)).unwrap();
     };
 
-    let work_items = WorkItems::from_client(&client, &report_progress)
-        .await
-        .map_err(|e| e.to_string())?;
+    let mut data_state = data_state.lock().await;
+    let work_items = data_state
+        .refresh(app, force_refresh, &report_progress)
+        .await?;
 
     let nodes = NodeBuilder::new(&work_items).build();
-
     Ok(Data {
         nodes,
         work_items: work_items.work_items,

@@ -1,3 +1,4 @@
+use data::DataState;
 use pat::PATState;
 use tauri::{async_runtime::Mutex, Manager};
 
@@ -11,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             app.manage(Mutex::new(PATState::default()));
+            app.manage(Mutex::new(DataState::default()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

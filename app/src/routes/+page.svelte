@@ -11,27 +11,33 @@
   type Progress = number[];
 
   let progress = $state<number>(0);
-  const getDataProgress = new Channel<Progress>();
-  getDataProgress.onmessage = (message) => {
-    console.log(`Message: ${JSON.stringify(message)}`);
-    const [retrieved, total] = message;
-    if (total === 0) progress = 0;
-    else progress = 1 - retrieved / total;
-  };
 
-  async function onRefreshClicked(): Promise<void> {
+  async function onRefreshClicked(forceRefresh: boolean): Promise<void> {
     if (progress !== 0) return;
 
     progress = 1;
-    raw_data = await invoke<Data>("get_data", { progress: getDataProgress });
+
+    const getDataProgress = new Channel<Progress>();
+    getDataProgress.onmessage = (message) => {
+      const [retrieved, total] = message;
+      if (total === 0) progress = 0;
+      else progress = 1 - retrieved / total;
+    };
+
+    raw_data = await invoke<Data>("get_data", {
+      forceRefresh: forceRefresh,
+      progress: getDataProgress,
+    });
     progress = 0;
   }
+
+  onRefreshClicked(false);
 </script>
 
 <AppBar>
   {#snippet lead()}
     <div class="content-center h-full">ghui</div>
-    <RefreshButton {progress} onclick={onRefreshClicked} />
+    <RefreshButton {progress} onclick={() => onRefreshClicked(true)} />
   {/snippet}
   {#snippet trail()}
     <Pat />
