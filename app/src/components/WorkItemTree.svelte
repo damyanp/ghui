@@ -37,7 +37,7 @@
     <table class="w-full table-auto">
       <thead>
         <tr>
-          {#each ["Title", "Status", "Iteration", "Blocked", "Kind"] as heading}
+          {#each ["Title", "Status", "Iteration", "Blocked", "Kind", "# Tracked"] as heading}
             <td>{heading}</td>
           {/each}
         </tr>
@@ -49,7 +49,7 @@
               <td
                 class="text-2xl border-b-2"
                 style="padding-inline-start: {1 * node.level}rem"
-                colspan="5"
+                colspan="6"
               >
                 {@render expander(node)}
                 {node.data.name}
@@ -72,6 +72,7 @@
                 <td>{item.projectItem.iteration?.title}</td>
                 <td>{item.projectItem.blocked?.name}</td>
                 <td>{item.projectItem.kind?.name}</td>
+                <td>{item.data.type === "issue" ? item.data.trackedIssues.length : ''}</td>
               {/if}
             {/if}
           </tr>
