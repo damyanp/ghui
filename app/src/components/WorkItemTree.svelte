@@ -12,6 +12,7 @@
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import { tick } from "svelte";
   import { text } from "@sveltejs/kit";
+  import { invoke } from "@tauri-apps/api/core";
 
   let { raw_data }: { raw_data: Data } = $props();
 
@@ -95,7 +96,9 @@
   }
 
   function convertTrackedIssuesToSubIssue(item: WorkItem) {
-    // what now?
+    invoke("convert_tracked_to_subissues", {
+      id: item.id,
+    });
   }
 </script>
 

@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{hash_map, HashMap, HashSet},
+    mem::Discriminant,
+};
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -193,6 +196,90 @@ impl WorkItems {
         }
 
         unreferenced_items.into_iter().cloned().collect()
+    }
+}
+
+#[derive(Default, Debug, Eq, PartialEq)]
+pub struct Changes {
+    data: HashMap<ChangeKey, Change>,
+}
+
+impl Changes {
+    pub fn add(&mut self, change: Change) {
+        panic!("Need to figure out how to do this properly - we're allowed multiple AddSubIssues for the same workitem - this should be part of the key");
+        let old_value = self.data.insert(change.key(), change.clone());
+        if let Some(old_value) = old_value {
+            println!("WARNING! {:?} overrides {:?}", change, old_value);
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a Changes {
+    type Item = &'a Change;
+
+    type IntoIter = hash_map::Values<'a, ChangeKey, Change>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.values()
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub struct ChangeKey {
+    pub work_item_id: WorkItemId,
+    pub data_type: Discriminant<ChangeData>,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Change {
+    pub work_item_id: WorkItemId,
+    pub data: ChangeData,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum ChangeData {
+    Status(Option<String>),
+    Blocked(Option<String>),
+    Epic(Option<String>),
+    AddSubIssue(WorkItemId),
+}
+
+impl Change {
+    fn key(&self) -> ChangeKey {
+        ChangeKey {
+            work_item_id: self.work_item_id.clone(),
+            data_type: std::mem::discriminant(&self.data),
+        }
+    }
+
+    pub fn describe(&self, work_items: &WorkItems) -> String {
+        let work_item = work_items.get(&self.work_item_id).unwrap();
+
+        let old_value = match self.data {
+            ChangeData::Status(_) => work_item.project_item.status.field_value(),
+            ChangeData::Blocked(_) => work_item.project_item.blocked.field_value(),
+            ChangeData::Epic(_) => work_item.project_item.epic.field_value(),
+            ChangeData::AddSubIssue(_) => Some("-"),
+        }
+        .unwrap_or("<>");
+
+        let name = match self.data {
+            ChangeData::Status(_) => "Status",
+            ChangeData::Blocked(_) => "Blocked",
+            ChangeData::Epic(_) => "Epic",
+            ChangeData::AddSubIssue(_) => "AddSubIssue",
+        };
+
+        let new_value = match &self.data {
+            ChangeData::Status(value) => value.as_ref(),
+            ChangeData::Blocked(value) => value.as_ref(),
+            ChangeData::Epic(value) => value.as_ref(),
+            ChangeData::AddSubIssue(value) => Some(&value.0),
+        }
+        .map(|v| v.as_str())
+        .unwrap_or("<>");
+
+        format!("{}({} -> {})", name, old_value, new_value).to_owned()
     }
 }
 

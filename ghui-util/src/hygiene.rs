@@ -1,10 +1,5 @@
 #![allow(dead_code)]
 
-use std::{
-    collections::{hash_map, HashMap},
-    mem::Discriminant,
-};
-
 use github_graphql::{
     client::{
         graphql::{
@@ -14,7 +9,10 @@ use github_graphql::{
         },
         transport::GithubClient,
     },
-    data::{self, HasFieldValue, SingleSelectFieldValue, WorkItemData, WorkItemId, WorkItems},
+    data::{
+        self, Change, ChangeData, Changes, HasFieldValue, SingleSelectFieldValue, WorkItemData,
+        WorkItemId, WorkItems,
+    },
 };
 
 use crate::Result;
@@ -41,85 +39,6 @@ pub async fn run(options: Options) -> Result {
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
     data::WorkItems::from_client(client, &report_progress).await
-}
-
-#[derive(Default, Debug, Eq, PartialEq)]
-struct Changes {
-    data: HashMap<ChangeKey, Change>,
-}
-
-impl Changes {
-    fn add(&mut self, change: Change) {
-        let old_value = self.data.insert(change.key(), change.clone());
-        if let Some(old_value) = old_value {
-            println!("WARNING! {:?} overrides {:?}", change, old_value);
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a Changes {
-    type Item = &'a Change;
-
-    type IntoIter = hash_map::Values<'a, ChangeKey, Change>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.data.values()
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Hash)]
-struct ChangeKey {
-    pub work_item_id: WorkItemId,
-    pub data_type: Discriminant<ChangeData>,
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-struct Change {
-    pub work_item_id: WorkItemId,
-    pub data: ChangeData,
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-enum ChangeData {
-    Status(Option<String>),
-    Blocked(Option<String>),
-    Epic(Option<String>),
-}
-
-impl Change {
-    fn key(&self) -> ChangeKey {
-        ChangeKey {
-            work_item_id: self.work_item_id.clone(),
-            data_type: std::mem::discriminant(&self.data),
-        }
-    }
-
-    fn describe(&self, work_items: &WorkItems) -> String {
-        let work_item = work_items.get(&self.work_item_id).unwrap();
-
-        let old_value = match self.data {
-            ChangeData::Status(_) => work_item.project_item.status.field_value(),
-            ChangeData::Blocked(_) => work_item.project_item.blocked.field_value(),
-            ChangeData::Epic(_) => work_item.project_item.epic.field_value(),
-        }
-        .unwrap_or("<>");
-
-        let name = match self.data {
-            ChangeData::Status(_) => "Status",
-            ChangeData::Blocked(_) => "Blocked",
-            ChangeData::Epic(_) => "Epic",
-        };
-
-        let new_value = match &self.data {
-            ChangeData::Status(value) => value.as_ref(),
-            ChangeData::Blocked(value) => value.as_ref(),
-            ChangeData::Epic(value) => value.as_ref(),
-        }
-        .map(|v| v.as_str())
-        .unwrap_or("<>");
-
-        format!("{}({} -> {})", name, old_value, new_value).to_owned()
-    }
 }
 
 pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {
@@ -264,6 +183,7 @@ async fn commit_changes(
                 value,
                 mode,
             ),
+            ChangeData::AddSubIssue(_) => todo!(),
         }
         .await?;
 

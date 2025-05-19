@@ -1,6 +1,6 @@
 use crate::pat::new_github_client;
 use dirs::home_dir;
-use github_graphql::data::{WorkItem, WorkItemData, WorkItemId, WorkItems};
+use github_graphql::data::{Change, Changes, WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
 use std::fs;
 use std::io::{BufReader, BufWriter};
@@ -35,7 +35,8 @@ pub enum NodeData {
 
 #[derive(Default)]
 pub struct DataState {
-    work_items: Option<WorkItems>,
+    pub work_items: Option<WorkItems>,
+    changes: Changes,
 }
 
 impl DataState {
@@ -78,6 +79,12 @@ impl DataState {
 
         self.work_items = Some(work_items.clone());
         Ok(work_items)
+    }
+
+    pub fn add_changes(&mut self, changes: impl Iterator<Item=Change>) {
+        for change in changes {
+            self.changes.add(change);
+        }       
     }
 }
 
