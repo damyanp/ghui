@@ -13,6 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@floating-ui/dom": "^1.7.0",
     "@lucide/svelte": "^0.501.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
