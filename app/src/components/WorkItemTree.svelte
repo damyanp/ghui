@@ -1,8 +1,9 @@
 <script lang="ts">
-  import type { Data, Node } from "$lib/data";
   import { CircleMinusIcon, CirclePlusIcon } from "@lucide/svelte";
   import { fade } from "svelte/transition";
   import { flip } from "svelte/animate";
+  import type { Data } from "$lib/bindings/Data";
+  import type { Node } from "$lib/bindings/Node";
 
   let { raw_data }: { raw_data: Data } = $props();
 
@@ -68,7 +69,7 @@
                   >
                 </td>
                 <td>{item.projectItem.status?.name}</td>
-                <td>{item.projectItem.iteration?.name}</td>
+                <td>{item.projectItem.iteration?.title}</td>
                 <td>{item.projectItem.blocked?.name}</td>
                 <td>{item.projectItem.kind?.name}</td>
               {/if}

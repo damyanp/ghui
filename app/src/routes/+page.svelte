@@ -2,9 +2,9 @@
   import { AppBar } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
   import { Channel, invoke } from "@tauri-apps/api/core";
-  import { type Data } from "../lib/data";
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
+  import type { Data } from "$lib/bindings/Data";
 
   let raw_data = $state<Data | undefined>(undefined);
 

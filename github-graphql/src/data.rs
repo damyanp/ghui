@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkItem {
     pub id: WorkItemId,
@@ -39,7 +40,7 @@ impl WorkItem {
     }
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
 pub struct WorkItemId(pub String);
 
 impl From<String> for WorkItemId {
@@ -48,7 +49,7 @@ impl From<String> for WorkItemId {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 pub enum WorkItemData {
@@ -58,7 +59,7 @@ pub enum WorkItemData {
     PullRequest(PullRequest),
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
     pub state: IssueState,
@@ -66,7 +67,7 @@ pub struct Issue {
     pub tracked_issues: Vec<WorkItemId>,
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all_fields = "camelCase")]
 pub enum IssueState {
     CLOSED,
@@ -75,13 +76,13 @@ pub enum IssueState {
     Other(String),
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequest {
     pub state: PullRequestState,
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all_fields = "camelCase")]
 pub enum PullRequestState {
     CLOSED,
@@ -91,7 +92,7 @@ pub enum PullRequestState {
     Other(String),
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectItem {
     pub id: ProjectItemId,
@@ -105,7 +106,7 @@ pub struct ProjectItem {
     pub project_milestone: Option<SingleSelectFieldValue>,
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SingleSelectFieldValue {
     pub option_id: String,
@@ -120,7 +121,7 @@ impl SingleSelectFieldValue {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct IterationFieldValue {
     pub iteration_id: String,
@@ -148,7 +149,7 @@ impl HasFieldValue for Option<SingleSelectFieldValue> {
     }
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
 pub struct ProjectItemId(pub String);
 
 impl From<String> for ProjectItemId {

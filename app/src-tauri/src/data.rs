@@ -7,15 +7,17 @@ use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::{collections::HashMap, mem::take};
 use tauri::{async_runtime::Mutex, ipc::Channel, AppHandle, State};
+use ts_rs::TS;
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Data {
     work_items: HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Node {
     level: u32,
@@ -24,7 +26,7 @@ pub struct Node {
     has_children: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum NodeData {
     WorkItem,
