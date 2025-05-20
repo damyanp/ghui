@@ -128,9 +128,7 @@ pub async fn get_data(
     };
 
     let mut data_state = data_state.lock().await;
-    let work_items = data_state
-        .refresh(force_refresh, &report_progress)
-        .await?;
+    let work_items = data_state.refresh(force_refresh, &report_progress).await?;
 
     let nodes = NodeBuilder::new(&work_items).build();
     Ok(Data {
