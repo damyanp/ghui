@@ -3,7 +3,7 @@
   import type { NumericRange } from "@sveltejs/kit";
 
   let props: {
-    onclick: () => void;
+    onclick: (e:MouseEvent) => void;
     progress: number; // 0 = not refreshing, otherwise counts towards 0
   } = $props();
 

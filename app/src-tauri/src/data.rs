@@ -2,11 +2,11 @@ use crate::pat::new_github_client;
 use dirs::home_dir;
 use github_graphql::data::{Change, Changes, WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
-use tauri::Emitter;
 use std::fs;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::{collections::HashMap, mem::take};
+use tauri::Emitter;
 use tauri::{async_runtime::Mutex, ipc::Channel, AppHandle, State};
 use ts_rs::TS;
 
@@ -16,6 +16,11 @@ use ts_rs::TS;
 pub struct Data {
     work_items: HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
+
+    // When changes have been applied, work_items contains the modified versions
+    // (and nodes is derived from this). Copies of the original, unmodified,
+    // ones are stored here.  When changes aren't applied this will be empty.
+    original_work_items: HashMap<WorkItemId, WorkItem>,
 }
 
 #[derive(Serialize, TS)]
@@ -99,6 +104,12 @@ impl DataState {
             println!("WARNING: emit(changes-updated) failed: {r:?}");
         }
     }
+
+    /// Updates in-place the provided work items with the changes set on self.
+    /// Returns the original values of the work items.
+    pub fn apply_changes(&self, work_items: &mut WorkItems) -> HashMap<WorkItemId, WorkItem> {
+        work_items.apply_changes(&self.changes)
+    }
 }
 
 fn load_workitems_from_appdata() -> Result<WorkItems, String> {
@@ -134,12 +145,14 @@ pub async fn get_data(
     };
 
     let mut data_state = data_state.lock().await;
-    let work_items = data_state.refresh(force_refresh, &report_progress).await?;
+    let mut work_items = data_state.refresh(force_refresh, &report_progress).await?;
+    let original_work_items = data_state.apply_changes(&mut work_items);
 
     let nodes = NodeBuilder::new(&work_items).build();
     Ok(Data {
         nodes,
         work_items: work_items.work_items,
+        original_work_items,
     })
 }
 

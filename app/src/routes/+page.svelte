@@ -35,15 +35,23 @@
 
   onRefreshClicked(false);
 
-  listen<Changes>('changes-updated', (event) => {
+  let changes = $state<Changes>({ data: {} });
+
+  listen<Changes>("changes-updated", (event) => {
     console.log(JSON.stringify(event, undefined, " "));
+    changes = event.payload;    
   });
 </script>
 
 <AppBar>
   {#snippet lead()}
     <div class="content-center h-full">ghui</div>
-    <RefreshButton {progress} onclick={() => onRefreshClicked(true)} />
+    <RefreshButton {progress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
+  {/snippet}
+  {#snippet children()}
+    {#if Object.keys(changes.data).length > 0}
+      {Object.keys(changes.data).length} changes
+    {/if}
   {/snippet}
   {#snippet trail()}
     <Pat />

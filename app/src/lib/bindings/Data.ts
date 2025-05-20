@@ -6,4 +6,5 @@ import type { WorkItemId } from "./WorkItemId";
 export type Data = {
   workItems: { [key in WorkItemId]?: WorkItem };
   nodes: Array<Node>;
+  originalWorkItems: { [key in WorkItemId]?: WorkItem };
 };

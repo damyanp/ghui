@@ -162,7 +162,7 @@ impl From<String> for ProjectItemId {
     }
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct WorkItems {
     ordered_items: Vec<WorkItemId>,
     pub work_items: HashMap<WorkItemId, WorkItem>,
@@ -184,6 +184,10 @@ impl WorkItems {
         self.work_items.get(id)
     }
 
+    fn get_mut(&mut self, id: &WorkItemId) -> Option<&mut WorkItem> {
+        self.work_items.get_mut(id)
+    }
+
     pub fn get_roots(&self) -> Vec<WorkItemId> {
         let mut unreferenced_items: HashSet<&WorkItemId> =
             HashSet::from_iter(self.ordered_items.iter());
@@ -197,6 +201,86 @@ impl WorkItems {
         }
 
         unreferenced_items.into_iter().cloned().collect()
+    }
+
+    pub fn apply_changes(&mut self, changes: &Changes) -> HashMap<WorkItemId, WorkItem> {
+        let mut originals = HashMap::<WorkItemId, WorkItem>::default();
+
+        let mut remember_original = |work_item: Option<&WorkItem>| {
+            if let Some(work_item) = work_item {
+                let id = &work_item.id;
+                if !originals.contains_key(id) {
+                    originals.insert(id.clone(), work_item.clone());
+                }
+            }
+        };
+
+        for change in changes {
+            let original = self.get(&change.work_item_id);
+            if original.is_none() {
+                println!("WARNING: change for '{0}' - work item not found", change.work_item_id.0);
+                continue;
+            }
+
+            remember_original(original);
+
+            match &change.data {
+                ChangeData::Status(_) => todo!(),
+                ChangeData::Blocked(_) => todo!(),
+                ChangeData::Epic(_) => todo!(),
+                ChangeData::SetParent(new_parent_id) => {
+                    remember_original(self.get(new_parent_id));
+
+                    let child_id = &change.work_item_id;
+
+                    // If there was an old parent we'll need to update it
+                    let old_parent_id = if let Some(WorkItem {
+                        data: WorkItemData::Issue(Issue { parent_id, .. }),
+                        ..
+                    }) = &self.get(child_id)
+                    {
+                        parent_id.to_owned()
+                    } else {
+                        None
+                    };
+
+                    if let Some(old_parent_id) = &old_parent_id {
+                        remember_original(self.get(old_parent_id));
+                        if let Some(old_parent) = self.get_mut(old_parent_id) {
+                            if let WorkItemData::Issue(issue) = &mut old_parent.data {
+                                issue.sub_issues.pop_if(|i| i == child_id);
+                            } else {
+                                println!("WARNING: old parent '{0}' not an issue", old_parent_id.0);
+                            }
+                        } else {
+                            println!("WARNING: old parent '{0}' not found", old_parent_id.0);
+                        }
+                    }
+
+                    if let Some(child) = self.get_mut(child_id) {
+                        if let WorkItemData::Issue(issue) = &mut child.data {
+                            issue.parent_id = Some(new_parent_id.clone());
+                        } else {
+                            println!("WARNING: child '{0}' not an issue", child_id.0);
+                        }
+                    } else {
+                        println!("WARNING: child '{0}' not found", child_id.0);
+                    }
+
+                    if let Some(parent) = self.get_mut(new_parent_id) {
+                        if let WorkItemData::Issue(issue) = &mut parent.data {
+                            issue.sub_issues.push(child_id.clone());
+                        } else {
+                            println!("WARNING: new parent '{0}' not an issue", new_parent_id.0);
+                        }
+                    } else {
+                        println!("WARNING: new parent '{0}' not found", new_parent_id.0);
+                    }
+                }
+            }
+        }
+
+        originals
     }
 }
 
@@ -238,7 +322,8 @@ pub struct ChangeKey {
 impl serde::Serialize for ChangeKey {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         serializer.serialize_str(format!("{}-{:?}", self.work_item_id.0, self.data_type).as_str())
     }
 }
@@ -371,6 +456,11 @@ pub mod test_helpers {
             self
         }
 
+        pub fn issue(mut self) -> Self {
+            self.get_issue();
+            self
+        }
+
         fn get_issue(&mut self) -> &mut Issue {
             if let WorkItemData::DraftIssue = self.item.data {
                 self.item.data = WorkItemData::Issue(Issue::default());
@@ -453,5 +543,127 @@ pub mod tests {
         assert!(roots.contains(&root1));
         assert!(roots.contains(&root2));
         assert!(roots.contains(&root3));
+    }
+
+    #[test]
+    fn test_apply_changes_no_changes() {
+        let mut data = TestData::default();
+        data.build().add();
+        data.build().add();
+
+        let unmodified_work_items = data.work_items.clone();
+
+        let changes = Default::default();
+
+        let original_work_items = data.work_items.apply_changes(&changes);
+
+        assert_eq!(unmodified_work_items, data.work_items);
+        assert_eq!(original_work_items, Default::default());
+    }
+
+    #[test]
+    fn test_apply_set_new_parent() {
+        let mut data = TestData::default();
+        let parent = data.build().issue().add();
+        let child = data.build().issue().add();
+
+        let mut changes = Changes::default();
+        changes.add(Change {
+            work_item_id: child.clone(),
+            data: ChangeData::SetParent(parent.clone()),
+        });
+
+        // All the items have changed, so we expect to get back a map containing
+        // all the originals
+        let expected_original_work_items = data.work_items.work_items.clone();
+
+        let actual_original_work_items = data.work_items.apply_changes(&changes);
+
+        assert_eq!(expected_original_work_items, actual_original_work_items);
+
+        let actual_sub_issues = data
+            .work_items
+            .get(&parent)
+            .unwrap()
+            .get_sub_issues()
+            .unwrap();
+        assert_eq!(&vec![child.clone()], actual_sub_issues);
+
+        let actual_parent = match &data.work_items.get(&child).unwrap().data {
+            WorkItemData::Issue(issue) => issue.parent_id.clone(),
+            _ => panic!(),
+        };
+        assert_eq!(Some(parent.clone()), actual_parent);
+    }
+
+    #[test]
+    fn test_apply_changes_update_parent() {
+        let mut data = TestData::default();
+
+        let child = data.build().issue().add();
+        let old_parent = data.build().sub_issues(&[&child]).add();
+        if let WorkItemData::Issue(issue) = &mut data.work_items.get_mut(&child).unwrap().data {
+            issue.parent_id = Some(old_parent.clone());
+        }
+
+        let new_parent = data.build().issue().add();
+
+        let mut changes = Changes::default();
+        changes.add(Change {
+            work_item_id: child.clone(),
+            data: ChangeData::SetParent(new_parent.clone()),
+        });
+
+        // All the items have changed, so we expect to get back a map containing
+        // all the originals
+        let expected_original_work_items = data.work_items.work_items.clone();
+
+        let actual_original_work_items = data.work_items.apply_changes(&changes);
+
+        assert_eq!(expected_original_work_items, actual_original_work_items);
+
+        let actual_old_parent_sub_issues = data
+            .work_items
+            .get(&old_parent)
+            .unwrap()
+            .get_sub_issues()
+            .unwrap();
+        assert_eq!(actual_old_parent_sub_issues.len(), 0);
+
+        let actual_new_parent_sub_issues = data
+            .work_items
+            .get(&new_parent)
+            .unwrap()
+            .get_sub_issues()
+            .unwrap();
+
+        assert_eq!(&vec![child.clone()], actual_new_parent_sub_issues);
+
+        let actual_parent = match &data.work_items.get(&child).unwrap().data {
+            WorkItemData::Issue(issue) => issue.parent_id.clone(),
+            _ => panic!(),
+        };
+        assert_eq!(Some(new_parent.clone()), actual_parent);
+    }
+
+    #[test]
+    fn test_apply_changes_item_not_found() {
+        let mut data = TestData::default();
+        let parent = data.build().issue().add();
+
+        let mut changes = Changes::default();
+        changes.add(Change {
+            work_item_id: WorkItemId("id-that-does-not-exist".to_owned()),
+            data: ChangeData::SetParent(parent.clone()),
+        });
+
+        // no items should change
+        let work_items_before = data.work_items.work_items.clone();
+        let expected_original_work_items = HashMap::default();
+        let actual_original_work_items = data.work_items.apply_changes(&changes);
+
+
+        assert_eq!(expected_original_work_items, actual_original_work_items);
+        assert_eq!(work_items_before, data.work_items.work_items);
     }
 }
