@@ -176,7 +176,8 @@ fn build_work_item(
             resource_path: Some(c.resource_path),
             repository: Some(c.repository.owner.login),
             data: WorkItemData::Issue(Issue {
-                state: c.state.into(),
+                parent_id: c.parent.map(|p| WorkItemId(p.id)),
+                state: c.issue_state.into(),
                 sub_issues: build_issue_id_vector(c.sub_issues.nodes),
                 tracked_issues: build_issue_id_vector(c.tracked_issues.nodes),
             }),
@@ -189,7 +190,7 @@ fn build_work_item(
             resource_path: Some(c.resource_path),
             repository: Some(c.repository.owner.login),
             data: WorkItemData::PullRequest(PullRequest {
-                state: c.state.into(),
+                state: c.pull_request_state.into(),
             }),
             project_item: ProjectItem::default(),
         },
@@ -305,7 +306,7 @@ mod tests {
       },
       "updatedAt": "2025-03-27T21:01:40Z",
       "title": "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite",
-      "state": "CLOSED",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -337,7 +338,7 @@ mod tests {
       },
       "title": "Add a proposal for how to explicitly specify struct layouts",
       "updatedAt": "2025-02-24T19:33:41Z",
-      "state": "OPEN"
+      "pullRequestState": "OPEN"
     }
   }]
 "#;
@@ -381,6 +382,7 @@ mod tests {
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
             repository: Some("llvm".into()),
             data: WorkItemData::Issue(Issue {
+                parent_id: None,
                 state: data::IssueState::CLOSED,
                 sub_issues: vec![],
                 tracked_issues: vec![],
@@ -446,7 +448,7 @@ mod tests {
       },
       "updatedAt": "2025-02-06T00:48:41Z",
       "title": "[milestone] Compile a runnable shader from clang",
-      "state": "CLOSED",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": [
           {

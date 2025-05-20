@@ -1,5 +1,5 @@
 use github_graphql::data::{Change, ChangeData, WorkItemData, WorkItemId};
-use tauri::{async_runtime::Mutex, AppHandle, State};
+use tauri::{async_runtime::Mutex, State};
 
 use crate::data::DataState;
 
@@ -12,16 +12,16 @@ pub async fn convert_tracked_to_subissues(
 
     let mut data_state = data_state.lock().await;
 
-    let item = data_state.work_items.as_ref().unwrap().get(&id).unwrap();
+    let parent_item = data_state.work_items.as_ref().unwrap().get(&id).unwrap();
 
-    if let WorkItemData::Issue(issue) = &item.data {
+    if let WorkItemData::Issue(issue) = &parent_item.data {
         let changes: Vec<_> = issue
             .tracked_issues
             .iter()
-            .filter(|i| !issue.sub_issues.contains(i))
-            .map(|i| Change {
-                work_item_id: item.id.clone(),
-                data: ChangeData::AddSubIssue(i.clone()),
+            .filter(|tracked_issue_id| !issue.sub_issues.contains(tracked_issue_id))
+            .map(|tracked_issue_id| Change {
+                work_item_id: tracked_issue_id.clone(),
+                data: ChangeData::SetParent(parent_item.id.clone()),
             })
             .collect();
 

@@ -42,6 +42,7 @@ query ProjectItems(
 
             ... on Issue {
               id
+              parent { id }
               resourcePath
               repository {
                 owner {
@@ -51,7 +52,7 @@ query ProjectItems(
               }
               updatedAt
               title
-              state
+              issueState: state
               subIssues(first: 100) {
                 nodes {
                   id
@@ -75,7 +76,7 @@ query ProjectItems(
               }
               title
               updatedAt
-              state
+              pullRequestState: state
             }
           }
         }

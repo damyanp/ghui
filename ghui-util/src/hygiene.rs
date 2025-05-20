@@ -183,7 +183,7 @@ async fn commit_changes(
                 value,
                 mode,
             ),
-            ChangeData::AddSubIssue(_) => todo!(),
+            ChangeData::SetParent(_) => todo!(),
         }
         .await?;
 

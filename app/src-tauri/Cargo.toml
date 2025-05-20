@@ -31,4 +31,4 @@ keyring = { version = "3", features = [
 github-graphql = { path = "../../github-graphql" }
 tauri-plugin-window-state = "2.2.2"
 dirs = "6.0.0"
-ts-rs = { version = "10.1.0", features = ["serde-compat", "format"]}
+ts-rs = { version = "10.1.0", features = ["serde-compat", "format"] }

@@ -33,16 +33,23 @@ pub enum NodeData {
     Group { name: String },
 }
 
-#[derive(Default)]
 pub struct DataState {
+    app: AppHandle,
     pub work_items: Option<WorkItems>,
     changes: Changes,
 }
 
 impl DataState {
+    pub(crate) fn new(app: AppHandle) -> Self {
+        Self {
+            app,
+            work_items: None,
+            changes: Changes::default(),
+        }
+    }
+
     async fn refresh(
         &mut self,
-        app: AppHandle,
         force: bool,
         report_progress: &impl Fn(usize, usize),
     ) -> Result<WorkItems, String> {
@@ -66,7 +73,7 @@ impl DataState {
         }
 
         // Try retrieving from github
-        let client = new_github_client(&app).await?;
+        let client = new_github_client(&self.app).await?;
 
         let work_items = WorkItems::from_client(&client, &report_progress)
             .await
@@ -81,10 +88,10 @@ impl DataState {
         Ok(work_items)
     }
 
-    pub fn add_changes(&mut self, changes: impl Iterator<Item=Change>) {
+    pub fn add_changes(&mut self, changes: impl Iterator<Item = Change>) {
         for change in changes {
             self.changes.add(change);
-        }       
+        }
     }
 }
 
@@ -112,7 +119,6 @@ fn get_appdata_path() -> PathBuf {
 
 #[tauri::command]
 pub async fn get_data(
-    app: AppHandle,
     data_state: State<'_, Mutex<DataState>>,
     force_refresh: bool,
     progress: Channel<(usize, usize)>,
@@ -123,7 +129,7 @@ pub async fn get_data(
 
     let mut data_state = data_state.lock().await;
     let work_items = data_state
-        .refresh(app, force_refresh, &report_progress)
+        .refresh(force_refresh, &report_progress)
         .await?;
 
     let nodes = NodeBuilder::new(&work_items).build();
@@ -204,6 +210,9 @@ impl<'a> NodeBuilder<'a> {
     fn add_node(&mut self, id: &WorkItemId, level: u32, path: &str) {
         if let Some(item) = self.work_items.get(id) {
             let children = if let WorkItemData::Issue(issue) = &item.data {
+                // Note it is important to use sub_issues here (rather than try
+                // and generate the hierarchy from the issue's parents) because
+                // the order of sub_issues is significant.
                 issue.sub_issues.clone()
             } else {
                 Vec::default()

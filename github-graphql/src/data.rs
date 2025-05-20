@@ -65,6 +65,7 @@ pub enum WorkItemData {
 #[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
+    pub parent_id: Option<WorkItemId>,
     pub state: IssueState,
     pub sub_issues: Vec<WorkItemId>,
     pub tracked_issues: Vec<WorkItemId>,
@@ -206,10 +207,11 @@ pub struct Changes {
 
 impl Changes {
     pub fn add(&mut self, change: Change) {
-        panic!("Need to figure out how to do this properly - we're allowed multiple AddSubIssues for the same workitem - this should be part of the key");
         let old_value = self.data.insert(change.key(), change.clone());
         if let Some(old_value) = old_value {
-            println!("WARNING! {:?} overrides {:?}", change, old_value);
+            if change != old_value {
+                println!("WARNING! {:?} overrides {:?}", change, old_value);
+            }
         }
     }
 }
@@ -241,7 +243,7 @@ pub enum ChangeData {
     Status(Option<String>),
     Blocked(Option<String>),
     Epic(Option<String>),
-    AddSubIssue(WorkItemId),
+    SetParent(WorkItemId),
 }
 
 impl Change {
@@ -259,7 +261,10 @@ impl Change {
             ChangeData::Status(_) => work_item.project_item.status.field_value(),
             ChangeData::Blocked(_) => work_item.project_item.blocked.field_value(),
             ChangeData::Epic(_) => work_item.project_item.epic.field_value(),
-            ChangeData::AddSubIssue(_) => Some("-"),
+            ChangeData::SetParent(_) => match &work_item.data {
+                WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
+                _ => None,
+            },
         }
         .unwrap_or("<>");
 
@@ -267,14 +272,14 @@ impl Change {
             ChangeData::Status(_) => "Status",
             ChangeData::Blocked(_) => "Blocked",
             ChangeData::Epic(_) => "Epic",
-            ChangeData::AddSubIssue(_) => "AddSubIssue",
+            ChangeData::SetParent(_) => "SetParent",
         };
 
         let new_value = match &self.data {
             ChangeData::Status(value) => value.as_ref(),
             ChangeData::Blocked(value) => value.as_ref(),
             ChangeData::Epic(value) => value.as_ref(),
-            ChangeData::AddSubIssue(value) => Some(&value.0),
+            ChangeData::SetParent(value) => Some(&value.0),
         }
         .map(|v| v.as_str())
         .unwrap_or("<>");
