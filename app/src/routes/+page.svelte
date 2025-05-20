@@ -5,6 +5,8 @@
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
   import type { Data } from "$lib/bindings/Data";
+  import { listen } from "@tauri-apps/api/event";
+  import type { Changes } from "$lib/bindings/Changes";
 
   let raw_data = $state<Data | undefined>(undefined);
 
@@ -32,6 +34,10 @@
   }
 
   onRefreshClicked(false);
+
+  listen<Changes>('changes-updated', (event) => {
+    console.log(JSON.stringify(event, undefined, " "));
+  });
 </script>
 
 <AppBar>

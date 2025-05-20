@@ -3,4 +3,12 @@ import type { ProjectItem } from "./ProjectItem";
 import type { WorkItemData } from "./WorkItemData";
 import type { WorkItemId } from "./WorkItemId";
 
-export type WorkItem = { id: WorkItemId, title: string, updatedAt: string | null, resourcePath: string | null, repository: string | null, data: WorkItemData, projectItem: ProjectItem, };
+export type WorkItem = {
+  id: WorkItemId;
+  title: string;
+  updatedAt: string | null;
+  resourcePath: string | null;
+  repository: string | null;
+  data: WorkItemData;
+  projectItem: ProjectItem;
+};

@@ -200,7 +200,9 @@ impl WorkItems {
     }
 }
 
-#[derive(Default, Debug, Eq, PartialEq)]
+#[derive(Default, Debug, Eq, PartialEq, Serialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
 pub struct Changes {
     data: HashMap<ChangeKey, Change>,
 }
@@ -226,19 +228,30 @@ impl<'a> IntoIterator for &'a Changes {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash, TS)]
+#[ts(as = "String")]
 pub struct ChangeKey {
     pub work_item_id: WorkItemId,
     pub data_type: Discriminant<ChangeData>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+impl serde::Serialize for ChangeKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        serializer.serialize_str(format!("{}-{:?}", self.work_item_id.0, self.data_type).as_str())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub struct Change {
     pub work_item_id: WorkItemId,
     pub data: ChangeData,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase", tag = "type", content = "value")]
 pub enum ChangeData {
     Status(Option<String>),
     Blocked(Option<String>),

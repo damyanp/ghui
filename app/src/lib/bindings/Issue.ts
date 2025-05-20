@@ -2,4 +2,9 @@
 import type { IssueState } from "./IssueState";
 import type { WorkItemId } from "./WorkItemId";
 
-export type Issue = { state: IssueState, subIssues: Array<WorkItemId>, trackedIssues: Array<WorkItemId>, };
+export type Issue = {
+  parentId: WorkItemId | null;
+  state: IssueState;
+  subIssues: Array<WorkItemId>;
+  trackedIssues: Array<WorkItemId>;
+};

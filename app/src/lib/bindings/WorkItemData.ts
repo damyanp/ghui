@@ -2,4 +2,7 @@
 import type { Issue } from "./Issue";
 import type { PullRequest } from "./PullRequest";
 
-export type WorkItemData = { "type": "draftIssue" } | { "type": "issue" } & Issue | { "type": "pullRequest" } & PullRequest;
+export type WorkItemData =
+  | { "type": "draftIssue" }
+  | { "type": "issue" } & Issue
+  | { "type": "pullRequest" } & PullRequest;

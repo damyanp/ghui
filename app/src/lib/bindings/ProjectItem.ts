@@ -3,4 +3,14 @@ import type { IterationFieldValue } from "./IterationFieldValue";
 import type { ProjectItemId } from "./ProjectItemId";
 import type { SingleSelectFieldValue } from "./SingleSelectFieldValue";
 
-export type ProjectItem = { id: ProjectItemId, updatedAt: string, status: SingleSelectFieldValue | null, iteration: IterationFieldValue | null, blocked: SingleSelectFieldValue | null, kind: SingleSelectFieldValue | null, epic: SingleSelectFieldValue | null, workstream: SingleSelectFieldValue | null, projectMilestone: SingleSelectFieldValue | null, };
+export type ProjectItem = {
+  id: ProjectItemId;
+  updatedAt: string;
+  status: SingleSelectFieldValue | null;
+  iteration: IterationFieldValue | null;
+  blocked: SingleSelectFieldValue | null;
+  kind: SingleSelectFieldValue | null;
+  epic: SingleSelectFieldValue | null;
+  workstream: SingleSelectFieldValue | null;
+  projectMilestone: SingleSelectFieldValue | null;
+};

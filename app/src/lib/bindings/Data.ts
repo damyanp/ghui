@@ -3,4 +3,7 @@ import type { Node } from "./Node";
 import type { WorkItem } from "./WorkItem";
 import type { WorkItemId } from "./WorkItemId";
 
-export type Data = { workItems: { [key in WorkItemId]?: WorkItem }, nodes: Array<Node>, };
+export type Data = {
+  workItems: { [key in WorkItemId]?: WorkItem };
+  nodes: Array<Node>;
+};
