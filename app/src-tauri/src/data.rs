@@ -6,7 +6,6 @@ use std::fs;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::{collections::HashMap, mem::take};
-use tauri::Emitter;
 use tauri::{async_runtime::Mutex, ipc::Channel, AppHandle, State};
 use ts_rs::TS;
 
@@ -21,6 +20,8 @@ pub struct Data {
     // (and nodes is derived from this). Copies of the original, unmodified,
     // ones are stored here.  When changes aren't applied this will be empty.
     original_work_items: HashMap<WorkItemId, WorkItem>,
+
+    changes: Changes,
 }
 
 #[derive(Serialize, TS)]
@@ -97,11 +98,6 @@ impl DataState {
 
     pub fn add_changes(&mut self, changes: Changes) {
         self.changes.add_changes(changes);
-
-        let r = self.app.emit("changes-updated", &self.changes);
-        if let Err(r) = r {
-            println!("WARNING: emit(changes-updated) failed: {r:?}");
-        }
     }
 
     /// Updates in-place the provided work items with the changes set on self.
@@ -152,6 +148,7 @@ pub async fn get_data(
         nodes,
         work_items: work_items.work_items,
         original_work_items,
+        changes: data_state.changes.clone(),
     })
 }
 

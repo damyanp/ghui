@@ -315,7 +315,7 @@ impl WorkItems {
     }
 }
 
-#[derive(Default, Debug, Eq, PartialEq, Serialize, TS)]
+#[derive(Default, Debug, Eq, PartialEq, Serialize, TS, Clone)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Changes {
@@ -349,7 +349,7 @@ impl<'a> IntoIterator for &'a Changes {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, TS)]
+#[derive(Debug, Eq, PartialEq, Hash, TS, Clone)]
 #[ts(as = "String")]
 pub struct ChangeKey {
     pub work_item_id: WorkItemId,

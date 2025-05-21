@@ -5,11 +5,15 @@
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
   import type { Data } from "$lib/bindings/Data";
-  import { listen } from "@tauri-apps/api/event";
   import type { Changes } from "$lib/bindings/Changes";
   import ChangesToolbarButton from "../components/ChangesToolbarButton.svelte";
 
-  let raw_data = $state<Data | undefined>(undefined);
+  let raw_data = $state<Data>({
+    workItems: {},
+    nodes: [],
+    originalWorkItems: {},
+    changes: { data: {} },
+  });
 
   type Progress = number[];
 
@@ -35,13 +39,6 @@
   }
 
   onRefreshClicked(false);
-
-  let changes = $state<Changes>({ data: {} });
-
-  listen<Changes>("changes-updated", (event) => {
-    console.log(JSON.stringify(event, undefined, " "));
-    changes = event.payload;
-  });
 </script>
 
 <div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
@@ -51,14 +48,12 @@
       <RefreshButton {progress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
     {/snippet}
 
-    <ChangesToolbarButton changes={changes} />
+    <ChangesToolbarButton changes={raw_data.changes} />
 
     {#snippet trail()}
       <Pat />
     {/snippet}
   </AppBar>
 
-  {#if raw_data !== undefined}
-    <WorkItemTree {raw_data} />
-  {/if}
+  <WorkItemTree {raw_data} />
 </div>
