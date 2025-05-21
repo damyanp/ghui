@@ -116,7 +116,7 @@
       </thead>
       <tbody>
         {#each nodes as node (node.id)}
-          <tr transition:fade animate:flip={{ duration: 100 }}>
+          <tr transition:fade animate:flip={{ duration: 100 }} class={`${node.isModified ? 'bg-secondary-50-950' : ''}`}>
             {#if node.data.type === "group"}
               <td
                 class="text-2xl border-b-2"

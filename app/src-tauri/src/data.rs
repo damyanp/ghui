@@ -30,6 +30,7 @@ pub struct Node {
     id: String,
     data: NodeData,
     has_children: bool,
+    is_modified: bool,
 }
 
 #[derive(Serialize, TS)]
@@ -146,7 +147,7 @@ pub async fn get_data(
     let mut work_items = data_state.refresh(force_refresh, &report_progress).await?;
     let original_work_items = data_state.apply_changes(&mut work_items);
 
-    let nodes = NodeBuilder::new(&work_items).build();
+    let nodes = NodeBuilder::new(&work_items, &original_work_items).build();
     Ok(Data {
         nodes,
         work_items: work_items.work_items,
@@ -156,13 +157,18 @@ pub async fn get_data(
 
 struct NodeBuilder<'a> {
     work_items: &'a WorkItems,
+    original_work_items: &'a HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
 }
 
 impl<'a> NodeBuilder<'a> {
-    fn new(work_items: &'a WorkItems) -> Self {
+    fn new(
+        work_items: &'a WorkItems,
+        original_work_items: &'a HashMap<WorkItemId, WorkItem>,
+    ) -> Self {
         NodeBuilder {
             work_items,
+            original_work_items,
             nodes: Vec::new(),
         }
     }
@@ -208,6 +214,7 @@ impl<'a> NodeBuilder<'a> {
                         id,
                         data: NodeData::Group { name },
                         has_children: true,
+                        is_modified: false,
                     });
                 }
             }
@@ -235,9 +242,10 @@ impl<'a> NodeBuilder<'a> {
 
             self.nodes.push(Node {
                 level,
-                id: item.id.0.clone(),
+                id: id.0.clone(),
                 data: NodeData::WorkItem,
                 has_children: !children.is_empty(),
+                is_modified: self.original_work_items.contains_key(&id),
             });
 
             self.add_nodes(

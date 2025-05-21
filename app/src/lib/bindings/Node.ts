@@ -6,4 +6,5 @@ export type Node = {
   id: string;
   data: NodeData;
   hasChildren: boolean;
+  isModified: boolean;
 };
