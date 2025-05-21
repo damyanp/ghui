@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map, HashMap, HashSet},
+    collections::{hash_map, HashMap},
     mem::Discriminant,
 };
 
@@ -189,8 +189,12 @@ impl WorkItems {
     }
 
     pub fn get_roots(&self) -> Vec<WorkItemId> {
-        let mut unreferenced_items: HashSet<&WorkItemId> =
-            HashSet::from_iter(self.ordered_items.iter());
+        let mut unreferenced_items: HashMap<&WorkItemId, usize> = HashMap::from_iter(
+            self.ordered_items
+                .iter()
+                .enumerate()
+                .map(|(index, item)| (item, index)),
+        );
 
         for item in self.work_items.values() {
             if let Some(sub_issues) = item.get_sub_issues() {
@@ -200,7 +204,13 @@ impl WorkItems {
             }
         }
 
-        unreferenced_items.into_iter().cloned().collect()
+        let mut unreferenced_items: Vec<_> = unreferenced_items.into_iter().collect();
+        unreferenced_items.sort_by_key(|(_, index)| *index);
+
+        unreferenced_items
+            .into_iter()
+            .map(|(id, _)| id.clone())
+            .collect()
     }
 
     pub fn convert_tracked_to_sub_issues(&self, id: &WorkItemId) -> Changes {
