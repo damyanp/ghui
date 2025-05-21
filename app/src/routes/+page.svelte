@@ -7,6 +7,7 @@
   import type { Data } from "$lib/bindings/Data";
   import { listen } from "@tauri-apps/api/event";
   import type { Changes } from "$lib/bindings/Changes";
+  import ChangesToolbarButton from "../components/ChangesToolbarButton.svelte";
 
   let raw_data = $state<Data | undefined>(undefined);
 
@@ -49,9 +50,9 @@
       <div class="content-center h-full">ghui</div>
       <RefreshButton {progress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
     {/snippet}
-    {#if Object.keys(changes.data).length > 0}
-      {Object.keys(changes.data).length} changes
-    {/if}
+
+    <ChangesToolbarButton changes={changes} />
+
     {#snippet trail()}
       <Pat />
     {/snippet}
