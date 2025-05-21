@@ -96,7 +96,7 @@
   }
 
   function convertTrackedIssuesToSubIssue(item: WorkItem) {
-    invoke("convert_tracked_to_subissues", {
+    invoke("convert_tracked_to_sub_issues", {
       id: item.id,
     });
   }

@@ -203,6 +203,34 @@ impl WorkItems {
         unreferenced_items.into_iter().cloned().collect()
     }
 
+    pub fn convert_tracked_to_sub_issues(&self, id: &WorkItemId) -> Changes {
+        let mut changes = Changes::default();
+
+        if let Some(WorkItem {
+            data: WorkItemData::Issue(parent_issue),
+            ..
+        }) = self.get(id)
+        {
+            for tracked_issue_id in &parent_issue.tracked_issues {
+                if let Some(WorkItem {
+                    data: WorkItemData::Issue(tracked_issue),
+                    ..
+                }) = self.get(tracked_issue_id)
+                {
+                    // only set parents on issues that aren't currently parented
+                    if tracked_issue.parent_id.is_none() {
+                        changes.add(Change {
+                            work_item_id: tracked_issue_id.clone(),
+                            data: ChangeData::SetParent(id.clone()),
+                        });
+                    }
+                }
+            }
+        }
+
+        changes
+    }
+
     pub fn apply_changes(&mut self, changes: &Changes) -> HashMap<WorkItemId, WorkItem> {
         let mut originals = HashMap::<WorkItemId, WorkItem>::default();
 
@@ -218,7 +246,10 @@ impl WorkItems {
         for change in changes {
             let original = self.get(&change.work_item_id);
             if original.is_none() {
-                println!("WARNING: change for '{0}' - work item not found", change.work_item_id.0);
+                println!(
+                    "WARNING: change for '{0}' - work item not found",
+                    change.work_item_id.0
+                );
                 continue;
             }
 
@@ -298,6 +329,12 @@ impl Changes {
             if change != old_value {
                 println!("WARNING! {:?} overrides {:?}", change, old_value);
             }
+        }
+    }
+
+    pub fn add_changes(&mut self, changes: Changes) {
+        for change in changes.data.into_values() {
+            self.add(change);
         }
     }
 }
@@ -402,6 +439,19 @@ pub mod test_helpers {
         }
 
         pub fn add_work_item(&mut self, item: WorkItem) {
+            // Set parent_id on any sub issues
+            if let WorkItemData::Issue(issue) = &item.data {
+                for sub_issue in &issue.sub_issues {
+                    if let Some(WorkItem {
+                        data: WorkItemData::Issue(sub_issue),
+                        ..
+                    }) = self.work_items.get_mut(sub_issue)
+                    {
+                        sub_issue.parent_id = Some(item.id.clone());
+                    }
+                }
+            }
+
             self.work_items.add(item);
         }
 
@@ -546,6 +596,47 @@ pub mod tests {
     }
 
     #[test]
+    fn test_convert_tracked_to_sub_issues() {
+        let mut data = TestData::default();
+
+        let tracked_issue = data.build().issue().add();
+        let sub_issue = data.build().issue().add();
+        let issue_not_in_project = WorkItemId("not-in-project".to_owned());
+        let issue_with_other_parent = data.build().issue().add();
+
+        let parent = data
+            .build()
+            .tracked_issues(&[
+                &tracked_issue,
+                &sub_issue,
+                &issue_not_in_project,
+                &issue_with_other_parent,
+            ])
+            .sub_issues(&[&sub_issue])
+            .add();
+
+        let _other_parent = data.build().sub_issues(&[&issue_with_other_parent]).add();
+
+        let mut expected_changes = Changes::default();
+        expected_changes.add(Change {
+            work_item_id: tracked_issue,
+            data: ChangeData::SetParent(parent.clone()),
+        });
+        // sub_issue - we don't expect the parent to be changed for this because
+        // it is already a sub-issue
+        //
+        // issue_not_in_project - we don't expect this to be changed because it
+        // isn't in the project
+        //
+        // issue_with_other_parent - we don't expect this to be changed because
+        // we only want to set new parents, not change existing ones.
+
+        let actual_changes = data.work_items.convert_tracked_to_sub_issues(&parent);
+
+        assert_eq!(actual_changes, expected_changes);
+    }
+
+    #[test]
     fn test_apply_changes_no_changes() {
         let mut data = TestData::default();
         data.build().add();
@@ -602,10 +693,6 @@ pub mod tests {
 
         let child = data.build().issue().add();
         let old_parent = data.build().sub_issues(&[&child]).add();
-        if let WorkItemData::Issue(issue) = &mut data.work_items.get_mut(&child).unwrap().data {
-            issue.parent_id = Some(old_parent.clone());
-        }
-
         let new_parent = data.build().issue().add();
 
         let mut changes = Changes::default();
@@ -661,7 +748,6 @@ pub mod tests {
         let work_items_before = data.work_items.work_items.clone();
         let expected_original_work_items = HashMap::default();
         let actual_original_work_items = data.work_items.apply_changes(&changes);
-
 
         assert_eq!(expected_original_work_items, actual_original_work_items);
         assert_eq!(work_items_before, data.work_items.work_items);

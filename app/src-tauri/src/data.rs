@@ -1,6 +1,6 @@
 use crate::pat::new_github_client;
 use dirs::home_dir;
-use github_graphql::data::{Change, Changes, WorkItem, WorkItemData, WorkItemId, WorkItems};
+use github_graphql::data::{Changes, WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
 use std::fs;
 use std::io::{BufReader, BufWriter};
@@ -94,10 +94,8 @@ impl DataState {
         Ok(work_items)
     }
 
-    pub fn add_changes(&mut self, changes: impl Iterator<Item = Change>) {
-        for change in changes {
-            self.changes.add(change);
-        }
+    pub fn add_changes(&mut self, changes: Changes) {
+        self.changes.add_changes(changes);
 
         let r = self.app.emit("changes-updated", &self.changes);
         if let Err(r) = r {
