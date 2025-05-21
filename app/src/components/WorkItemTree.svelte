@@ -102,12 +102,14 @@
   }
 </script>
 
-{@render itemList(data.rootNodes)}
+<div class="overflow-auto">
+  {@render itemList(data.rootNodes)}
+</div>
 
 {#snippet itemList(nodes: Node[])}
   {#if nodes.length > 0}
     <table class="w-full table-auto">
-      <thead>
+      <thead class="sticky top-0 bg-primary-50-950 outline">
         <tr>
           {#each ["Title", "Status", "Iteration", "Blocked", "Kind", "# Tracked"] as heading}
             <td>{heading}</td>
@@ -116,7 +118,11 @@
       </thead>
       <tbody>
         {#each nodes as node (node.id)}
-          <tr transition:fade animate:flip={{ duration: 100 }} class={`${node.isModified ? 'bg-secondary-50-950' : ''}`}>
+          <tr
+            transition:fade
+            animate:flip={{ duration: 100 }}
+            class={`${node.isModified ? "bg-secondary-50-950" : ""}`}
+          >
             {#if node.data.type === "group"}
               <td
                 class="text-2xl border-b-2"

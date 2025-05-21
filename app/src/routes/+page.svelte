@@ -39,25 +39,25 @@
 
   listen<Changes>("changes-updated", (event) => {
     console.log(JSON.stringify(event, undefined, " "));
-    changes = event.payload;    
+    changes = event.payload;
   });
 </script>
 
-<AppBar>
-  {#snippet lead()}
-    <div class="content-center h-full">ghui</div>
-    <RefreshButton {progress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
-  {/snippet}
-  {#snippet children()}
+<div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
+  <AppBar>
+    {#snippet lead()}
+      <div class="content-center h-full">ghui</div>
+      <RefreshButton {progress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
+    {/snippet}
     {#if Object.keys(changes.data).length > 0}
       {Object.keys(changes.data).length} changes
     {/if}
-  {/snippet}
-  {#snippet trail()}
-    <Pat />
-  {/snippet}
-</AppBar>
+    {#snippet trail()}
+      <Pat />
+    {/snippet}
+  </AppBar>
 
-{#if raw_data !== undefined}
-  <WorkItemTree {raw_data} />
-{/if}
+  {#if raw_data !== undefined}
+    <WorkItemTree {raw_data} />
+  {/if}
+</div>
