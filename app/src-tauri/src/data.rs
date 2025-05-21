@@ -242,7 +242,7 @@ impl<'a> NodeBuilder<'a> {
                 id: id.0.clone(),
                 data: NodeData::WorkItem,
                 has_children: !children.is_empty(),
-                is_modified: self.original_work_items.contains_key(&id),
+                is_modified: self.original_work_items.contains_key(id),
             });
 
             self.add_nodes(
