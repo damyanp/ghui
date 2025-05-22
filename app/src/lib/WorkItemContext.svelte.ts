@@ -48,7 +48,9 @@ export class WorkItemContext {
 
   // #region Managing Changes
 
-  previewChanges = $derived(Object.keys(this.data.originalWorkItems).length > 0);
+  previewChanges = $derived(
+    Object.keys(this.data.originalWorkItems).length > 0
+  );
 
   public async deleteChanges() {
     await invoke("delete_changes");
@@ -60,19 +62,22 @@ export class WorkItemContext {
     await this.refresh(false);
   }
 
-  public async saveChanges() {
-    await invoke("save_changes");
+  public async saveChanges(progress: Channel<Progress>) {
+      await invoke("save_changes", { progress });
     await this.refresh(true);
   }
 
   // #endregion
 }
 
-function makeProgressChannel(setter: (value: number) => void) {
+type Progress = number[];
+
+export function makeProgressChannel(
+  setter: (value: number) => void
+): Channel<Progress> {
   let progress = 0;
   setter(progress);
 
-  type Progress = number[];
   const getDataProgress = new Channel<Progress>();
   getDataProgress.onmessage = (message) => {
     const [retrieved, total] = message;

@@ -1,3 +1,4 @@
+pub mod add_sub_issue;
 pub mod add_to_project;
 pub mod clear_project_field_value;
 pub mod custom_fields_query;

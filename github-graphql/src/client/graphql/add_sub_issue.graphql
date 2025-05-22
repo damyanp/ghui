@@ -1,0 +1,7 @@
+mutation AddSubIssue($issueId: ID!, $subIssueId: ID!) {
+  addSubIssue(
+    input: { issueId: $issueId, replaceParent: true, subIssueId: $subIssueId }
+  ) {
+    clientMutationId
+  }
+}

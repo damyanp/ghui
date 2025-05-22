@@ -1,9 +1,12 @@
+use crate::{
+    client::{graphql::add_sub_issue, transport::Client},
+    Result,
+};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map, HashMap},
-    mem::Discriminant,
+    mem::{swap, Discriminant},
 };
-
-use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
@@ -347,6 +350,42 @@ impl Changes {
             self.add(change);
         }
     }
+
+    pub async fn save(
+        &mut self,
+        client: &impl Client,
+        report_progress: &impl Fn(usize, usize),
+    ) -> Result<()> {
+        let mut data = HashMap::default();
+        swap(&mut data, &mut self.data);
+
+        let change_count = data.len();
+
+        for (change_number, (key, change)) in data.into_iter().enumerate() {
+            let result = change.save(client).await;
+            report_progress(change_number, change_count);
+
+            if result.is_err() {
+                println!("WARNING: save for {:?} failed {result:?}", change.key());
+                self.data.insert(key, change);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Change {
+    async fn save(&self, client: &impl Client) -> Result<()> {
+        match &self.data {
+            ChangeData::Status(_) => Err("Not implemented".into()),
+            ChangeData::Blocked(_) => Err("Not implemented".into()),
+            ChangeData::Epic(_) => Err("Not implemented".into()),
+            ChangeData::SetParent(new_parent) => {
+                add_sub_issue::add(client, &new_parent.0, &self.work_item_id.0).await
+            }
+        }
+    }
 }
 
 impl<'a> IntoIterator for &'a Changes {
@@ -367,7 +406,7 @@ pub struct ChangeKey {
 }
 
 impl serde::Serialize for ChangeKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {

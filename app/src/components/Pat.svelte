@@ -126,7 +126,7 @@
           target="_blank"
           href="https://github.com/settings/tokens"
           class="anchor">Generate PAT here</a
-        >. Tokens (classic) with access to projects seem to work well.
+        >. Tokens (classic) with access to projects & repos seem to work well.
       </p>
 
       <form class="w-full space-y-4 space-x-1">

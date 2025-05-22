@@ -107,6 +107,17 @@ impl DataState {
     pub fn apply_changes(&self, work_items: &mut WorkItems) -> HashMap<WorkItemId, WorkItem> {
         work_items.apply_changes(&self.changes)
     }
+
+    async fn save_changes(
+        &mut self,
+        report_progress: &impl Fn(usize, usize),
+    ) -> Result<(), String> {
+        let client = new_github_client(&self.app).await?;
+        self.changes
+            .save(&client, report_progress)
+            .await
+            .map_err(|e| e.to_string())
+    }
 }
 
 fn load_workitems_from_appdata() -> Result<WorkItems, String> {
@@ -180,7 +191,12 @@ pub async fn save_changes(
     data_state: State<'_, Mutex<DataState>>,
     progress: Channel<(usize, usize)>,
 ) -> Result<(), String> {
-    todo!();
+    let report_progress = |c, t| {
+        progress.send((c, t)).unwrap();
+    };
+
+    let mut data_state = data_state.lock().await;
+    data_state.save_changes(&report_progress).await
 }
 
 struct NodeBuilder<'a> {
