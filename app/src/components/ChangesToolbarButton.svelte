@@ -2,19 +2,23 @@
   import type { Changes } from "$lib/bindings/Changes";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import { Eye, EyeOff, Save, Trash2 } from "@lucide/svelte";
+  import { scale } from "svelte/transition";
 
   const context = getWorkItemContext();
 
   const numChanges = $derived(Object.keys(context.data.changes.data).length);
-
-  let previewChanges = $state(true);
 </script>
 
 {#if numChanges}
   <div
     class="cursor-default rounded-2xl w-fit bg-primary-50-950 text-xs h-full flex flex-row p-1 items-center"
+    transition:scale
   >
-    <button class="btn p-1" title="Delete Changes">
+    <button
+      class="btn p-1"
+      title="Delete Changes"
+      onclick={async () => await context.deleteChanges()}
+    >
       <Trash2 />
     </button>
     <button class="btn p-1" title="Save">
@@ -27,11 +31,13 @@
 
     <button
       title="Preview"
-      aria-pressed={previewChanges}
-      onclick={() => (previewChanges = !previewChanges)}
+      aria-pressed={context.previewChanges}
+      onclick={() => {
+        context.setPreviewChanges(!context.previewChanges);
+      }}
       class="btn p-1"
     >
-      {#if previewChanges}
+      {#if context.previewChanges}
         <Eye />
       {:else}
         <EyeOff />

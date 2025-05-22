@@ -27,19 +27,13 @@ export class WorkItemContext {
   public async refresh(forceRefresh: boolean): Promise<void> {
     if (this.loadProgress !== 0) return;
 
-    this.loadProgress = 1;
-
-    type Progress = number[];
-    const getDataProgress = new Channel<Progress>();
-    getDataProgress.onmessage = (message) => {
-      const [retrieved, total] = message;
-      if (total === 0) this.loadProgress = 0;
-      else this.loadProgress = 1 - retrieved / total;
-    };
+    const progress = makeProgressChannel(
+      (value) => (this.loadProgress = value)
+    );
 
     this.data = await invoke<Data>("get_data", {
-      forceRefresh: forceRefresh,
-      progress: getDataProgress,
+      forceRefresh,
+      progress,
     });
 
     this.loadProgress = 0;
@@ -51,4 +45,41 @@ export class WorkItemContext {
     });
     await this.refresh(false);
   }
+
+  // #region Managing Changes
+
+  previewChanges = $derived(Object.keys(this.data.originalWorkItems).length > 0);
+
+  public async deleteChanges() {
+    await invoke("delete_changes");
+    await this.refresh(false);
+  }
+
+  public async setPreviewChanges(preview: boolean) {
+    await invoke("set_preview_changes", { preview });
+    await this.refresh(false);
+  }
+
+  public async saveChanges() {
+    await invoke("save_changes");
+    await this.refresh(true);
+  }
+
+  // #endregion
+}
+
+function makeProgressChannel(setter: (value: number) => void) {
+  let progress = 0;
+  setter(progress);
+
+  type Progress = number[];
+  const getDataProgress = new Channel<Progress>();
+  getDataProgress.onmessage = (message) => {
+    const [retrieved, total] = message;
+    if (total === 0) progress = 0;
+    else progress = 1 - retrieved / total;
+    setter(progress);
+  };
+
+  return getDataProgress;
 }

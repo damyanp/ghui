@@ -45,6 +45,7 @@ pub struct DataState {
     app: AppHandle,
     pub work_items: Option<WorkItems>,
     changes: Changes,
+    preview_changes: bool,
 }
 
 impl DataState {
@@ -53,6 +54,7 @@ impl DataState {
             app,
             work_items: None,
             changes: Changes::default(),
+            preview_changes: true,
         }
     }
 
@@ -141,7 +143,11 @@ pub async fn get_data(
 
     let mut data_state = data_state.lock().await;
     let mut work_items = data_state.refresh(force_refresh, &report_progress).await?;
-    let original_work_items = data_state.apply_changes(&mut work_items);
+    let original_work_items = if data_state.preview_changes {
+        data_state.apply_changes(&mut work_items)
+    } else {
+        HashMap::default()
+    };
 
     let nodes = NodeBuilder::new(&work_items, &original_work_items).build();
     Ok(Data {
@@ -150,6 +156,31 @@ pub async fn get_data(
         original_work_items,
         changes: data_state.changes.clone(),
     })
+}
+
+#[tauri::command]
+pub async fn delete_changes(data_state: State<'_, Mutex<DataState>>) -> Result<(), String> {
+    let mut data_state = data_state.lock().await;
+    data_state.changes = Changes::default();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_preview_changes(
+    data_state: State<'_, Mutex<DataState>>,
+    preview: bool,
+) -> Result<(), String> {
+    let mut data_state = data_state.lock().await;
+    data_state.preview_changes = preview;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn save_changes(
+    data_state: State<'_, Mutex<DataState>>,
+    progress: Channel<(usize, usize)>,
+) -> Result<(), String> {
+    todo!();
 }
 
 struct NodeBuilder<'a> {

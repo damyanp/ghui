@@ -20,6 +20,9 @@ pub fn run() {
             pat::check_pat_status,
             pat::set_pat,
             data::get_data,
+            data::delete_changes,
+            data::set_preview_changes,
+            data::save_changes,
             tracked_to_sub_issue::convert_tracked_to_sub_issues
         ])
         .run(tauri::generate_context!())
