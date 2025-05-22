@@ -13,8 +13,9 @@
   import { tick } from "svelte";
   import { text } from "@sveltejs/kit";
   import { invoke } from "@tauri-apps/api/core";
+  import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
 
-  let { raw_data }: { raw_data: Data } = $props();
+  let context = getWorkItemContext();
 
   let expanded = $state<string[]>([]);
 
@@ -23,7 +24,7 @@
 
     let level = 0;
 
-    for (const node of raw_data.nodes) {
+    for (const node of context.data.nodes) {
       if (node.level > level) continue;
 
       nodes.push(node);
@@ -35,7 +36,7 @@
       }
     }
 
-    return { ...raw_data, rootNodes: nodes };
+    return { ...context.data, rootNodes: nodes };
   });
 
   type MenuOption =
@@ -96,9 +97,7 @@
   }
 
   function convertTrackedIssuesToSubIssue(item: WorkItem) {
-    invoke("convert_tracked_to_sub_issues", {
-      id: item.id,
-    });
+    context.convertTrackedIssuesToSubIssue(item.id);
   }
 </script>
 

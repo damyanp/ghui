@@ -5,37 +5,16 @@
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
   import type { Data } from "$lib/bindings/Data";
-  import type { Changes } from "$lib/bindings/Changes";
   import ChangesToolbarButton from "../components/ChangesToolbarButton.svelte";
+  import {
+    setWorkItemContext,
+    WorkItemContext,
+  } from "$lib/WorkItemContext.svelte";
 
-  let raw_data = $state<Data>({
-    workItems: {},
-    nodes: [],
-    originalWorkItems: {},
-    changes: { data: {} },
-  });
-
-  type Progress = number[];
-
-  let progress = $state<number>(0);
+  const context = setWorkItemContext(new WorkItemContext());
 
   async function onRefreshClicked(forceRefresh: boolean): Promise<void> {
-    if (progress !== 0) return;
-
-    progress = 1;
-
-    const getDataProgress = new Channel<Progress>();
-    getDataProgress.onmessage = (message) => {
-      const [retrieved, total] = message;
-      if (total === 0) progress = 0;
-      else progress = 1 - retrieved / total;
-    };
-
-    raw_data = await invoke<Data>("get_data", {
-      forceRefresh: forceRefresh,
-      progress: getDataProgress,
-    });
-    progress = 0;
+    await context.refresh(forceRefresh);
   }
 
   onRefreshClicked(false);
@@ -45,15 +24,15 @@
   <AppBar>
     {#snippet lead()}
       <div class="content-center h-full">ghui</div>
-      <RefreshButton {progress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
+      <RefreshButton progress={context.loadProgress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
     {/snippet}
 
-    <ChangesToolbarButton changes={raw_data.changes} />
+    <ChangesToolbarButton />
 
     {#snippet trail()}
       <Pat />
     {/snippet}
   </AppBar>
 
-  <WorkItemTree {raw_data} />
+  <WorkItemTree />
 </div>

@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { Changes } from "$lib/bindings/Changes";
+  import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import { Eye, EyeOff, Save, Trash2 } from "@lucide/svelte";
 
-  let { changes }: { changes: Changes } = $props();
+  const context = getWorkItemContext();
 
-  const numChanges = $derived(Object.keys(changes.data).length);
+  const numChanges = $derived(Object.keys(context.data.changes.data).length);
 
   let previewChanges = $state(true);
 </script>
