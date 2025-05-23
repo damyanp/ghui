@@ -12,7 +12,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map, HashMap},
-    mem::{swap, Discriminant},
+    mem::{take, Discriminant},
 };
 use ts_rs::TS;
 
@@ -360,28 +360,25 @@ impl WorkItems {
 
             match &change.data {
                 ChangeData::Status(value) => {
-                    work_item.project_item.status = value.as_ref().and_then(|value| {
-                        Some(SingleSelectFieldValue {
+                    work_item.project_item.status =
+                        value.as_ref().map(|value| SingleSelectFieldValue {
                             option_id: "???".to_owned(),
                             name: value.clone(),
                         })
-                    })
                 }
                 ChangeData::Blocked(value) => {
-                    work_item.project_item.blocked = value.as_ref().and_then(|value| {
-                        Some(SingleSelectFieldValue {
+                    work_item.project_item.blocked =
+                        value.as_ref().map(|value| SingleSelectFieldValue {
                             option_id: "???".to_owned(),
                             name: value.clone(),
                         })
-                    })
                 }
                 ChangeData::Epic(value) => {
-                    work_item.project_item.epic = value.as_ref().and_then(|value| {
-                        Some(SingleSelectFieldValue {
+                    work_item.project_item.epic =
+                        value.as_ref().map(|value| SingleSelectFieldValue {
                             option_id: "???".to_owned(),
                             name: value.clone(),
                         })
-                    })
                 }
                 ChangeData::SetParent(new_parent_id) => {
                     remember_original(self.get(new_parent_id));
@@ -474,8 +471,7 @@ impl Changes {
         mode: SaveMode,
         report_progress: &impl Fn(&Change, usize, usize),
     ) -> Result<()> {
-        let mut data = HashMap::default();
-        swap(&mut data, &mut self.data);
+        let data = take(&mut self.data);
 
         let change_count = data.len();
 
