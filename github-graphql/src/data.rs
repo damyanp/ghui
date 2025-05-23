@@ -1,5 +1,12 @@
 use crate::{
-    client::{graphql::add_sub_issue, transport::Client},
+    client::{
+        graphql::{
+            add_sub_issue, clear_project_field_value,
+            custom_fields_query::{Field, Fields},
+            set_project_field_value,
+        },
+        transport::Client,
+    },
     Result,
 };
 use serde::{Deserialize, Serialize};
@@ -354,7 +361,10 @@ impl Changes {
     pub async fn save(
         &mut self,
         client: &impl Client,
-        report_progress: &impl Fn(usize, usize),
+        fields: &Fields,
+        work_items: &WorkItems,
+        mode: SaveMode,
+        report_progress: &impl Fn(&Change, usize, usize),
     ) -> Result<()> {
         let mut data = HashMap::default();
         swap(&mut data, &mut self.data);
@@ -362,8 +372,13 @@ impl Changes {
         let change_count = data.len();
 
         for (change_number, (key, change)) in data.into_iter().enumerate() {
-            let result = change.save(client).await;
-            report_progress(change_number, change_count);
+            let result = if let SaveMode::Commit = mode {
+                change.save(client, fields, work_items).await
+            } else {
+                Ok(())
+            };
+
+            report_progress(&change, change_number, change_count);
 
             if result.is_err() {
                 println!("WARNING: save for {:?} failed {result:?}", change.key());
@@ -375,16 +390,76 @@ impl Changes {
     }
 }
 
+pub enum SaveMode {
+    DryRun,
+    Commit,
+}
+
 impl Change {
-    async fn save(&self, client: &impl Client) -> Result<()> {
+    async fn save(
+        &self,
+        client: &impl Client,
+        fields: &Fields,
+        work_items: &WorkItems,
+    ) -> Result<()> {
         match &self.data {
-            ChangeData::Status(_) => Err("Not implemented".into()),
-            ChangeData::Blocked(_) => Err("Not implemented".into()),
-            ChangeData::Epic(_) => Err("Not implemented".into()),
+            ChangeData::Status(value) => {
+                self.save_field(
+                    client,
+                    work_items,
+                    &fields.project_id,
+                    &fields.status,
+                    value,
+                )
+                .await
+            }
+            ChangeData::Blocked(value) => {
+                self.save_field(
+                    client,
+                    work_items,
+                    &fields.project_id,
+                    &fields.blocked,
+                    value,
+                )
+                .await
+            }
+            ChangeData::Epic(value) => {
+                self.save_field(client, work_items, &fields.project_id, &fields.epic, value)
+                    .await
+            }
             ChangeData::SetParent(new_parent) => {
                 add_sub_issue::add(client, &new_parent.0, &self.work_item_id.0).await
             }
         }
+    }
+
+    async fn save_field(
+        &self,
+        client: &impl Client,
+        work_items: &WorkItems,
+        project_id: &str,
+        field: &Field,
+        value: &Option<String>,
+    ) -> Result<()> {
+        if let Some(project_item_id) = work_items
+            .get(&self.work_item_id)
+            .map(|item| &item.project_item.id)
+        {
+            if let Some(new_value_id) = value.as_ref().and_then(|name| field.id(name)) {
+                set_project_field_value::set(
+                    client,
+                    project_id,
+                    project_item_id,
+                    &field.id,
+                    new_value_id,
+                )
+                .await?;
+            } else {
+                clear_project_field_value::clear(client, project_id, project_item_id, &field.id)
+                    .await?;
+            }
+        }
+        Ok(())
     }
 }
 

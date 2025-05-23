@@ -1,5 +1,7 @@
 use graphql_client::{GraphQLQuery, Response};
 
+use crate::data::ProjectItemId;
+
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "src/schema.docs.graphql",
@@ -12,13 +14,13 @@ pub struct SetProjectFieldValue;
 pub async fn set<ClientType: crate::client::transport::Client>(
     client: &ClientType,
     project_id: &str,
-    item_id: &str,
+    item_id: &ProjectItemId,
     field_id: &str,
     option_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let variables = set_project_field_value::Variables {
         project_id: project_id.to_owned(),
-        item_id: item_id.to_owned(),
+        item_id: item_id.0.to_owned(),
         field_id: field_id.to_owned(),
         option_id: option_id.to_owned(),
     };

@@ -1,4 +1,4 @@
-use crate::{client::transport::Client, Result};
+use crate::{client::transport::Client, data::ProjectItemId, Result};
 use graphql_client::{GraphQLQuery, Response};
 
 #[derive(GraphQLQuery)]
@@ -10,7 +10,11 @@ use graphql_client::{GraphQLQuery, Response};
 )]
 pub struct AddToProject;
 
-pub async fn add(client: &impl Client, project_id: &str, content_id: &str) -> Result<String> {
+pub async fn add(
+    client: &impl Client,
+    project_id: &str,
+    content_id: &str,
+) -> Result<ProjectItemId> {
     use add_to_project::*;
 
     let variables = Variables {
@@ -30,6 +34,6 @@ pub async fn add(client: &impl Client, project_id: &str, content_id: &str) -> Re
         .data
         .and_then(|data| data.add_project_v2_item_by_id)
         .and_then(|data| data.item)
-        .map(|item| item.id)
+        .map(|item| ProjectItemId(item.id))
         .ok_or("Mutation didn't return an ID".into())
 }

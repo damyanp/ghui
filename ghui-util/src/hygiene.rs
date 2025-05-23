@@ -1,17 +1,8 @@
-#![allow(dead_code)]
-
 use github_graphql::{
-    client::{
-        graphql::{
-            clear_project_field_value,
-            custom_fields_query::{self, Field},
-            set_project_field_value,
-        },
-        transport::GithubClient,
-    },
+    client::{graphql::custom_fields_query::get_fields, transport::GithubClient},
     data::{
-        self, Change, ChangeData, Changes, HasFieldValue, SingleSelectFieldValue, WorkItemData,
-        WorkItemId, WorkItems,
+        self, Change, ChangeData, Changes, HasFieldValue, SaveMode, WorkItemData, WorkItemId,
+        WorkItems,
     },
 };
 
@@ -52,9 +43,29 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     println!("{} items", items.work_items.len());
 
-    let changes = get_hygienic_changes(&items);
+    let mut changes = get_hygienic_changes(&items);
 
-    commit_changes(client, &items, &changes, &mode).await?;
+    let report_progress = |change: &Change, _, _| {
+        println!(
+            "{} - {}",
+            items
+                .get(&change.work_item_id)
+                .map(describe_item)
+                .unwrap_or("??".to_owned()),
+            change.describe(&items)
+        );
+    };
+
+    let save_mode = match mode {
+        RunHygieneMode::DryRun | RunHygieneMode::TestData => SaveMode::DryRun,
+        RunHygieneMode::Commit => SaveMode::Commit,
+    };
+
+    let fields = get_fields(client).await?;
+
+    changes
+        .save(client, &fields, &items, save_mode, &report_progress)
+        .await?;
 
     Ok(())
 }
@@ -138,103 +149,6 @@ fn describe_item(item: &data::WorkItem) -> String {
         Some(resource_path) => format!("https://github.com{}", resource_path),
         None => format!("[{}]", item.id.0),
     }
-}
-
-async fn commit_changes(
-    client: &GithubClient,
-    work_items: &WorkItems,
-    changes: &Changes,
-    mode: &RunHygieneMode,
-) -> Result {
-    let fields = custom_fields_query::get_fields(client).await?;
-
-    for change in changes {
-        let work_item = work_items.get(&change.work_item_id).unwrap();
-
-        println!("{}", describe_item(work_item));
-
-        let id = &work_item.project_item.id;
-
-        match &change.data {
-            ChangeData::Status(value) => apply_change(
-                client,
-                &fields.project_id,
-                id,
-                &work_item.project_item.status,
-                &fields.status,
-                value,
-                mode,
-            ),
-            ChangeData::Blocked(value) => apply_change(
-                client,
-                &fields.project_id,
-                id,
-                &work_item.project_item.blocked,
-                &fields.blocked,
-                value,
-                mode,
-            ),
-            ChangeData::Epic(value) => apply_change(
-                client,
-                &fields.project_id,
-                id,
-                &work_item.project_item.epic,
-                &fields.epic,
-                value,
-                mode,
-            ),
-            ChangeData::SetParent(_) => todo!(),
-        }
-        .await?;
-
-        println!();
-    }
-
-    Ok(())
-}
-
-async fn apply_change(
-    client: &GithubClient,
-    project_id: &str,
-    work_item_id: &data::ProjectItemId,
-    old_value: &Option<SingleSelectFieldValue>,
-    field: &Field,
-    value: &Option<String>,
-    mode: &RunHygieneMode,
-) -> Result {
-    let old_value = old_value.as_ref().map_or("<>", |v| v.name.as_str());
-    let new_value_id = value.as_ref().and_then(|v| field.id(v));
-
-    println!(
-        "  {} {} -> {}({})",
-        field.name,
-        old_value,
-        value.as_ref().map_or("<>", |v| v.as_str()),
-        new_value_id.as_ref().map_or("<>", |v| v)
-    );
-
-    if *mode == RunHygieneMode::Commit {
-        if let Some(new_value_id) = new_value_id {
-            set_project_field_value::set(
-                client,
-                project_id,
-                work_item_id.0.as_str(),
-                field.id.as_str(),
-                new_value_id,
-            )
-            .await?;
-        } else {
-            clear_project_field_value::clear(
-                client,
-                project_id,
-                work_item_id.0.as_str(),
-                field.id.as_str(),
-            )
-            .await?;
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]

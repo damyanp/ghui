@@ -1,5 +1,7 @@
 use graphql_client::{GraphQLQuery, Response};
 
+use crate::data::ProjectItemId;
+
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "src/schema.docs.graphql",
@@ -12,12 +14,12 @@ pub struct ClearProjectFieldValue;
 pub async fn clear<ClientType: crate::client::transport::Client>(
     client: &ClientType,
     project_id: &str,
-    item_id: &str,
+    item_id: &ProjectItemId,
     field_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let variables = clear_project_field_value::Variables {
         project_id: project_id.to_owned(),
-        item_id: item_id.to_owned(),
+        item_id: item_id.0.to_owned(),
         field_id: field_id.to_owned(),
     };
     let request_body = ClearProjectFieldValue::build_query(variables);

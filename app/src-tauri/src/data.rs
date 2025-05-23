@@ -1,6 +1,7 @@
 use crate::pat::new_github_client;
 use dirs::home_dir;
-use github_graphql::data::{Changes, WorkItem, WorkItemData, WorkItemId, WorkItems};
+use github_graphql::client::graphql::custom_fields_query::get_fields;
+use github_graphql::data::{Changes, SaveMode, WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
 use std::fs;
 use std::io::{BufReader, BufWriter};
@@ -113,8 +114,18 @@ impl DataState {
         report_progress: &impl Fn(usize, usize),
     ) -> Result<(), String> {
         let client = new_github_client(&self.app).await?;
+
+        println!("TODO: only get_fields once, not every time we hit save!");
+        let fields = get_fields(&client).await.map_err(|e| e.to_string())?;
+
         self.changes
-            .save(&client, report_progress)
+            .save(
+                &client,
+                &fields,
+                self.work_items.as_ref().unwrap(),
+                SaveMode::Commit,
+                &|_, a, b| report_progress(a, b),
+            )
             .await
             .map_err(|e| e.to_string())
     }
