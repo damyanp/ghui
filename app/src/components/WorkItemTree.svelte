@@ -1,8 +1,5 @@
 <script lang="ts">
-  import {
-    CircleMinusIcon,
-    CirclePlusIcon,
-  } from "@lucide/svelte";
+  import { CircleMinusIcon, CirclePlusIcon } from "@lucide/svelte";
   import { fade } from "svelte/transition";
   import { flip } from "svelte/animate";
   import type { Data } from "$lib/bindings/Data";
@@ -16,15 +13,21 @@
 
   let expanded = $state<string[]>([]);
 
+  type ModifiedNode = Node & { modifiedDescendent: boolean };
+
   const data = $derived.by(() => {
-    let nodes = [];
+    let nodes: ModifiedNode[] = [];
 
     let level = 0;
 
     for (const node of context.data.nodes) {
-      if (node.level > level) continue;
+      if (node.level > level) {
+        nodes[nodes.length - 1].modifiedDescendent =
+          nodes[nodes.length - 1].modifiedDescendent || node.isModified;
+        continue;
+      }
 
-      nodes.push(node);
+      nodes.push({ ...node, modifiedDescendent: false });
 
       if (node.hasChildren && expanded.includes(node.id)) {
         level = node.level + 1;
@@ -102,7 +105,7 @@
   {@render itemList(data.rootNodes)}
 </div>
 
-{#snippet itemList(nodes: Node[])}
+{#snippet itemList(nodes: ModifiedNode[])}
   {#if nodes.length > 0}
     <table class="w-full table-auto">
       <thead class="sticky top-0 bg-primary-50-950 outline">
@@ -117,7 +120,7 @@
           <tr
             transition:fade
             animate:flip={{ duration: 100 }}
-            class={`${node.isModified ? "bg-secondary-50-950" : ""}`}
+            class={`${node.isModified ? "bg-secondary-300-700" : node.modifiedDescendent ? "bg-secondary-50-950" : ""}`}
           >
             {#if node.data.type === "group"}
               <td
