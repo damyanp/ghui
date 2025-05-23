@@ -315,78 +315,50 @@ impl<'a> NodeBuilder<'a> {
 #[cfg(test)]
 mod nodebuilder_tests {
     use super::*;
-    use github_graphql::data::{ProjectItem, SingleSelectFieldValue};
+    use github_graphql::data::test_helpers::TestData;
     use std::collections::HashMap;
-
-    fn make_work_item(
-        id: &str,
-        epic: Option<&str>,
-        sub_issues: Vec<WorkItemId>,
-    ) -> (WorkItemId, WorkItem) {
-        let id_obj = WorkItemId(id.to_string());
-        let project_item = ProjectItem {
-            epic: epic.map(|e| SingleSelectFieldValue {
-                name: e.to_string(),
-                option_id: e.to_string(),
-            }),
-            ..Default::default()
-        };
-        let data = WorkItemData::Issue(github_graphql::data::Issue {
-            sub_issues,
-            ..Default::default()
-        });
-        let item = WorkItem {
-            id: id_obj.clone(),
-            project_item,
-            data,
-            ..Default::default()
-        };
-        (id_obj, item)
-    }
 
     #[test]
     fn test_node_builder_single_item() {
-        let (_, item) = make_work_item("1", Some("Epic1"), vec![]);
-        let mut work_items = WorkItems::default();
+        let mut data = TestData::default();
+        let id = data.build().epic("Epic1").add();
+        let work_items = data.work_items;
         let original_work_items = HashMap::new();
-        work_items.add(item);
         let mut builder = NodeBuilder::new(&work_items, &original_work_items);
         let nodes = builder.build();
         // Only one node (the work item) should be present, no group node
         assert_eq!(nodes.len(), 1);
         assert!(matches!(nodes[0].data, NodeData::WorkItem));
-        assert_eq!(nodes[0].id, "1");
+        assert_eq!(nodes[0].id, id.0);
         assert_eq!(nodes[0].level, 0);
     }
 
     #[test]
     fn test_node_builder_grouping() {
-        let (_, item1) = make_work_item("1", Some("EpicA"), vec![]);
-        let (_, item2) = make_work_item("2", Some("EpicB"), vec![]);
-        let mut work_items = WorkItems::default();
+        let mut data = TestData::default();
+        let id1 = data.build().epic("EpicA").add();
+        let id2 = data.build().epic("EpicB").add();
+        let work_items = data.work_items;
         let original_work_items = HashMap::new();
-        work_items.add(item1);
-        work_items.add(item2);
         let mut builder = NodeBuilder::new(&work_items, &original_work_items);
         let nodes = builder.build();
         // Should have two groups and two work items, in order: Group(EpicA), WorkItem(1), Group(EpicB), WorkItem(2)
         assert_eq!(nodes.len(), 4);
         assert!(matches!(nodes[0].data, NodeData::Group { ref name } if name == "EpicA"));
         assert!(matches!(nodes[1].data, NodeData::WorkItem));
-        assert_eq!(nodes[1].id, "1");
+        assert_eq!(nodes[1].id, id1.0);
         assert!(matches!(nodes[2].data, NodeData::Group { ref name } if name == "EpicB"));
         assert!(matches!(nodes[3].data, NodeData::WorkItem));
-        assert_eq!(nodes[3].id, "2");
+        assert_eq!(nodes[3].id, id2.0);
     }
 
     #[test]
     fn test_node_builder_hierarchy() {
-        let (_, item1) = make_work_item("1", Some("EpicA"), vec![]);
-        let (id2, item2) = make_work_item("2", Some("EpicA"), vec![WorkItemId("1".to_string())]);
-        let mut work_items = WorkItems::default();
+        let mut data = TestData::default();
+        let id1 = data.build().epic("EpicA").add();
+        let id2 = data.build().epic("EpicA").sub_issues(&[&id1]).add();
+        let work_items = data.work_items;
         let original_work_items = HashMap::new();
-        work_items.add(item1);
-        work_items.add(item2);
         let mut builder = NodeBuilder::new(&work_items, &original_work_items);
         let nodes = builder.build();
         // Should have two work items, no group node, in order: WorkItem(2), WorkItem(1)
@@ -394,10 +366,10 @@ mod nodebuilder_tests {
         assert!(matches!(nodes[0].data, NodeData::WorkItem));
         assert_eq!(nodes[0].id, id2.0);
         assert!(matches!(nodes[1].data, NodeData::WorkItem));
-        assert_eq!(nodes[1].id, "1");
+        assert_eq!(nodes[1].id, id1.0);
         // Child should be at a deeper level
         let parent_level = nodes.iter().find(|n| n.id == id2.0).unwrap().level;
-        let child_level = nodes.iter().find(|n| n.id == "1").unwrap().level;
+        let child_level = nodes.iter().find(|n| n.id == id1.0).unwrap().level;
         assert!(child_level > parent_level);
     }
 }
