@@ -345,8 +345,8 @@ impl WorkItems {
         };
 
         for change in changes {
-            let original = self.get(&change.work_item_id);
-            if original.is_none() {
+            let work_item = self.get_mut(&change.work_item_id);
+            if work_item.is_none() {
                 println!(
                     "WARNING: change for '{0}' - work item not found",
                     change.work_item_id.0
@@ -354,12 +354,35 @@ impl WorkItems {
                 continue;
             }
 
-            remember_original(original);
+            remember_original(work_item.as_deref());
+
+            let work_item = work_item.unwrap();
 
             match &change.data {
-                ChangeData::Status(_) => todo!(),
-                ChangeData::Blocked(_) => todo!(),
-                ChangeData::Epic(_) => todo!(),
+                ChangeData::Status(value) => {
+                    work_item.project_item.status = value.as_ref().and_then(|value| {
+                        Some(SingleSelectFieldValue {
+                            option_id: "???".to_owned(),
+                            name: value.clone(),
+                        })
+                    })
+                }
+                ChangeData::Blocked(value) => {
+                    work_item.project_item.blocked = value.as_ref().and_then(|value| {
+                        Some(SingleSelectFieldValue {
+                            option_id: "???".to_owned(),
+                            name: value.clone(),
+                        })
+                    })
+                }
+                ChangeData::Epic(value) => {
+                    work_item.project_item.epic = value.as_ref().and_then(|value| {
+                        Some(SingleSelectFieldValue {
+                            option_id: "???".to_owned(),
+                            name: value.clone(),
+                        })
+                    })
+                }
                 ChangeData::SetParent(new_parent_id) => {
                     remember_original(self.get(new_parent_id));
 
@@ -437,6 +460,10 @@ impl Changes {
         for change in changes.data.into_values() {
             self.add(change);
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
     }
 
     pub async fn save(

@@ -10,6 +10,7 @@
     setWorkItemContext,
     WorkItemContext,
   } from "$lib/WorkItemContext.svelte";
+  import SanitizeButton from "../components/SanitizeButton.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
 
@@ -21,13 +22,16 @@
 </script>
 
 <div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
-  <AppBar>
+  <AppBar centerClasses="flex gap-1">
     {#snippet lead()}
       <div class="content-center h-full">ghui</div>
       <RefreshButton progress={context.loadProgress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
     {/snippet}
 
+    {#snippet children()}
+    <SanitizeButton />
     <ChangesToolbarButton />
+    {/snippet}
 
     {#snippet trail()}
       <Pat />

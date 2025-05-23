@@ -46,6 +46,11 @@ export class WorkItemContext {
     await this.refresh(false);
   }
 
+  public async sanitize() {
+    await invoke("sanitize");
+    await this.refresh(false);
+  }
+
   // #region Managing Changes
 
   previewChanges = $derived(

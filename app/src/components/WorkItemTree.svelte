@@ -1,6 +1,5 @@
 <script lang="ts">
   import {
-    BookOpenIcon,
     CircleMinusIcon,
     CirclePlusIcon,
   } from "@lucide/svelte";
@@ -11,8 +10,6 @@
   import * as floating from "@floating-ui/dom";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import { tick } from "svelte";
-  import { text } from "@sveltejs/kit";
-  import { invoke } from "@tauri-apps/api/core";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
 
   let context = getWorkItemContext();
