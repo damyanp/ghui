@@ -3,10 +3,10 @@ use dirs::home_dir;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::data::{Changes, SaveMode, WorkItem, WorkItemData, WorkItemId, WorkItems};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
-use std::{collections::HashMap, mem::take};
 use tauri::{async_runtime::Mutex, ipc::Channel, AppHandle, State};
 use ts_rs::TS;
 
@@ -25,19 +25,19 @@ pub struct Data {
     changes: Changes,
 }
 
-#[derive(Serialize, TS)]
+#[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Node {
-    level: u32,
-    id: String,
-    data: NodeData,
-    has_children: bool,
-    is_modified: bool,
+struct Node {
+    pub level: u32,
+    pub id: String,
+    pub data: NodeData,
+    pub has_children: bool,
+    pub is_modified: bool,
 }
 
-#[derive(Serialize, TS)]
+#[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase", tag = "type")]
-pub enum NodeData {
+enum NodeData {
     WorkItem,
     Group { name: String },
 }
@@ -230,7 +230,7 @@ impl<'a> NodeBuilder<'a> {
 
     fn build(&mut self) -> Vec<Node> {
         self.add_nodes(&self.work_items.get_roots(), 0, "");
-        take(&mut self.nodes)
+        std::mem::take(&mut self.nodes)
     }
 
     fn add_nodes(&mut self, items: &[WorkItemId], level: u32, path: &str) {
@@ -309,5 +309,95 @@ impl<'a> NodeBuilder<'a> {
                 format!("{}{}/", path, item.id.0).as_str(),
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod nodebuilder_tests {
+    use super::*;
+    use github_graphql::data::{ProjectItem, SingleSelectFieldValue};
+    use std::collections::HashMap;
+
+    fn make_work_item(
+        id: &str,
+        epic: Option<&str>,
+        sub_issues: Vec<WorkItemId>,
+    ) -> (WorkItemId, WorkItem) {
+        let id_obj = WorkItemId(id.to_string());
+        let project_item = ProjectItem {
+            epic: epic.map(|e| SingleSelectFieldValue {
+                name: e.to_string(),
+                option_id: e.to_string(),
+            }),
+            ..Default::default()
+        };
+        let data = WorkItemData::Issue(github_graphql::data::Issue {
+            sub_issues,
+            ..Default::default()
+        });
+        let item = WorkItem {
+            id: id_obj.clone(),
+            project_item,
+            data,
+            ..Default::default()
+        };
+        (id_obj, item)
+    }
+
+    #[test]
+    fn test_node_builder_single_item() {
+        let (_, item) = make_work_item("1", Some("Epic1"), vec![]);
+        let mut work_items = WorkItems::default();
+        let original_work_items = HashMap::new();
+        work_items.add(item);
+        let mut builder = NodeBuilder::new(&work_items, &original_work_items);
+        let nodes = builder.build();
+        // Only one node (the work item) should be present, no group node
+        assert_eq!(nodes.len(), 1);
+        assert!(matches!(nodes[0].data, NodeData::WorkItem));
+        assert_eq!(nodes[0].id, "1");
+        assert_eq!(nodes[0].level, 0);
+    }
+
+    #[test]
+    fn test_node_builder_grouping() {
+        let (_, item1) = make_work_item("1", Some("EpicA"), vec![]);
+        let (_, item2) = make_work_item("2", Some("EpicB"), vec![]);
+        let mut work_items = WorkItems::default();
+        let original_work_items = HashMap::new();
+        work_items.add(item1);
+        work_items.add(item2);
+        let mut builder = NodeBuilder::new(&work_items, &original_work_items);
+        let nodes = builder.build();
+        // Should have two groups and two work items, in order: Group(EpicA), WorkItem(1), Group(EpicB), WorkItem(2)
+        assert_eq!(nodes.len(), 4);
+        assert!(matches!(nodes[0].data, NodeData::Group { ref name } if name == "EpicA"));
+        assert!(matches!(nodes[1].data, NodeData::WorkItem));
+        assert_eq!(nodes[1].id, "1");
+        assert!(matches!(nodes[2].data, NodeData::Group { ref name } if name == "EpicB"));
+        assert!(matches!(nodes[3].data, NodeData::WorkItem));
+        assert_eq!(nodes[3].id, "2");
+    }
+
+    #[test]
+    fn test_node_builder_hierarchy() {
+        let (_, item1) = make_work_item("1", Some("EpicA"), vec![]);
+        let (id2, item2) = make_work_item("2", Some("EpicA"), vec![WorkItemId("1".to_string())]);
+        let mut work_items = WorkItems::default();
+        let original_work_items = HashMap::new();
+        work_items.add(item1);
+        work_items.add(item2);
+        let mut builder = NodeBuilder::new(&work_items, &original_work_items);
+        let nodes = builder.build();
+        // Should have two work items, no group node, in order: WorkItem(2), WorkItem(1)
+        assert_eq!(nodes.len(), 2);
+        assert!(matches!(nodes[0].data, NodeData::WorkItem));
+        assert_eq!(nodes[0].id, id2.0);
+        assert!(matches!(nodes[1].data, NodeData::WorkItem));
+        assert_eq!(nodes[1].id, "1");
+        // Child should be at a deeper level
+        let parent_level = nodes.iter().find(|n| n.id == id2.0).unwrap().level;
+        let child_level = nodes.iter().find(|n| n.id == "1").unwrap().level;
+        assert!(child_level > parent_level);
     }
 }
