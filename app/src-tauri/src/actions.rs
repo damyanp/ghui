@@ -19,3 +19,14 @@ pub async fn convert_tracked_to_sub_issues(
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn sanitize(data_state: State<'_, Mutex<DataState>>) -> Result<(), String> {
+    let mut data_state = data_state.lock().await;
+
+    if let Some(work_items) = data_state.work_items.as_ref() {
+        let changes = work_items.sanitize();
+        data_state.add_changes(changes);
+    }
+    Ok(())
+}

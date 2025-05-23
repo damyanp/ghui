@@ -1,9 +1,6 @@
 use github_graphql::{
     client::{graphql::custom_fields_query::get_fields, transport::GithubClient},
-    data::{
-        self, Change, ChangeData, Changes, HasFieldValue, SaveMode, WorkItemData, WorkItemId,
-        WorkItems,
-    },
+    data::{self, Change, SaveMode},
 };
 
 use crate::Result;
@@ -43,14 +40,14 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     println!("{} items", items.work_items.len());
 
-    let mut changes = get_hygienic_changes(&items);
+    let mut changes = items.sanitize();
 
     let report_progress = |change: &Change, _, _| {
         println!(
             "{} - {}",
             items
                 .get(&change.work_item_id)
-                .map(describe_item)
+                .map(|i| i.describe())
                 .unwrap_or("??".to_owned()),
             change.describe(&items)
         );
@@ -68,230 +65,4 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
         .await?;
 
     Ok(())
-}
-
-fn get_hygienic_changes(items: &WorkItems) -> Changes {
-    let mut changes = Changes::default();
-
-    for item in items.work_items.values() {
-        // Closed items should have status set to Closed
-        if item.is_closed() && !item.project_item.status.matches("Closed") {
-            changes.add(Change {
-                work_item_id: item.id.clone(),
-                data: ChangeData::Status(Some("Closed".to_owned())),
-            });
-        }
-
-        // Map project milestones to epics
-        if item.project_item.epic.is_none() {
-            let new_epic = match item.project_item.project_milestone.field_value() {
-                Some("3: ML preview requirements")
-                | Some("4: ML preview planning")
-                | Some("5: ML preview implementation") => Some("DML Demo"),
-                Some("Graphics preview feature analysis") => Some("MiniEngine Demo"),
-                Some("DXC: SM 6.9 Preview") => Some("SM 6.9 Preview"),
-                Some("DXC: SM 6.9 Release") => Some("DXC 2025 Q4"),
-                _ => None,
-            };
-
-            if let Some(new_epic) = new_epic {
-                changes.add(Change {
-                    work_item_id: item.id.clone(),
-                    data: ChangeData::Epic(Some(new_epic.to_owned())),
-                });
-            }
-        }
-    }
-
-    for root_item_id in items.get_roots() {
-        sanitize_issue_hierarchy(items, &mut changes, &root_item_id, None);
-    }
-
-    fn sanitize_issue_hierarchy(
-        items: &WorkItems,
-        changes: &mut Changes,
-        id: &WorkItemId,
-        epic: Option<&str>,
-    ) {
-        if let Some(item) = items.get(id) {
-            if item.project_item.epic.field_value() != epic {
-                if let Some(epic) = epic {
-                    if let Some(current_epic) = &item.project_item.epic {
-                        println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
-                        describe_item(item), current_epic.name, epic);
-                    } else {
-                        changes.add(Change {
-                            work_item_id: id.clone(),
-                            data: ChangeData::Epic(Some(epic.to_owned())),
-                        });
-                    }
-                }
-            }
-
-            if let WorkItemData::Issue(issue) = &item.data {
-                for child_id in &issue.sub_issues {
-                    sanitize_issue_hierarchy(
-                        items,
-                        changes,
-                        child_id,
-                        epic.or(item.project_item.epic.field_value()),
-                    );
-                }
-            }
-        }
-    }
-
-    changes
-}
-
-fn describe_item(item: &data::WorkItem) -> String {
-    match &item.resource_path {
-        Some(resource_path) => format!("https://github.com{}", resource_path),
-        None => format!("[{}]", item.id.0),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use github_graphql::data::{test_helpers::TestData, IssueState};
-
-    use super::{get_hygienic_changes, Change, ChangeData, Changes};
-
-    #[test]
-    fn test_closed_issues_set_state_to_closed() {
-        let mut data = TestData::default();
-
-        data.build()
-            .issue_state(IssueState::OPEN)
-            .status("Active")
-            .add();
-
-        let closed_item_id = data
-            .build()
-            .issue_state(IssueState::CLOSED)
-            .status("Active")
-            .add();
-
-        let actual_changes = get_hygienic_changes(&data.work_items);
-
-        let mut expected_changes = Changes::default();
-        expected_changes.add(Change {
-            work_item_id: closed_item_id,
-            data: ChangeData::Status(Some("Closed".to_owned())),
-        });
-
-        assert_eq!(actual_changes, expected_changes);
-    }
-
-    #[test]
-    fn test_set_epic_from_project_milestone() {
-        let mappings = [
-            ("3: ML preview requirements", "DML Demo"),
-            ("4: ML preview planning", "DML Demo"),
-            ("5: ML preview implementation", "DML Demo"),
-            ("Graphics preview feature analysis", "MiniEngine Demo"),
-            ("DXC: SM 6.9 Preview", "SM 6.9 Preview"),
-            ("DXC: SM 6.9 Release", "DXC 2025 Q4"),
-        ];
-
-        for (project_milestone, epic) in mappings {
-            let mut data = TestData::default();
-
-            // Existing epics shouldn't be changed
-            data.build()
-                .project_milestone(project_milestone)
-                .epic("Do Not Change")
-                .add();
-
-            // Unrecognized milestones shouldn't change epic
-            data.build()
-                .project_milestone(format!("{}-XXX", project_milestone).as_str())
-                .add();
-
-            // Already matching ones shouldn't change
-            data.build()
-                .project_milestone(project_milestone)
-                .epic(epic)
-                .add();
-
-            // But when there's a match and no epic is set, we should expect a
-            // change
-            let id = data.build().project_milestone(project_milestone).add();
-
-            let actual_changes = get_hygienic_changes(&data.work_items);
-
-            let mut expected_changes = Changes::default();
-            expected_changes.add(Change {
-                work_item_id: id,
-                data: ChangeData::Epic(Some(epic.to_owned())),
-            });
-
-            assert_eq!(actual_changes, expected_changes);
-        }
-    }
-
-    #[test]
-    fn test_set_epic_from_parent() {
-        let mut data = TestData::default();
-
-        const RIGHT_EPIC: &str = "right epic";
-        const WRONG_EPIC: &str = "wrong epic";
-
-        let child_no_epic = data.build().add();
-        let child_wrong_epic = data.build().epic(WRONG_EPIC).add();
-        let child_right_epic = data.build().epic(RIGHT_EPIC).add();
-
-        data.build()
-            .epic(RIGHT_EPIC)
-            .sub_issues(&[&child_no_epic, &child_wrong_epic, &child_right_epic])
-            .add();
-
-        let actual_changes = get_hygienic_changes(&data.work_items);
-
-        let mut expected_changes = Changes::default();
-        expected_changes.add(Change {
-            work_item_id: child_no_epic,
-            data: ChangeData::Epic(Some(RIGHT_EPIC.to_owned())),
-        });
-
-        assert_eq!(actual_changes, expected_changes);
-    }
-
-    #[test]
-    fn test_set_epic_from_grandparent() {
-        let mut data = TestData::default();
-
-        const EPIC: &str = "epic";
-
-        let child_a = data.build().add();
-        let parent_a = data.build().epic(EPIC).sub_issues(&[&child_a]).add();
-
-        let child_b = data.build().add();
-        let parent_b = data.build().sub_issues(&[&child_b]).add();
-
-        data.build()
-            .epic(EPIC)
-            .sub_issues(&[&parent_a, &parent_b])
-            .add();
-
-        let epic = ChangeData::Epic(Some(EPIC.to_owned()));
-
-        let actual_changes = get_hygienic_changes(&data.work_items);
-
-        let mut expected_changes = Changes::default();
-        expected_changes.add(Change {
-            work_item_id: child_a,
-            data: epic.clone(),
-        });
-        expected_changes.add(Change {
-            work_item_id: child_b,
-            data: epic.clone(),
-        });
-        expected_changes.add(Change {
-            work_item_id: parent_b,
-            data: epic.clone(),
-        });
-
-        assert_eq!(actual_changes, expected_changes);
-    }
 }
