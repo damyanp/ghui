@@ -463,6 +463,10 @@ impl Changes {
         self.data.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub async fn save(
         &mut self,
         client: &impl Client,
