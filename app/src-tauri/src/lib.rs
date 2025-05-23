@@ -4,7 +4,7 @@ use tauri::{async_runtime::Mutex, Manager};
 
 mod data;
 mod pat;
-mod tracked_to_sub_issue;
+mod actions;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,7 +23,7 @@ pub fn run() {
             data::delete_changes,
             data::set_preview_changes,
             data::save_changes,
-            tracked_to_sub_issue::convert_tracked_to_sub_issues
+            actions::convert_tracked_to_sub_issues
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
