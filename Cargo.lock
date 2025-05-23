@@ -1668,6 +1668,7 @@ dependencies = [
  "clap",
  "dotenv",
  "github-graphql",
+ "keyring",
  "regex",
  "serde",
  "serde_json",

@@ -129,5 +129,11 @@ pub fn client() -> GithubClient {
 }
 
 fn pat() -> String {
-    env::var("GITHUB_PAT").expect("GITHUB_PAT needs to be set in environemnt or .env file")
+    if let Ok(pat) = env::var("GITHUB_PAT") {
+        return pat;
+    }
+
+    let pat_entry = keyring::Entry::new("ghui", "PAT").expect("No PAT in GITHUB_PAT or keyring");
+
+    pat_entry.get_password().expect("keyring failed to get password")
 }
