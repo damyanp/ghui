@@ -25,7 +25,7 @@
   <AppBar centerClasses="flex gap-1">
     {#snippet lead()}
       <div class="content-center h-full">ghui</div>
-      <RefreshButton progress={context.loadProgress} onclick={(e) => onRefreshClicked(e.shiftKey)} />
+      <RefreshButton progress={context.loadProgress} onclick={() => onRefreshClicked(true)} />
     {/snippet}
 
     {#snippet children()}
