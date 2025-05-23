@@ -22,6 +22,10 @@ pub async fn get_custom_fields<ClientType: crate::client::transport::Client>(
     let response: Response<custom_fields_query::ResponseData> =
         client.request(&request_body).await?;
 
+    if let Some(errors) = response.errors {
+        Err(format!("{:?}", errors))?
+    }
+
     Ok(response
         .data
         .and_then(|d| d.organization)
