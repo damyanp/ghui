@@ -1,17 +1,12 @@
 <script lang="ts">
   import {
-    CircleMinusIcon,
-    CirclePlusIcon,
-    EllipsisVertical,
-    Menu,
+    ChevronDown,
+    ChevronRight,
   } from "@lucide/svelte";
   import { fade } from "svelte/transition";
   import { flip } from "svelte/animate";
-  import type { Data } from "$lib/bindings/Data";
   import type { Node } from "$lib/bindings/Node";
-  import * as floating from "@floating-ui/dom";
   import type { WorkItem } from "$lib/bindings/WorkItem";
-  import { tick } from "svelte";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import WorkItemContextMenu, {
     type MenuOption,
@@ -66,7 +61,7 @@
   }
 </script>
 
-<div class="px-5 overflow-auto">
+<div class="p-5 overflow-auto">
   {@render itemList(data.rootNodes)}
 </div>
 
@@ -118,9 +113,7 @@
     <div
       class="flex gap-1 py-0.5 overflow-hidden border-r border-surface-200-800 flex-nowrap"
     >
-      <div class="shrink-0">
-        {@render expander(node)}
-      </div>
+      {@render expander(node)}
       <div class="overflow-hidden whitespace-nowrap overflow-ellipsis shrink-2">
         {item.title}
       </div>
@@ -157,6 +150,7 @@
 {#snippet expander(node: Node)}
   {#if node.hasChildren}
     <button
+      class="shrink-0"
       onclick={() => {
         if (expanded.includes(node.id)) {
           expanded = expanded.filter((i) => i !== node.id);
@@ -166,12 +160,12 @@
       }}
     >
       {#if expanded.includes(node.id)}
-        <CircleMinusIcon size="1em" class="hover:fill-primary-500" />
+        <ChevronDown size="1em" class="hover:bg-primary-500" />
       {:else}
-        <CirclePlusIcon size="1em" class="hover:fill-primary-500" />
+        <ChevronRight size="1em" class="hover:bg-primary-500" />
       {/if}
     </button>
   {:else}
-    <div class="inline-block size-[1em]">&nbsp;</div>
+    <div class="shrink-0 inline-block size-[1em]">&nbsp;</div>
   {/if}
 {/snippet}
