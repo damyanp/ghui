@@ -22,15 +22,22 @@
 </script>
 
 <div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
-  <AppBar centerClasses="flex gap-1">
+  <AppBar centerClasses="flex gap-1" padding="px-4 py-1">
     {#snippet lead()}
-      <div class="content-center h-full">ghui</div>
-      <RefreshButton progress={context.loadProgress} onclick={() => onRefreshClicked(true)} />
+      <div
+        class="content-center h-full text-lg font-black border-r rounded-2xl pe-1"
+      >
+        ghui
+      </div>
+      <RefreshButton
+        progress={context.loadProgress}
+        onclick={() => onRefreshClicked(true)}
+      />
     {/snippet}
 
     {#snippet children()}
-    <SanitizeButton />
-    <ChangesToolbarButton />
+      <SanitizeButton />
+      <ChangesToolbarButton />
     {/snippet}
 
     {#snippet trail()}

@@ -1,7 +1,11 @@
 <script lang="ts">
-  import { getWorkItemContext, makeProgressChannel } from "$lib/WorkItemContext.svelte";
+  import {
+    getWorkItemContext,
+    makeProgressChannel,
+  } from "$lib/WorkItemContext.svelte";
   import { Eye, EyeOff, Save, Trash2 } from "@lucide/svelte";
   import { scale } from "svelte/transition";
+  import AppBarButton from "./AppBarButton.svelte";
 
   const context = getWorkItemContext();
 
@@ -36,38 +40,27 @@
 
 {#if numChanges}
   <div
-    class="cursor-default rounded-2xl w-fit bg-primary-50-950 text-xs h-full flex flex-row p-1 items-center bg-linear-[90deg,transparent,20%,transparent,20%,blue"
+    class="cursor-default rounded-2xl w-fit text-xs h-full flex flex-row p-1 px-2 mx-2 border items-center bg-linear-[90deg,transparent,20%,transparent,20%,blue"
     style={progressStyle}
     transition:scale
   >
-    <button
-      class={buttonClasses}
-      title="Delete Changes"
-      onclick={async () => await context.deleteChanges()}
+    <span class="self-start h-full text-xs border-r pe-1"
+      >{numChanges} change{numChanges > 1 ? "s" : ""}</span
     >
-      <Trash2 />
-    </button>
-    <button class={buttonClasses} title="Save" onclick={saveChanges}>
-      <Save />
-    </button>
+    <AppBarButton
+      icon={Trash2}
+      text="Discard"
+      onclick={async () => await context.deleteChanges()}
+    />
 
-    <div class="border-surface-100-900 border-r p-1 align-middle">
-      {numChanges} changes
-    </div>
+    <AppBarButton icon={Save} text="Save" onclick={saveChanges} />
 
-    <button
-      title="Preview"
-      aria-pressed={context.previewChanges}
+    <AppBarButton
+      text="Preview"
+      icon={context.previewChanges ? Eye : EyeOff}
       onclick={() => {
         context.setPreviewChanges(!context.previewChanges);
       }}
-      class={buttonClasses}
-    >
-      {#if context.previewChanges}
-        <Eye />
-      {:else}
-        <EyeOff />
-      {/if}
-    </button>
+    />
   </div>
 {/if}

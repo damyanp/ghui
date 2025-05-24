@@ -1,4 +1,4 @@
-import { getContext, setContext } from "svelte";
+import { getContext, setContext, tick } from "svelte";
 import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { WorkItemId } from "./bindings/WorkItemId";
@@ -26,6 +26,10 @@ export class WorkItemContext {
 
   public async refresh(forceRefresh: boolean): Promise<void> {
     if (this.loadProgress !== 0) return;
+
+    // If we're expecting this to take a long time start the progress spinner
+    // immediately
+    if (forceRefresh || this.data.nodes.length === 0) this.loadProgress = 1;
 
     const progress = makeProgressChannel(
       (value) => (this.loadProgress = value)
@@ -68,7 +72,7 @@ export class WorkItemContext {
   }
 
   public async saveChanges(progress: Channel<Progress>) {
-      await invoke("save_changes", { progress });
+    await invoke("save_changes", { progress });
     await this.refresh(true);
   }
 
@@ -80,14 +84,10 @@ type Progress = number[];
 export function makeProgressChannel(
   setter: (value: number) => void
 ): Channel<Progress> {
-  let progress = 0;
-  setter(progress);
-
   const getDataProgress = new Channel<Progress>();
   getDataProgress.onmessage = (message) => {
     const [retrieved, total] = message;
-    if (total === 0) progress = 0;
-    else progress = 1 - retrieved / total;
+    const progress = total === 0 ? 0 : 1 - retrieved / total;
     setter(progress);
   };
 
