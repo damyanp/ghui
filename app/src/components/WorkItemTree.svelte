@@ -66,78 +66,91 @@
   }
 </script>
 
-<div class="overflow-auto">
+<div class="px-5 overflow-auto">
   {@render itemList(data.rootNodes)}
 </div>
 
 {#snippet itemList(nodes: ModifiedNode[])}
   {#if nodes.length > 0}
-    <table class="w-full table-auto">
-      <thead class="sticky top-0 bg-primary-50-950 outline">
-        <tr>
-          {#each ["Title", "Status", "Iteration", "Blocked", "Kind", "# Tracked"] as heading}
-            <td>{heading}</td>
-          {/each}
-        </tr>
-      </thead>
-      <tbody>
-        {#each nodes as node (node.id)}
-          <tr
-            transition:fade
-            animate:flip={{ duration: 100 }}
-            class={[
-              `${node.isModified ? "bg-secondary-300-700" : node.modifiedDescendent ? "bg-secondary-50-950" : ""}`,
-              "group",
-            ]}
-          >
-            {#if node.data.type === "group"}
-              {@render groupRow(node)}
-            {:else if node.data.type === "workItem"}
-              {@render workItemRow(node)}
-            {/if}
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <div
+      class="grid w-full"
+      style="grid-template-columns: 5fr 1fr 1fr 1fr 1fr 1fr"
+    >
+      {#each ["Title", "Status", "Iteration", "Blocked", "Kind", "# Tracked"] as heading}
+        <div
+          class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700"
+        >
+          {heading}
+        </div>
+      {/each}
+      {#each nodes as node (node.id)}
+        <div
+          transition:fade
+          animate:flip={{ duration: 100 }}
+          class={[
+            "grid-cols-subgrid grid col-span-6 overflow-hidden border border-surface-200-800",
+            `${node.isModified ? "bg-secondary-300-700" : node.modifiedDescendent ? "bg-secondary-50-950" : "hover:bg-surface-100-900"}`,
+          ]}
+          style={`padding-left: ${1 * node.level}rem;`}
+        >
+          {#if node.data.type === "group"}
+            {@render groupRow(node)}
+          {:else if node.data.type === "workItem"}
+            {@render workItemRow(node)}
+          {/if}
+        </div>
+      {/each}
+    </div>
   {/if}
 {/snippet}
 
 {#snippet groupRow(node: ModifiedNode)}
-  <td
-    class="text-2xl border-b-2"
-    style="padding-inline-start: {1 * node.level}rem"
-    colspan="6"
-  >
+  <div class="col-span-6 py-2 font-bold">
     {@render expander(node)}
     {node.data.type === "group" && node.data.name}
-  </td>
+  </div>
 {/snippet}
 
 {#snippet workItemRow(node: ModifiedNode)}
   {@const item = data.workItems[node.id]}
   {#if item}
     {@const path = item.resourcePath?.split("/")}
-    <td style="padding-inline-start: {1 * node.level}rem">
-      {@render expander(node)}
-      {item.title}
+    <div
+      class="flex gap-1 py-0.5 overflow-hidden border-r border-surface-200-800 flex-nowrap"
+    >
+      <div class="shrink-0">
+        {@render expander(node)}
+      </div>
+      <div class="overflow-hidden whitespace-nowrap overflow-ellipsis shrink-2">
+        {item.title}
+      </div>
       <a
-        class="text-blue-400 underline"
+        class="text-blue-400 underline whitespace-nowrap shrink-0"
         target="_blank"
         href="http://github.com{item.resourcePath}"
-        >{path?.at(-3)}#{path?.at(-1)}</a
       >
-    </td>
-    <td>{item.projectItem.status?.name}</td>
-    <td>{item.projectItem.iteration?.title}</td>
-    <td>{item.projectItem.blocked?.name}</td>
-    <td>{item.projectItem.kind?.name}</td>
-    <td class="cursor-default">
+        {path?.at(-3)}#{path?.at(-1)}
+      </a>
+    </div>
+    <div class="px-1 py-0.5 border-r border-surface-200-800">
+      {item.projectItem.status?.name}
+    </div>
+    <div class="px-1 py-0.5 border-r border-surface-200-800">
+      {item.projectItem.iteration?.title}
+    </div>
+    <div class="px-1 py-0.5 border-r border-surface-200-800">
+      {item.projectItem.blocked?.name}
+    </div>
+    <div class="px-1 py-0.5 border-r border-surface-200-800">
+      {item.projectItem.kind?.name}
+    </div>
+    <div class="px-1 py-0.5 border-r cursor-default border-surface-500">
       <WorkItemContextMenu items={contextMenu(item)}>
         {#snippet trigger()}
           {item.data.type === "issue" ? item.data.trackedIssues.length : ""}
         {/snippet}
       </WorkItemContextMenu>
-    </td>
+    </div>
   {/if}
 {/snippet}
 
