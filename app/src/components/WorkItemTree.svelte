@@ -1,8 +1,5 @@
 <script lang="ts">
-  import {
-    ChevronDown,
-    ChevronRight,
-  } from "@lucide/svelte";
+  import { ChevronDown, ChevronRight } from "@lucide/svelte";
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
@@ -59,7 +56,7 @@
   }
 </script>
 
-<div class="px-5 my-5 overflow-auto">
+<div class="px-5 my-5 overflow-y-scroll overflow-x-auto">
   {@render itemList(data.rootNodes)}
 </div>
 
@@ -67,21 +64,21 @@
   {#if nodes.length > 0}
     <div
       class="grid w-full"
-      style="grid-template-columns: 5fr 1fr 1fr 1fr 1fr 1fr"
+      style="grid-template-columns: 5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr"
     >
-    <div class="sticky top-0 grid col-span-6 grid-cols-subgrid">
-      {#each ["Title", "Status", "Iteration", "Blocked", "Kind", "# Tracked"] as heading}
-        <div
-          class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700"
-        >
-          {heading}
-        </div>
-      {/each}
+      <div class="sticky top-0 grid col-span-9 grid-cols-subgrid">
+        {#each ["Title", "Updated", "State", "Status", "Iteration", "Blocked", "Kind", "Epic", "# Tracked"] as heading}
+          <div
+            class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700"
+          >
+            {heading}
+          </div>
+        {/each}
       </div>
       {#each nodes as node (node.id)}
         <div
           class={[
-            "grid-cols-subgrid grid col-span-6 overflow-hidden border border-surface-200-800",
+            "grid-cols-subgrid grid col-span-9 overflow-hidden whitespace-nowrap border border-surface-200-800",
             `${node.isModified ? "bg-secondary-300-700" : node.modifiedDescendent ? "bg-secondary-50-950" : "hover:bg-surface-100-900"}`,
           ]}
           style={`padding-left: ${1 * node.level}rem;`}
@@ -123,19 +120,32 @@
         {path?.at(-3)}#{path?.at(-1)}
       </a>
     </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800">
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
+      {item.updatedAt}
+    </div>
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
+      {(() => {
+        if (item.data.type === "issue") return item.data.state;
+        else if (item.data.type === "pullRequest") return item.data.state;
+        else return "&nbsp;";
+      })()}
+    </div>
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
       {item.projectItem.status?.name}
     </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800">
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
       {item.projectItem.iteration?.title}
     </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800">
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
       {item.projectItem.blocked?.name}
     </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800">
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
       {item.projectItem.kind?.name}
     </div>
-    <div class="px-1 py-0.5 border-r cursor-default border-surface-500">
+    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
+      {item.projectItem.epic?.name}
+    </div>
+    <div class="px-1 py-0.5 border-r cursor-default border-surface-500 overflow-ellipsis overflow-hidden">
       <WorkItemContextMenu items={contextMenu(item)}>
         {#snippet trigger()}
           {item.data.type === "issue" ? item.data.trackedIssues.length : ""}
