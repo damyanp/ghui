@@ -3,8 +3,6 @@
     ChevronDown,
     ChevronRight,
   } from "@lucide/svelte";
-  import { fade } from "svelte/transition";
-  import { flip } from "svelte/animate";
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
@@ -61,7 +59,7 @@
   }
 </script>
 
-<div class="p-5 overflow-auto">
+<div class="px-5 my-5 overflow-auto">
   {@render itemList(data.rootNodes)}
 </div>
 
@@ -71,6 +69,7 @@
       class="grid w-full"
       style="grid-template-columns: 5fr 1fr 1fr 1fr 1fr 1fr"
     >
+    <div class="sticky top-0 grid col-span-6 grid-cols-subgrid">
       {#each ["Title", "Status", "Iteration", "Blocked", "Kind", "# Tracked"] as heading}
         <div
           class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700"
@@ -78,10 +77,9 @@
           {heading}
         </div>
       {/each}
+      </div>
       {#each nodes as node (node.id)}
         <div
-          transition:fade
-          animate:flip={{ duration: 100 }}
           class={[
             "grid-cols-subgrid grid col-span-6 overflow-hidden border border-surface-200-800",
             `${node.isModified ? "bg-secondary-300-700" : node.modifiedDescendent ? "bg-secondary-50-950" : "hover:bg-surface-100-900"}`,
