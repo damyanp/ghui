@@ -1,7 +1,7 @@
 use crate::{
     client::{
         graphql::{
-            add_sub_issue, clear_project_field_value,
+            add_sub_issue, add_to_project, clear_project_field_value,
             custom_fields_query::{Field, Fields},
             set_project_field_value,
         },
@@ -326,6 +326,12 @@ impl WorkItems {
                         );
                     }
                 }
+            } else {
+                // This work item isn't in the project - add it
+                changes.add(Change {
+                    work_item_id: id.clone(),
+                    data: ChangeData::AddToProject,
+                });
             }
         }
 
@@ -428,6 +434,9 @@ impl WorkItems {
                     } else {
                         println!("WARNING: new parent '{0}' not found", new_parent_id.0);
                     }
+                }
+                ChangeData::AddToProject => {
+                    panic!("This shouldn't happen, because this item isn't in the project and so we shouldn't get here");
                 }
             }
         }
@@ -538,6 +547,11 @@ impl Change {
             ChangeData::SetParent(new_parent) => {
                 add_sub_issue::add(client, &new_parent.0, &self.work_item_id.0).await
             }
+            ChangeData::AddToProject => {
+                add_to_project::add(client, &fields.project_id, &self.work_item_id.0)
+                    .await
+                    .map(|_| ())
+            }
         }
     }
 
@@ -611,6 +625,7 @@ pub enum ChangeData {
     Blocked(Option<String>),
     Epic(Option<String>),
     SetParent(WorkItemId),
+    AddToProject,
 }
 
 impl Change {
@@ -632,6 +647,7 @@ impl Change {
                 WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
                 _ => None,
             },
+            ChangeData::AddToProject => None,
         }
         .unwrap_or("<>");
 
@@ -640,6 +656,7 @@ impl Change {
             ChangeData::Blocked(_) => "Blocked",
             ChangeData::Epic(_) => "Epic",
             ChangeData::SetParent(_) => "SetParent",
+            ChangeData::AddToProject => "AddToProject",
         };
 
         let new_value = match &self.data {
@@ -647,6 +664,7 @@ impl Change {
             ChangeData::Blocked(value) => value.as_ref(),
             ChangeData::Epic(value) => value.as_ref(),
             ChangeData::SetParent(value) => Some(&value.0),
+            ChangeData::AddToProject => None,
         }
         .map(|v| v.as_str())
         .unwrap_or("<>");
