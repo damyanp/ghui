@@ -12,6 +12,29 @@
   function getContextMenuItems(node: Node): MenuItem[] {
     let items: MenuItem[] = [];
 
+    function getDisplayName(workItem: WorkItem | undefined): string {
+      if (!workItem || !workItem.resourcePath) return workItem?.title || "?";
+      const path = workItem.resourcePath.split("/");
+      return `${path.at(-3) ?? "?"}#${path.at(-1) ?? "?"}`;
+    }
+
+    function describeChange(change: Change): string {
+      switch (change.data.type) {
+        case "setParent": {
+          let parent = context.data.workItems[change.data.value];
+          let parentDisplay = getDisplayName(parent) || "???";
+          return `Set parent to '${parentDisplay}'`;
+        }
+        case "addToProject": {
+          return "Add to project";
+        }
+        default: {
+          // All other types just set a field to a value
+          return `Set ${change.data.type} to '${change.data.value}'`;
+        }
+      }
+    }
+
     if (node.data.type === "workItem") {
       let item = context.data.workItems[node.id];
       if (item) {
@@ -30,7 +53,7 @@
           for (const change of changes) {
             items.push({
               type: "action",
-              title: `Revert change: ${JSON.stringify(change.data)}`,
+              title: `Revert change: ${describeChange(change)}`,
               action: () => context.removeChange(change),
             });
           }
