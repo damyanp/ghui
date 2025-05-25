@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { ChevronDown, ChevronRight } from "@lucide/svelte";
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import WorkItemContextMenu, {
     type MenuOption,
   } from "./WorkItemContextMenu.svelte";
+  import TreeTable from "./TreeTable.svelte";
+  import { createRawSnippet } from "svelte";
 
   let context = getWorkItemContext();
 
@@ -34,7 +35,7 @@
       }
     }
 
-    return { ...context.data, rootNodes: nodes };
+    return { ...context.data, nodes };
   });
 
   function contextMenu(item: WorkItem): MenuOption[] {
@@ -54,126 +55,120 @@
   function convertTrackedIssuesToSubIssue(item: WorkItem) {
     context.convertTrackedIssuesToSubIssue(item.id);
   }
+
+  let rows = $derived.by(() => {
+    return context.data.nodes.map((n) => {
+      return { ...n, isGroup: n.data.type === "group" };
+    });
+  });
+
+  let columns = [
+    { name: "Title", width: "5fr", render: renderTitle },
+    {
+      name: "Updated",
+      width: "1fr",
+      render: renderTextCell((i) => {
+        const projectUpdate = i.projectItem.updatedAt;
+        const itemUpdate = i.updatedAt ?? projectUpdate;
+
+        return itemUpdate < projectUpdate ? projectUpdate : itemUpdate;
+      }),
+    },
+    {
+      name: "State",
+      width: "1fr",
+      render: renderTextCell((i) => {
+        if (i.data.type === "issue") return i.data.state.toString();
+        else if (i.data.type === "pullRequest") return i.data.state.toString();
+        else return null;
+      }),
+    },
+    {
+      name: "Status",
+      width: "1fr",
+      render: renderTextCell((i) => i.projectItem.status?.name ?? null),
+    },
+    {
+      name: "Iteration",
+      width: "1fr",
+      render: renderTextCell((i) => i.projectItem.iteration?.title ?? null),
+    },
+    {
+      name: "Blocked",
+      width: "1fr",
+      render: renderTextCell((i) => i.projectItem.blocked?.name ?? null),
+    },
+    {
+      name: "Kind",
+      width: "1fr",
+      render: renderTextCell((i) => i.projectItem.kind?.name ?? null),
+    },
+    {
+      name: "Epic",
+      width: "1fr",
+      render: renderTextCell((i) => i.projectItem.epic?.name ?? null),
+    },
+    {
+      name: "#Tracked",
+      width: "1fr",
+      render: renderTrackedItems,
+    },
+  ];
+
+  function getGroup(n: Node) {
+    if (n.data.type === "group") return n.data.name;
+  }
+
+  function getItem(n: Node) {
+    return context.data.workItems[n.id];
+  }
+
+  function renderTextCell(getText: (item: WorkItem) => string | null) {
+    return createRawSnippet((itemGetter: () => WorkItem | undefined) => {
+      return {
+        render: () => {
+          const item = itemGetter();
+          return (item && getText(item)) || "&nbsp;";
+        },
+      };
+    });
+  }
 </script>
 
-<div class="px-5 my-5 overflow-y-scroll overflow-x-auto">
-  {@render itemList(data.rootNodes)}
-</div>
+<TreeTable {rows} {columns} {getGroup} {getItem} {renderGroup} />
 
-{#snippet itemList(nodes: ModifiedNode[])}
-  {#if nodes.length > 0}
-    <div
-      class="grid w-full"
-      style="grid-template-columns: 5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr"
-    >
-      <div class="sticky top-0 grid col-span-9 grid-cols-subgrid">
-        {#each ["Title", "Updated", "State", "Status", "Iteration", "Blocked", "Kind", "Epic", "# Tracked"] as heading}
-          <div
-            class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700"
-          >
-            {heading}
-          </div>
-        {/each}
-      </div>
-      {#each nodes as node (node.id)}
-        <div
-          class={[
-            "grid-cols-subgrid grid col-span-9 overflow-hidden whitespace-nowrap border border-surface-200-800",
-            `${node.isModified ? "bg-secondary-300-700" : node.modifiedDescendent ? "bg-secondary-50-950" : "hover:bg-surface-100-900"}`,
-          ]}
-          style={`padding-left: ${1 * node.level}rem;`}
-        >
-          {#if node.data.type === "group"}
-            {@render groupRow(node)}
-          {:else if node.data.type === "workItem"}
-            {@render workItemRow(node)}
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
+{#snippet renderGroup(name: string | undefined)}
+  {name}
 {/snippet}
 
-{#snippet groupRow(node: ModifiedNode)}
-  <div class="col-span-6 py-2 font-bold">
-    {@render expander(node)}
-    {node.data.type === "group" && node.data.name}
-  </div>
-{/snippet}
-
-{#snippet workItemRow(node: ModifiedNode)}
-  {@const item = data.workItems[node.id]}
+{#snippet renderTitle(item: WorkItem | undefined)}
   {#if item}
     {@const path = item.resourcePath?.split("/")}
-    <div
-      class="flex gap-1 py-0.5 overflow-hidden border-r border-surface-200-800 flex-nowrap"
+    <div class="overflow-hidden whitespace-nowrap overflow-ellipsis shrink-2">
+      {item.title}
+    </div>
+    <a
+      class="text-blue-400 underline whitespace-nowrap shrink-0"
+      target="_blank"
+      href="http://github.com{item.resourcePath}"
     >
-      {@render expander(node)}
-      <div class="overflow-hidden whitespace-nowrap overflow-ellipsis shrink-2">
-        {item.title}
-      </div>
-      <a
-        class="text-blue-400 underline whitespace-nowrap shrink-0"
-        target="_blank"
-        href="http://github.com{item.resourcePath}"
-      >
-        {path?.at(-3)}#{path?.at(-1)}
-      </a>
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {item.updatedAt}
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {(() => {
-        if (item.data.type === "issue") return item.data.state;
-        else if (item.data.type === "pullRequest") return item.data.state;
-        else return "&nbsp;";
-      })()}
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {item.projectItem.status?.name}
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {item.projectItem.iteration?.title}
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {item.projectItem.blocked?.name}
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {item.projectItem.kind?.name}
-    </div>
-    <div class="px-1 py-0.5 border-r border-surface-200-800 overflow-ellipsis overflow-hidden">
-      {item.projectItem.epic?.name}
-    </div>
-    <div class="px-1 py-0.5 border-r cursor-default border-surface-500 overflow-ellipsis overflow-hidden">
-      <WorkItemContextMenu items={contextMenu(item)}>
-        {#snippet trigger()}
-          {item.data.type === "issue" ? item.data.trackedIssues.length : ""}
-        {/snippet}
-      </WorkItemContextMenu>
-    </div>
+      {path?.at(-3)}#{path?.at(-1)}
+    </a>
+  {:else}
+    &nbsp;
   {/if}
 {/snippet}
 
-{#snippet expander(node: Node)}
-  {#if node.hasChildren}
-    <button
-      class="shrink-0"
-      onclick={() => {
-        if (expanded.includes(node.id)) {
-          expanded = expanded.filter((i) => i !== node.id);
-        } else {
-          expanded.push(node.id);
-        }
-      }}
-    >
-      {#if expanded.includes(node.id)}
-        <ChevronDown size="1em" class="hover:bg-primary-500" />
-      {:else}
-        <ChevronRight size="1em" class="hover:bg-primary-500" />
-      {/if}
-    </button>
+{#snippet renderTrackedItems(item: WorkItem | undefined)}
+  {#if item}
+  <div class="cursor-default">
+    <WorkItemContextMenu items={contextMenu(item)}>
+      {#snippet trigger()}
+        {item.data.type === "issue" ? item.data.trackedIssues.length : ""}
+      {/snippet}
+    </WorkItemContextMenu>
+    </div>
   {:else}
-    <div class="shrink-0 inline-block size-[1em]">&nbsp;</div>
+    &nbsp;
   {/if}
 {/snippet}
