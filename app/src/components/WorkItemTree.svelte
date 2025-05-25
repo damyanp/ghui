@@ -2,9 +2,7 @@
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
-  import WorkItemContextMenu, {
-    type MenuOption,
-  } from "./WorkItemContextMenu.svelte";
+  import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable from "./TreeTable.svelte";
   import { createRawSnippet } from "svelte";
 
@@ -38,16 +36,21 @@
     return { ...context.data, nodes };
   });
 
-  function contextMenu(item: WorkItem): MenuOption[] {
-    let items: MenuOption[] = [];
-    if (item.data.type === "issue" && item.data.trackedIssues.length > 0) {
-      items.push({
-        type: "action",
-        title: `Convert ${item.data.trackedIssues.length} tracked issues to sub-issues`,
-        action: () => convertTrackedIssuesToSubIssue(item),
-      });
-    }
+  function getContextMenuItems(node: Node): MenuItem[] {
+    let items: MenuItem[] = [];
 
+    if (node.data.type === "workItem") {
+      let item = data.workItems[node.id];
+      if (item) {
+        if (item.data.type === "issue" && item.data.trackedIssues.length > 0) {
+          items.push({
+            type: "action",
+            title: `Convert ${item.data.trackedIssues.length} tracked issues to sub-issues`,
+            action: () => convertTrackedIssuesToSubIssue(item),
+          });
+        }
+      }
+    }
     if (items.length === 0) return [{ type: "text", title: "No actions" }];
     else return items;
   }
@@ -111,7 +114,11 @@
     {
       name: "#Tracked",
       width: "1fr",
-      render: renderTrackedItems,
+      render: renderTextCell((i) => {
+        if (i.data.type === "issue" && i.data.trackedIssues.length > 0)
+          return i.data.trackedIssues.length.toString();
+        else return null;
+      }),
     },
   ];
 
@@ -135,7 +142,14 @@
   }
 </script>
 
-<TreeTable {rows} {columns} {getGroup} {getItem} {renderGroup} />
+<TreeTable
+  {rows}
+  {columns}
+  {getGroup}
+  {getItem}
+  {renderGroup}
+  {getContextMenuItems}
+/>
 
 {#snippet renderGroup(name: string | undefined)}
   {name}
@@ -154,20 +168,6 @@
     >
       {path?.at(-3)}#{path?.at(-1)}
     </a>
-  {:else}
-    &nbsp;
-  {/if}
-{/snippet}
-
-{#snippet renderTrackedItems(item: WorkItem | undefined)}
-  {#if item}
-  <div class="cursor-default">
-    <WorkItemContextMenu items={contextMenu(item)}>
-      {#snippet trigger()}
-        {item.data.type === "issue" ? item.data.trackedIssues.length : ""}
-      {/snippet}
-    </WorkItemContextMenu>
-    </div>
   {:else}
     &nbsp;
   {/if}

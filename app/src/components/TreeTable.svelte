@@ -1,6 +1,10 @@
 <script lang="ts" generics="T, GROUP, ITEM">
   import { ChevronDown, ChevronRight } from "@lucide/svelte";
+  import { ContextMenu } from "bits-ui";
   import type { Snippet } from "svelte";
+  import TreeTableContextMenu, {
+    type MenuItem,
+  } from "./TreeTableContextMenu.svelte";
 
   type Row<T> = {
     level: number;
@@ -23,6 +27,7 @@
     getGroup: (row: Row<T>) => GROUP;
     getItem: (row: Row<T>) => ITEM;
     renderGroup: Snippet<[GROUP]>;
+    getContextMenuItems: (row: Row<T>) => MenuItem[];
   };
   let props: Props = $props();
 
@@ -91,21 +96,28 @@
       {@const modified = row.isModified}
       {@const modifiedDescendent = !modified && row.modifiedDescendent}
       {@const unmodified = !(modified || modifiedDescendent)}
-      <div
-        class={[
-          "grid-cols-subgrid grid col-span-9 overflow-hidden whitespace-nowrap border border-surface-200-800",
-          modified && "bg-secondary-300-700",
-          modifiedDescendent && "bg-secondary-50-950",
-          unmodified && "hover:bg-surface-100-900",
-        ]}
-        style={`padding-left: ${1 * row.level}rem;`}
-      >
-        {#if row.isGroup}
-          {@render groupRow(row)}
-        {:else}
-          {@render itemRow(row)}
-        {/if}
-      </div>
+      <TreeTableContextMenu items={props.getContextMenuItems(row)}>
+        {#snippet trigger({ props }: { props: any })}
+          {@const menuOpen = props["data-state"] === "open"}
+          <div
+            {...props}
+            class={[
+              "grid-cols-subgrid grid col-span-9 overflow-hidden whitespace-nowrap border border-surface-200-800",
+              modified && "bg-secondary-300-700",
+              modifiedDescendent && "bg-secondary-50-950",
+              unmodified && "hover:bg-surface-100-900",
+              menuOpen && "outline-2 bg-primary-500",
+            ]}
+            style={`padding-left: ${1 * row.level}rem;`}
+          >
+            {#if row.isGroup}
+              {@render groupRow(row)}
+            {:else}
+              {@render itemRow(row)}
+            {/if}
+          </div>
+        {/snippet}
+      </TreeTableContextMenu>
     {/each}
   </div>
 </div>
@@ -119,7 +131,7 @@
 
 {#snippet itemRow(row: Row<T>)}
   {#each props.columns as column, index}
-  {@const item = props.getItem(row)}
+    {@const item = props.getItem(row)}
     <div
       class={[
         "overflow-hidden border-r border-surface-200-800 py-0.5",
