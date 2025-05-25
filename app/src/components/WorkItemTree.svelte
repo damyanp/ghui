@@ -128,7 +128,7 @@
       return {
         render: () => {
           const item = itemGetter();
-          return (item && getText(item)) || "&nbsp;";
+          return `<span>${(item && getText(item)) || "&nbsp;"}</span>`;
         },
       };
     });
