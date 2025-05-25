@@ -10,37 +10,11 @@
 
   let expanded = $state<string[]>([]);
 
-  type ModifiedNode = Node & { modifiedDescendent: boolean };
-
-  const data = $derived.by(() => {
-    let nodes: ModifiedNode[] = [];
-
-    let level = 0;
-
-    for (const node of context.data.nodes) {
-      if (node.level > level) {
-        nodes[nodes.length - 1].modifiedDescendent =
-          nodes[nodes.length - 1].modifiedDescendent || node.isModified;
-        continue;
-      }
-
-      nodes.push({ ...node, modifiedDescendent: false });
-
-      if (node.hasChildren && expanded.includes(node.id)) {
-        level = node.level + 1;
-      } else {
-        level = node.level;
-      }
-    }
-
-    return { ...context.data, nodes };
-  });
-
   function getContextMenuItems(node: Node): MenuItem[] {
     let items: MenuItem[] = [];
 
     if (node.data.type === "workItem") {
-      let item = data.workItems[node.id];
+      let item = context.data.workItems[node.id];
       if (item) {
         if (item.data.type === "issue" && item.data.trackedIssues.length > 0) {
           items.push({
