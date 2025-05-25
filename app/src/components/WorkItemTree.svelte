@@ -5,10 +5,9 @@
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable from "./TreeTable.svelte";
   import { createRawSnippet } from "svelte";
-
+  import type { Change } from "$lib/bindings/Change";
+  
   let context = getWorkItemContext();
-
-  let expanded = $state<string[]>([]);
 
   function getContextMenuItems(node: Node): MenuItem[] {
     let items: MenuItem[] = [];
@@ -123,8 +122,53 @@
     });
   }
 
-  function onRowDragDrop(draggedRowId: string, droppedOntoRowId: string) {
+  async function onRowDragDrop(draggedRowId: string, droppedOntoRowId: string) {
     console.log(`Item ${draggedRowId} dropped onto ${droppedOntoRowId}`);
+
+    let targetNode = rows.find((row) => row.id === droppedOntoRowId);
+    if (!targetNode) {
+      console.log(
+        `WARNING: couldn't find target node with id ${droppedOntoRowId}`
+      );
+      return;
+    }
+
+    let draggedNode = rows.find((row) => row.id === draggedRowId);
+    if (!draggedNode) {
+      console.log(
+        `WARNING: couldn't find dragged node with id ${draggedRowId}`
+      );
+      return;
+    }
+
+    let change: Change | undefined;
+
+    if (draggedNode.data.type === "workItem") {
+      if (targetNode.data.type === "group") {
+        // Currently the only group is epic
+        change = {
+          workItemId: draggedRowId,
+          data: {
+            type: "epic",
+            value: targetNode.data.name,
+          },
+        };
+      } else {
+        change = {
+          workItemId: draggedRowId,
+          data: {
+            type: "setParent",
+            value: droppedOntoRowId,
+          },
+        };
+      }
+    }
+
+    console.log(`Change: ${JSON.stringify(change)}`);
+
+    if (change)
+      await context.addChange(change);
+     
   }
 </script>
 

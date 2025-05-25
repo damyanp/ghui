@@ -1,4 +1,4 @@
-use github_graphql::data::WorkItemId;
+use github_graphql::data::{Change, WorkItemId};
 use tauri::{async_runtime::Mutex, State};
 
 use crate::data::DataState;
@@ -31,4 +31,14 @@ pub async fn sanitize(data_state: State<'_, Mutex<DataState>>) -> Result<usize, 
         return Ok(num_changes);
     }
     Ok(0)
+}
+
+#[tauri::command]
+pub async fn add_change(
+    data_state: State<'_, Mutex<DataState>>,
+    change: Change,
+) -> Result<(), String> {
+    let mut data_state = data_state.lock().await;
+    data_state.add_change(change);
+    Ok(())
 }

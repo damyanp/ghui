@@ -2,6 +2,7 @@ import { getContext, setContext, tick } from "svelte";
 import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { WorkItemId } from "./bindings/WorkItemId";
+  import type { Change } from "./bindings/Change";
 
 const key = Symbol("WorkItemContext");
 
@@ -74,6 +75,11 @@ export class WorkItemContext {
   public async saveChanges(progress: Channel<Progress>) {
     await invoke("save_changes", { progress });
     await this.refresh(true);
+  }
+
+  public async addChange(change: Change) {
+    await invoke("add_change", { change });
+    await this.refresh(false);    
   }
 
   // #endregion

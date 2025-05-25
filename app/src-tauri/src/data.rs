@@ -1,7 +1,9 @@
 use crate::pat::new_github_client;
 use dirs::home_dir;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
-use github_graphql::data::{Changes, SaveMode, WorkItem, WorkItemData, WorkItemId, WorkItems};
+use github_graphql::data::{
+    Change, Changes, SaveMode, WorkItem, WorkItemData, WorkItemId, WorkItems,
+};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
@@ -101,6 +103,10 @@ impl DataState {
 
     pub fn add_changes(&mut self, changes: Changes) {
         self.changes.add_changes(changes);
+    }
+
+    pub fn add_change(&mut self, change: Change) {
+        self.changes.add(change);
     }
 
     /// Updates in-place the provided work items with the changes set on self.

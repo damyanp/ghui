@@ -612,14 +612,14 @@ impl serde::Serialize for ChangeKey {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, TS)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Change {
     pub work_item_id: WorkItemId,
     pub data: ChangeData,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, TS)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", tag = "type", content = "value")]
 pub enum ChangeData {
     Status(Option<String>),
