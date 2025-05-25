@@ -102,13 +102,13 @@
           <div
             {...props}
             class={[
-              "grid-cols-subgrid grid col-span-9 overflow-hidden whitespace-nowrap border border-surface-200-800",
+              "grid-cols-subgrid grid overflow-hidden whitespace-nowrap border border-surface-200-800",
               modified && "bg-secondary-300-700",
               modifiedDescendent && "bg-secondary-50-950",
               unmodified && "hover:bg-surface-100-900",
               menuOpen && "outline-2 bg-primary-500",
             ]}
-            style={`padding-left: ${1 * row.level}rem;`}
+            style={`padding-left: ${1 * row.level}rem; grid-column: ${gridColumn};`}
           >
             {#if row.isGroup}
               {@render groupRow(row)}

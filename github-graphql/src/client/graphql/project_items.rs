@@ -177,6 +177,7 @@ fn build_work_item(
             repository: Some(c.repository.owner.login),
             data: WorkItemData::Issue(Issue {
                 parent_id: c.parent.map(|p| WorkItemId(p.id)),
+                issue_type: c.issue_type.map(|it| it.name),
                 state: c.issue_state.into(),
                 sub_issues: build_issue_id_vector(c.sub_issues.nodes),
                 tracked_issues: build_issue_id_vector(c.tracked_issues.nodes),
@@ -383,6 +384,7 @@ mod tests {
             repository: Some("llvm".into()),
             data: WorkItemData::Issue(Issue {
                 parent_id: None,
+                issue_type: None,
                 state: data::IssueState::CLOSED,
                 sub_issues: vec![],
                 tracked_issues: vec![],

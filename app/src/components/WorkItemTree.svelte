@@ -68,6 +68,14 @@
   let columns = [
     { name: "Title", width: "5fr", render: renderTitle },
     {
+      name: "Type",
+      width: "1fr",
+      render: renderTextCell((i) => {
+        if (i.data.type === "issue") return i.data.issueType;
+        return null;
+      }),
+    },
+    {
       name: "Updated",
       width: "1fr",
       render: renderTextCell((i) => {

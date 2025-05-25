@@ -5,4 +5,5 @@ export type ChangeData =
   | { "type": "status"; "value": string | null }
   | { "type": "blocked"; "value": string | null }
   | { "type": "epic"; "value": string | null }
-  | { "type": "setParent"; "value": WorkItemId };
+  | { "type": "setParent"; "value": WorkItemId }
+  | { "type": "addToProject" };

@@ -83,6 +83,7 @@ pub enum WorkItemData {
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
     pub parent_id: Option<WorkItemId>,
+    pub issue_type: Option<String>,
     pub state: IssueState,
     pub sub_issues: Vec<WorkItemId>,
     pub tracked_issues: Vec<WorkItemId>,
