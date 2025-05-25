@@ -26,6 +26,7 @@ pub fn run() {
             actions::convert_tracked_to_sub_issues,
             actions::sanitize,
             actions::add_change,
+            actions::remove_change,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -463,6 +463,10 @@ impl Changes {
         }
     }
 
+    pub fn remove(&mut self, change: Change) {
+        self.data.remove(&change.key());
+    }
+
     pub fn add_changes(&mut self, changes: Changes) {
         for change in changes.data.into_values() {
             self.add(change);

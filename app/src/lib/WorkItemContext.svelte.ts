@@ -82,6 +82,11 @@ export class WorkItemContext {
     await this.refresh(false);    
   }
 
+  public async removeChange(change: Change) {
+    await invoke("remove_change", { change });
+    await this.refresh(false);
+  }
+
   // #endregion
 }
 

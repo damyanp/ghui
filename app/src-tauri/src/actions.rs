@@ -42,3 +42,13 @@ pub async fn add_change(
     data_state.add_change(change);
     Ok(())
 }
+
+#[tauri::command]
+pub async fn remove_change(
+    data_state: State<'_, Mutex<DataState>>,
+    change: Change,
+) -> Result<(), String> {
+    let mut data_state = data_state.lock().await;
+    data_state.remove_change(change);
+    Ok(())
+}

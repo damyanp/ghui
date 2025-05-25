@@ -6,7 +6,7 @@
   import TreeTable from "./TreeTable.svelte";
   import { createRawSnippet } from "svelte";
   import type { Change } from "$lib/bindings/Change";
-  
+
   let context = getWorkItemContext();
 
   function getContextMenuItems(node: Node): MenuItem[] {
@@ -21,6 +21,19 @@
             title: `Convert ${item.data.trackedIssues.length} tracked issues to sub-issues`,
             action: () => convertTrackedIssuesToSubIssue(item),
           });
+        }
+        if (context.data.changes.data) {
+          let changes = Object.values(context.data.changes.data).filter(
+            (i) => i?.workItemId === item.id
+          ) as Change[];
+
+          for (const change of changes) {
+            items.push({
+              type: "action",
+              title: `Revert change: ${JSON.stringify(change.data)}`,
+              action: () => context.removeChange(change),
+            });
+          }
         }
       }
     }
@@ -166,9 +179,7 @@
 
     console.log(`Change: ${JSON.stringify(change)}`);
 
-    if (change)
-      await context.addChange(change);
-     
+    if (change) await context.addChange(change);
   }
 </script>
 

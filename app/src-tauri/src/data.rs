@@ -109,6 +109,10 @@ impl DataState {
         self.changes.add(change);
     }
 
+    pub fn remove_change(&mut self, change: Change) {
+        self.changes.remove(change);
+    }
+
     /// Updates in-place the provided work items with the changes set on self.
     /// Returns the original values of the work items.
     pub fn apply_changes(&self, work_items: &mut WorkItems) -> HashMap<WorkItemId, WorkItem> {
