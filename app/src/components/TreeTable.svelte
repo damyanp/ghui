@@ -28,6 +28,7 @@
     getItem: (row: Row<T>) => ITEM;
     renderGroup: Snippet<[GROUP]>;
     getContextMenuItems: (row: Row<T>) => MenuItem[];
+    onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
   };
   let props: Props = $props();
 
@@ -68,6 +69,72 @@
   const gridColumn = $derived(
     `span ${props.columns.length} / span ${props.columns.length};`
   );
+
+  let draggedRowId: string | null = $state(null);
+  let currentDropRowId: string | null = $state(null);
+
+  function dragStartHandler(e: DragEvent) {
+    let element = e.target as HTMLElement;
+    let rowId = element.getAttribute("data-row-id");
+
+    if (rowId && e.dataTransfer !== null) {
+      e.dataTransfer.dropEffect = "move";
+      draggedRowId = rowId;
+    }
+  }
+
+  function dragEndHandler(e: DragEvent) {
+    draggedRowId = null;
+  }
+
+  function dragOverHandler(e: DragEvent) {
+    let rowId = findRowId(e.target as HTMLElement);
+    if (rowId && rowId !== draggedRowId) {
+      currentDropRowId = rowId;
+      e.preventDefault();
+    }
+  }
+
+  function dragEnterHandler(e: DragEvent) {
+    let rowId = findRowId(e.target as HTMLElement);
+    currentDropRowId = rowId;
+    e.preventDefault();
+  }
+
+  function dragLeaveHandler(e: DragEvent) {
+    let rowId = findRowId(e.target as HTMLElement);
+    if (rowId === currentDropRowId) currentDropRowId = null;
+    e.preventDefault();
+  }
+
+  function findRowId(e: HTMLElement): string | null {
+    let id = e.getAttribute("data-row-id");
+    if (id) return id;
+
+    let parent = e.parentElement;
+    if (parent) return findRowId(parent);
+
+    return null;
+  }
+
+  function dropHandler(e: DragEvent) {
+    let rowId = findRowId(e.target as HTMLElement);
+    if (rowId) {
+      props.onRowDragDrop?.(draggedRowId as string, rowId);      
+      
+      dragLeaveHandler(e);
+      e.preventDefault();
+
+    }
+  }
+
+  function getRowClass(row: MRow<T>) {
+    if (row.id === draggedRowId) return "outline-1 bg-primary-500";
+    if (row.id === currentDropRowId) return "outline-2 bg-secondary-500";
+    if (row.isModified) return "bg-secondary-300-700";
+    if (row.modifiedDescendent) return "bg-secondary-50-950";
+    return "hover:bg-surface-100-900";
+  }
 </script>
 
 <!-- Component Container -->
@@ -103,12 +170,17 @@
             {...props}
             class={[
               "grid-cols-subgrid grid overflow-hidden whitespace-nowrap border border-surface-200-800",
-              modified && "bg-secondary-300-700",
-              modifiedDescendent && "bg-secondary-50-950",
-              unmodified && "hover:bg-surface-100-900",
-              menuOpen && "outline-2 bg-primary-500",
+              menuOpen ? "outline-2 bg-primary-500" : getRowClass(row),
             ]}
             style={`padding-left: ${1 * row.level}rem; grid-column: ${gridColumn};`}
+            draggable="true"
+            data-row-id={row.id}
+            ondragstart={dragStartHandler}
+            ondragend={dragEndHandler}
+            ondragenter={dragEnterHandler}
+            ondragleave={dragLeaveHandler}
+            ondragover={dragOverHandler}
+            ondrop={dropHandler}
           >
             {#if row.isGroup}
               {@render groupRow(row)}

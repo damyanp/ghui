@@ -148,6 +148,10 @@
       };
     });
   }
+
+  function onRowDragDrop(draggedRowId: string, droppedOntoRowId: string) {
+    console.log(`Item ${draggedRowId} dropped onto ${droppedOntoRowId}`);
+  }
 </script>
 
 <TreeTable
@@ -157,6 +161,7 @@
   {getItem}
   {renderGroup}
   {getContextMenuItems}
+  {onRowDragDrop}
 />
 
 {#snippet renderGroup(name: string | undefined)}
