@@ -1,7 +1,7 @@
 <script lang="ts" generics="T, GROUP, ITEM">
   import { ChevronDown, ChevronRight } from "@lucide/svelte";
   import { ContextMenu } from "bits-ui";
-  import type { Snippet } from "svelte";
+  import { tick, type Snippet } from "svelte";
   import TreeTableContextMenu, {
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
@@ -62,8 +62,24 @@
     return [...rows];
   });
 
+  let columnWidths = $state(props.columns.map((c) => c.width));
+
   const gridTemplateColumns = $derived.by(() => {
-    return props.columns.map((c) => c.width).join(" ");
+    return columnWidths.join(" ");
+  });
+
+  $effect(() => {
+    tick().then(() => {
+      for (let index = 0; index < columnWidths.length; index++) {
+        const element = document.getElementById(`column-index-${index}`);
+        if (!element) {
+          console.log(`Couldn't find column ${index}`);
+          continue;
+        }
+
+        columnWidths[index] = `${element.getBoundingClientRect().width}px`;
+      }
+    });
   });
 
   const gridColumn = $derived(
@@ -120,11 +136,10 @@
   function dropHandler(e: DragEvent) {
     let rowId = findRowId(e.target as HTMLElement);
     if (rowId) {
-      props.onRowDragDrop?.(draggedRowId as string, rowId);      
-      
+      props.onRowDragDrop?.(draggedRowId as string, rowId);
+
       dragLeaveHandler(e);
       e.preventDefault();
-
     }
   }
 
@@ -134,6 +149,60 @@
     if (row.isModified) return "bg-secondary-300-700";
     if (row.modifiedDescendent) return "bg-secondary-50-950";
     return "hover:bg-surface-100-900";
+  }
+
+  let columnResize:
+    | { startWidth: number; startX: number; index: number }
+    | undefined = undefined;
+
+  function handleColumnResizeOnPointerDown(event: PointerEvent) {
+    const element = event.target as HTMLElement;
+    const columnIndex = Number.parseInt(
+      element.getAttribute("data-column-index")!
+    );
+
+    const columnElement = document.getElementById(
+      `column-index-${columnIndex}`
+    )!;
+
+    columnResize = {
+      startWidth: columnElement.getBoundingClientRect().width,
+      startX: event.x,
+      index: columnIndex,
+    };
+
+    element.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function handleColumnResizeOnPointerUp(event: PointerEvent) {
+    const element = event.target as HTMLElement;
+    if (!element.hasPointerCapture(event.pointerId)) return;
+    element.releasePointerCapture(event.pointerId);
+    columnResize = undefined;
+  }
+
+  function handleColumnResizeOnPointerMove(event: PointerEvent) {
+    const element = event.target as HTMLElement;
+    if (!element.hasPointerCapture(event.pointerId)) return;
+
+    if (!columnResize) return;
+
+    let deltaX = event.x - columnResize.startX;
+
+    let newSize = Math.max(columnResize.startWidth + deltaX, 20);
+
+    columnWidths[columnResize.index] = `${newSize}px`;
+    event.preventDefault();
+  }
+
+  function handleColumnResizeDoubleClick(event: MouseEvent) {
+    const element = event.target as HTMLElement;
+    const columnIndex = Number.parseInt(
+      element.getAttribute("data-column-index")!
+    );
+
+    columnWidths[columnIndex] = "max-content";
   }
 </script>
 
@@ -149,11 +218,24 @@
       class="sticky top-0 grid grid-cols-subgrid h-fit"
       style={`grid-column: ${gridColumn};`}
     >
-      {#each props.columns as column}
+      {#each props.columns as column, index}
         <div
-          class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700"
+          id="column-index-{index}"
+          class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
         >
-          {column.name}
+          <div class="overflow-hidden text-ellipsis">{column.name}</div>
+          <div
+            class="overflow-visible z-10 my-1 border-r border-r-surface-800-200"
+          >
+            <div
+              data-column-index={index}
+              class="w-[10px] left-[5px] h-full relative cursor-col-resize"
+              onpointerdown={handleColumnResizeOnPointerDown}
+              onpointerup={handleColumnResizeOnPointerUp}
+              onpointermove={handleColumnResizeOnPointerMove}
+              ondblclick={handleColumnResizeDoubleClick}
+            ></div>
+          </div>
         </div>
       {/each}
     </div>
