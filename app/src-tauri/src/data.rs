@@ -1,4 +1,6 @@
 use crate::pat::new_github_client;
+use crate::TauriCommandResult;
+use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::data::{
@@ -65,14 +67,14 @@ impl DataState {
         &mut self,
         force: bool,
         report_progress: &impl Fn(usize, usize),
-    ) -> Result<WorkItems, String> {
+    ) -> Result<WorkItems> {
         if !force {
             if self.work_items.is_some() {
                 return Ok(self.work_items.clone().unwrap());
             }
 
             // Try loading from the local cache
-            let load_result: Result<_, String> = load_workitems_from_appdata();
+            let load_result = load_workitems_from_appdata();
 
             if let Ok(work_items) = load_result {
                 self.work_items = Some(work_items.clone());
@@ -88,9 +90,7 @@ impl DataState {
         // Try retrieving from github
         let client = new_github_client(&self.app).await?;
 
-        let work_items = WorkItems::from_client(&client, &report_progress)
-            .await
-            .map_err(|e| e.to_string())?;
+        let work_items = WorkItems::from_client(&client, &report_progress).await?;
 
         let save_result = save_workitems_to_appdata(&work_items);
         if let Err(error) = save_result {
@@ -119,16 +119,14 @@ impl DataState {
         work_items.apply_changes(&self.changes)
     }
 
-    async fn save_changes(
-        &mut self,
-        report_progress: &impl Fn(usize, usize),
-    ) -> Result<(), String> {
+    async fn save_changes(&mut self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
         let client = new_github_client(&self.app).await?;
 
         println!("TODO: only get_fields once, not every time we hit save!");
-        let fields = get_fields(&client).await.map_err(|e| e.to_string())?;
+        let fields = get_fields(&client).await?;
 
-        self.changes
+        Ok(self
+            .changes
             .save(
                 &client,
                 &fields,
@@ -136,25 +134,27 @@ impl DataState {
                 SaveMode::Commit,
                 &|_, a, b| report_progress(a, b),
             )
-            .await
-            .map_err(|e| e.to_string())
+            .await?)
     }
 }
 
-fn load_workitems_from_appdata() -> Result<WorkItems, String> {
+fn load_workitems_from_appdata() -> anyhow::Result<WorkItems> {
     let path = get_appdata_path();
     println!("Attempting to load work item cache from {path:?}");
 
-    let reader = fs::File::open(path).map_err(|e| e.to_string())?;
-    serde_json::from_reader(BufReader::new(reader)).map_err(|e| e.to_string())
+    let reader = fs::File::open(path)?;
+    Ok(serde_json::from_reader(BufReader::new(reader))?)
 }
 
-fn save_workitems_to_appdata(work_items: &WorkItems) -> Result<(), String> {
+fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
     let path = get_appdata_path();
     println!("Attempting to save work item cache to {path:?}");
 
-    let writer = fs::File::create(path).map_err(|e| e.to_string())?;
-    serde_json::to_writer_pretty(BufWriter::new(writer), work_items).map_err(|e| e.to_string())
+    let writer = fs::File::create(path)?;
+    Ok(serde_json::to_writer_pretty(
+        BufWriter::new(writer),
+        work_items,
+    )?)
 }
 
 fn get_appdata_path() -> PathBuf {
@@ -168,7 +168,7 @@ pub async fn get_data(
     data_state: State<'_, Mutex<DataState>>,
     force_refresh: bool,
     progress: Channel<(usize, usize)>,
-) -> Result<Data, String> {
+) -> TauriCommandResult<Data> {
     let report_progress = |c, t| {
         progress.send((c, t)).unwrap();
     };
@@ -191,7 +191,7 @@ pub async fn get_data(
 }
 
 #[tauri::command]
-pub async fn delete_changes(data_state: State<'_, Mutex<DataState>>) -> Result<(), String> {
+pub async fn delete_changes(data_state: State<'_, Mutex<DataState>>) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.changes = Changes::default();
     Ok(())
@@ -201,7 +201,7 @@ pub async fn delete_changes(data_state: State<'_, Mutex<DataState>>) -> Result<(
 pub async fn set_preview_changes(
     data_state: State<'_, Mutex<DataState>>,
     preview: bool,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.preview_changes = preview;
     Ok(())
@@ -211,13 +211,13 @@ pub async fn set_preview_changes(
 pub async fn save_changes(
     data_state: State<'_, Mutex<DataState>>,
     progress: Channel<(usize, usize)>,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     let report_progress = |c, t| {
         progress.send((c, t)).unwrap();
     };
 
     let mut data_state = data_state.lock().await;
-    data_state.save_changes(&report_progress).await
+    Ok(data_state.save_changes(&report_progress).await?)
 }
 
 struct NodeBuilder<'a> {

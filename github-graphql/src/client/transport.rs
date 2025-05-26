@@ -1,10 +1,11 @@
+use crate::Result;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 pub trait Client {
     #[allow(async_fn_in_trait)]
-    async fn request<Q, R>(&self, request: &Q) -> Result<R, Box<dyn std::error::Error>>
+    async fn request<Q, R>(&self, request: &Q) -> Result<R>
     where
         Q: Serialize,
         R: DeserializeOwned;
@@ -15,12 +16,12 @@ pub struct GithubClient {
 }
 
 impl GithubClient {
-    pub fn new(pat: &str) -> Result<GithubClient, Box<dyn std::error::Error>> {
+    pub fn new(pat: &str) -> Result<GithubClient> {
         static APP_USER_AGENT: &str =
             concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
         let bearer_token = format!("Bearer {pat}");
-        let mut auth_header = HeaderValue::from_str(&bearer_token)?;
+        let mut auth_header = HeaderValue::from_str(&bearer_token).expect("Invalid header value");
         auth_header.set_sensitive(true);
 
         let mut headers = HeaderMap::new();
@@ -36,7 +37,7 @@ impl GithubClient {
 }
 
 impl Client for GithubClient {
-    async fn request<Q, R>(&self, request: &Q) -> Result<R, Box<dyn std::error::Error>>
+    async fn request<Q, R>(&self, request: &Q) -> Result<R>
     where
         Q: Serialize,
         R: DeserializeOwned,

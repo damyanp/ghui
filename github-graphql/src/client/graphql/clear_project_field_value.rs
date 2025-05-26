@@ -1,6 +1,6 @@
-use graphql_client::{GraphQLQuery, Response};
-
 use crate::data::ProjectItemId;
+use crate::Result;
+use graphql_client::{GraphQLQuery, Response};
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -16,7 +16,7 @@ pub async fn clear<ClientType: crate::client::transport::Client>(
     project_id: &str,
     item_id: &ProjectItemId,
     field_id: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result {
     let variables = clear_project_field_value::Variables {
         project_id: project_id.to_owned(),
         item_id: item_id.0.to_owned(),

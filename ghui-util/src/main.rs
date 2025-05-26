@@ -24,8 +24,7 @@ enum Commands {
     AddItems(add_items::Options),
 }
 
-type Error = Box<dyn std::error::Error>;
-type Result<T = ()> = core::result::Result<T, Error>;
+type Result<T = ()> = core::result::Result<T, anyhow::Error>;
 
 #[tokio::main]
 async fn main() -> Result {

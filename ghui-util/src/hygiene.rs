@@ -26,7 +26,7 @@ pub async fn run(options: Options) -> Result {
 
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    data::WorkItems::from_client(client, &report_progress).await
+    Ok(data::WorkItems::from_client(client, &report_progress).await?)
 }
 
 pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {

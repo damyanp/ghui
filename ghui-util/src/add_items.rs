@@ -1,4 +1,5 @@
 use crate::Result;
+use anyhow::anyhow;
 use github_graphql::client::graphql::custom_fields_query::{get_fields, Fields};
 use github_graphql::client::graphql::{add_to_project, get_resource_id, set_project_field_value};
 use github_graphql::client::transport::GithubClient;
@@ -33,7 +34,7 @@ pub async fn run(options: Options) -> Result {
             fields
                 .epic
                 .id(epic.as_str())
-                .ok_or(format!("Unable to find epic '{}'", epic))?,
+                .ok_or(anyhow!("Unable to find epic '{}'", epic))?,
         )
     } else {
         None
@@ -72,13 +73,11 @@ async fn add_item(
 }
 
 fn read_issues(input_file: &str) -> Result<Vec<String>> {
-    let mut file = File::open(input_file).map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut file = File::open(input_file)?;
     let mut content = String::new();
-    file.read_to_string(&mut content)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    file.read_to_string(&mut content)?;
 
-    let re = Regex::new(r"https://github.com/(\S+)")
-        .map_err(|e| format!("Invalid regex pattern: {}", e))?;
+    let re = Regex::new(r"https://github.com/(\S+)")?;
     let matches: Vec<String> = re
         .find_iter(&content)
         .map(|mat| mat.as_str().to_string())

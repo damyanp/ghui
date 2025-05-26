@@ -1,6 +1,6 @@
-use crate::client::transport::Client;
-
 use super::URI;
+use crate::client::transport::Client;
+use crate::{Error, Result};
 use graphql_client::{GraphQLQuery, Response};
 use serde::Serialize;
 
@@ -19,13 +19,16 @@ pub struct ViewerInfo {
     pub avatar_uri: String,
 }
 
-pub async fn get_viewer_info<ClientType: Client>(
-    client: &ClientType,
-) -> Result<ViewerInfo, Box<dyn std::error::Error>> {
+pub async fn get_viewer_info<ClientType: Client>(client: &ClientType) -> Result<ViewerInfo> {
     let query = ViewerInfoQuery::build_query(viewer_info_query::Variables {});
     let response: Response<viewer_info_query::ResponseData> = client.request(&query).await?;
 
-    let v = response.data.ok_or("No data from viewer query")?.viewer;
+    let v = response
+        .data
+        .ok_or(Error::GraphQlResponseUnexpected(
+            "No data from viewer query".into(),
+        ))?
+        .viewer;
     Ok(ViewerInfo {
         login: v.login,
         avatar_uri: v.avatar_url,

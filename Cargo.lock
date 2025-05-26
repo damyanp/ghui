@@ -1649,6 +1649,7 @@ dependencies = [
 name = "ghui"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "dirs",
  "github-graphql",
  "keyring",
@@ -1658,6 +1659,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-opener",
  "tauri-plugin-window-state",
+ "thiserror 2.0.12",
  "ts-rs",
 ]
 
@@ -1665,6 +1667,7 @@ dependencies = [
 name = "ghui-util"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
  "dotenv",
  "github-graphql",
@@ -1672,6 +1675,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "thiserror 2.0.12",
  "tokio",
 ]
 
@@ -1722,6 +1726,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "thiserror 2.0.12",
  "ts-rs",
 ]
 

@@ -1,5 +1,5 @@
-use crate::client::transport::Client;
 use crate::Result;
+use crate::{client::transport::Client, Error};
 use get_resource_id_query::*;
 use graphql_client::{GraphQLQuery, Response};
 
@@ -22,7 +22,10 @@ pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<String> 
         GetResourceIdQueryResource::Issue(i) => Some(i.id.clone()),
         _ => None,
     }
-    .ok_or(format!("Unable to match {} - got {:?}", url, resource).into())
+    .ok_or(Error::GraphQlResponseUnexpected(format!(
+        "Unable to match {} - got {:?}",
+        url, resource
+    )))
 }
 
 async fn get_resource_id_query(client: &impl Client, url: &str) -> Result<ResponseData> {
@@ -32,8 +35,10 @@ async fn get_resource_id_query(client: &impl Client, url: &str) -> Result<Respon
     let response: Response<ResponseData> = client.request(&request_body).await?;
 
     if let Some(errors) = response.errors {
-        Err(format!("{:?}", errors))?
+        Err(Error::GraphQlResponseErrors(errors))?;
     }
 
-    response.data.ok_or("Missing data".to_owned().into())
+    response
+        .data
+        .ok_or(Error::GraphQlResponseUnexpected("Missing data".into()))
 }

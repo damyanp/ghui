@@ -485,7 +485,7 @@ impl Changes {
         work_items: &WorkItems,
         mode: SaveMode,
         report_progress: &impl Fn(&Change, usize, usize),
-    ) -> Result<()> {
+    ) -> Result {
         let data = take(&mut self.data);
 
         let change_count = data.len();

@@ -1,4 +1,4 @@
-use crate::{client::transport::Client, Result};
+use crate::{client::transport::Client, Error, Result};
 use graphql_client::{GraphQLQuery, Response};
 
 #[derive(GraphQLQuery)]
@@ -10,7 +10,7 @@ use graphql_client::{GraphQLQuery, Response};
 )]
 pub struct AddSubIssue;
 
-pub async fn add(client: &impl Client, issue_id: &str, sub_issue_id: &str) -> Result<()> {
+pub async fn add(client: &impl Client, issue_id: &str, sub_issue_id: &str) -> Result {
     use add_sub_issue::*;
 
     let variables = Variables {
@@ -23,7 +23,7 @@ pub async fn add(client: &impl Client, issue_id: &str, sub_issue_id: &str) -> Re
     let response: Response<ResponseData> = client.request(&request_body).await?;
 
     if let Some(errors) = response.errors {
-        Err(format!("{:?}", errors))?
+        Err(Error::GraphQlResponseErrors(errors))?;
     }
 
     Ok(())

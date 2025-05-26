@@ -4,7 +4,7 @@ use crate::{
         self, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
         SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId, WorkItems,
     },
-    Result,
+    Error, Result,
 };
 use graphql_client::GraphQLQuery;
 use project_items::{
@@ -157,7 +157,7 @@ impl WorkItems {
 fn build_work_item(
     content: Option<ProjectItemsOrganizationProjectV2ItemsNodesContent>,
 ) -> Result<WorkItem> {
-    let content = content.ok_or("project item without content")?;
+    let content = content.ok_or(Error::UnexpectedData("project item without content".into()))?;
 
     Ok(match content {
         ProjectItemsOrganizationProjectV2ItemsNodesContent::DraftIssue(c) => WorkItem {

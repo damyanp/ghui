@@ -7,6 +7,7 @@ pub mod project_items;
 pub mod set_project_field_value;
 mod viewer_info;
 
+use crate::Result;
 pub use custom_fields_query::{
     get_custom_fields, FieldConfig, FieldConfigOnProjectV2IterationField,
     FieldConfigOnProjectV2SingleSelectField,
@@ -37,7 +38,7 @@ pub async fn get_all_items<Query>(
     client: &impl Client,
     variables: Query::Variables,
     report_progress: &impl Fn(usize, usize),
-) -> Result<Vec<Query::ItemType>, Box<dyn std::error::Error>>
+) -> Result<Vec<Query::ItemType>>
 where
     Query: GraphQLQuery + PagedQuery<Query>,
 {

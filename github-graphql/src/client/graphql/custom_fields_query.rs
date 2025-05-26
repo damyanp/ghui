@@ -1,7 +1,6 @@
-use crate::Result;
-use std::collections::HashMap;
-
+use crate::{Error, Result};
 use graphql_client::{GraphQLQuery, Response};
+use std::collections::HashMap;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -23,14 +22,16 @@ pub async fn get_custom_fields<ClientType: crate::client::transport::Client>(
         client.request(&request_body).await?;
 
     if let Some(errors) = response.errors {
-        Err(format!("{:?}", errors))?
+        Err(Error::GraphQlResponseErrors(errors))?;
     }
 
-    Ok(response
+    response
         .data
         .and_then(|d| d.organization)
         .and_then(|d| d.project_v2)
-        .ok_or("Missing custom fields data")?)
+        .ok_or(Error::GraphQlResponseUnexpected(
+            "Missing custom fields data".into(),
+        ))
 }
 
 #[derive(Default, Debug)]

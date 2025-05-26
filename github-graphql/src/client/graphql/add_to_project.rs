@@ -1,4 +1,4 @@
-use crate::{client::transport::Client, data::ProjectItemId, Result};
+use crate::{client::transport::Client, data::ProjectItemId, Error, Result};
 use graphql_client::{GraphQLQuery, Response};
 
 #[derive(GraphQLQuery)]
@@ -27,7 +27,7 @@ pub async fn add(
     let response: Response<ResponseData> = client.request(&request_body).await?;
 
     if let Some(errors) = response.errors {
-        Err(format!("{:?}", errors))?
+        Err(Error::GraphQlResponseErrors(errors))?;
     }
 
     response
@@ -35,5 +35,7 @@ pub async fn add(
         .and_then(|data| data.add_project_v2_item_by_id)
         .and_then(|data| data.item)
         .map(|item| ProjectItemId(item.id))
-        .ok_or("Mutation didn't return an ID".into())
+        .ok_or(Error::GraphQlResponseUnexpected(
+            "Mutation didn't return an ID".into(),
+        ))
 }

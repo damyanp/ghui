@@ -1,9 +1,12 @@
+use anyhow::{Context, Result};
 use github_graphql::client::{
     graphql::{get_viewer_info, ViewerInfo},
     transport::GithubClient,
 };
 use serde::Serialize;
 use tauri::{async_runtime::Mutex, AppHandle, Emitter, Manager, State};
+
+use crate::TauriCommandResult;
 
 #[derive(Clone, Serialize)]
 #[serde(
@@ -49,20 +52,17 @@ async fn delete_password(state: &Mutex<PATState>) -> keyring::Result<()> {
     state.pat_entry.delete_credential()
 }
 
-pub async fn new_github_client(app: &AppHandle) -> Result<GithubClient, String> {
+pub async fn new_github_client(app: &AppHandle) -> Result<GithubClient> {
     let state = app.state::<Mutex<PATState>>();
-    let password = get_password(&state).await.map_err(|e| e.to_string())?;
-    GithubClient::new(&password).map_err(|e| e.to_string())
+    let password = get_password(&state).await?;
+    Ok(GithubClient::new(&password)?)
 }
 
-async fn update_pat_status(
-    app: &AppHandle,
-    password: &keyring::Result<String>,
-) -> Result<(), String> {
+async fn update_pat_status(app: &AppHandle, password: &keyring::Result<String>) -> Result<()> {
     notify_pat_status(app, PatStatus::Checking);
 
     if let Ok(password) = password {
-        let client = GithubClient::new(password).map_err(|e| e.to_string())?;
+        let client = GithubClient::new(password)?;
         let info = get_viewer_info(&client).await;
 
         if let Ok(info) = info {
@@ -81,9 +81,9 @@ async fn update_pat_status(
 pub async fn check_pat_status(
     app: AppHandle,
     state: State<'_, Mutex<PATState>>,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     let password = get_password(&state).await;
-    update_pat_status(&app, &password).await
+    Ok(update_pat_status(&app, &password).await?)
 }
 
 #[tauri::command]
@@ -91,18 +91,18 @@ pub async fn set_pat(
     app: AppHandle,
     state: State<'_, Mutex<PATState>>,
     pat: String,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     let result = if !pat.is_empty() {
         set_password(&state, &pat)
             .await
-            .map_err(|_| String::from("set_password failed"))?;
+            .context("set_password failed")?;
         Ok(pat)
     } else {
         delete_password(&state)
             .await
-            .map_err(|_| String::from("delete_password failed"))?;
+            .context("delete_password failed")?;
         Err(keyring::Error::NoEntry)
     };
 
-    update_pat_status(&app, &result).await
+    Ok(update_pat_status(&app, &result).await?)
 }

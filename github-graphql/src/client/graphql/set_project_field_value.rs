@@ -1,6 +1,6 @@
-use graphql_client::{GraphQLQuery, Response};
-
 use crate::data::ProjectItemId;
+use crate::{Error, Result};
+use graphql_client::{GraphQLQuery, Response};
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -17,7 +17,7 @@ pub async fn set<ClientType: crate::client::transport::Client>(
     item_id: &ProjectItemId,
     field_id: &str,
     option_id: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result {
     let variables = set_project_field_value::Variables {
         project_id: project_id.to_owned(),
         item_id: item_id.0.to_owned(),
@@ -31,7 +31,7 @@ pub async fn set<ClientType: crate::client::transport::Client>(
         client.request(&request_body).await?;
 
     if let Some(errors) = response.errors {
-        Err(format!("{:?}", errors))?
+        Err(Error::GraphQlResponseErrors(errors))?;
     }
 
     Ok(())

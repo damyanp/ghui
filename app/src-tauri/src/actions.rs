@@ -1,13 +1,13 @@
+use crate::data::DataState;
+use crate::TauriCommandResult;
 use github_graphql::data::{Change, WorkItemId};
 use tauri::{async_runtime::Mutex, State};
-
-use crate::data::DataState;
 
 #[tauri::command]
 pub async fn convert_tracked_to_sub_issues(
     data_state: State<'_, Mutex<DataState>>,
     id: WorkItemId,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     println!("convert_tracked_to_subissues for {id:?}");
 
     let mut data_state = data_state.lock().await;
@@ -21,7 +21,7 @@ pub async fn convert_tracked_to_sub_issues(
 }
 
 #[tauri::command]
-pub async fn sanitize(data_state: State<'_, Mutex<DataState>>) -> Result<usize, String> {
+pub async fn sanitize(data_state: State<'_, Mutex<DataState>>) -> TauriCommandResult<usize> {
     let mut data_state = data_state.lock().await;
 
     if let Some(work_items) = data_state.work_items.as_ref() {
@@ -37,7 +37,7 @@ pub async fn sanitize(data_state: State<'_, Mutex<DataState>>) -> Result<usize, 
 pub async fn add_change(
     data_state: State<'_, Mutex<DataState>>,
     change: Change,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.add_change(change);
     Ok(())
@@ -47,7 +47,7 @@ pub async fn add_change(
 pub async fn remove_change(
     data_state: State<'_, Mutex<DataState>>,
     change: Change,
-) -> Result<(), String> {
+) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.remove_change(change);
     Ok(())

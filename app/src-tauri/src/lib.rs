@@ -6,6 +6,23 @@ mod actions;
 mod data;
 mod pat;
 
+pub type TauriCommandResult<T> = core::result::Result<T, TauriCommandError>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum TauriCommandError {
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
+}
+
+impl serde::Serialize for TauriCommandError {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_ref())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
