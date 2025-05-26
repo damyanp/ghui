@@ -388,8 +388,6 @@ impl WorkItems {
                         })
                 }
                 ChangeData::SetParent(new_parent_id) => {
-                    remember_original(self.get(new_parent_id));
-
                     let child_id = &change.work_item_id;
 
                     // If there was an old parent we'll need to update it
@@ -404,7 +402,6 @@ impl WorkItems {
                     };
 
                     if let Some(old_parent_id) = &old_parent_id {
-                        remember_original(self.get(old_parent_id));
                         if let Some(old_parent) = self.get_mut(old_parent_id) {
                             if let WorkItemData::Issue(issue) = &mut old_parent.data {
                                 issue.sub_issues.pop_if(|i| i == child_id);
@@ -1059,7 +1056,9 @@ pub mod tests {
 
         // All the items have changed, so we expect to get back a map containing
         // all the originals
-        let expected_original_work_items = data.work_items.work_items.clone();
+
+        let expected_original_work_items =
+            HashMap::from_iter([(child.clone(), data.work_items.get(&child).unwrap().clone())]);
 
         let actual_original_work_items = data.work_items.apply_changes(&changes);
 
@@ -1094,9 +1093,10 @@ pub mod tests {
             data: ChangeData::SetParent(new_parent.clone()),
         });
 
-        // All the items have changed, so we expect to get back a map containing
-        // all the originals
-        let expected_original_work_items = data.work_items.work_items.clone();
+        let expected_original_work_items = HashMap::from_iter([(
+            child.clone(),
+            data.work_items.get(&child).unwrap().to_owned(),
+        )]);
 
         let actual_original_work_items = data.work_items.apply_changes(&changes);
 
