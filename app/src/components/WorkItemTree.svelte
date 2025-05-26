@@ -74,7 +74,7 @@
     });
   });
 
-  let columns = [
+  let columns = $state([
     { name: "Title", width: "5fr", render: renderTitle },
     {
       name: "Type",
@@ -137,7 +137,7 @@
         else return null;
       }),
     },
-  ];
+  ]);
 
   function getGroup(n: Node) {
     if (n.data.type === "group") return n.data.name;
@@ -159,8 +159,6 @@
   }
 
   async function onRowDragDrop(draggedRowId: string, droppedOntoRowId: string) {
-    console.log(`Item ${draggedRowId} dropped onto ${droppedOntoRowId}`);
-
     let targetNode = rows.find((row) => row.id === droppedOntoRowId);
     if (!targetNode) {
       console.log(
@@ -200,15 +198,13 @@
       }
     }
 
-    console.log(`Change: ${JSON.stringify(change)}`);
-
     if (change) await context.addChange(change);
   }
 </script>
 
 <TreeTable
   {rows}
-  {columns}
+  bind:columns
   {getGroup}
   {getItem}
   {renderGroup}

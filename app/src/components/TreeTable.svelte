@@ -30,7 +30,8 @@
     getContextMenuItems: (row: Row<T>) => MenuItem[];
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
   };
-  let props: Props = $props();
+
+  let { columns = $bindable(), ...props }: Props = $props();
 
   type MRow<T> = Row<T> & { modifiedDescendent: boolean };
 
@@ -62,28 +63,24 @@
     return [...rows];
   });
 
-  let columnWidths = $state(props.columns.map((c) => c.width));
-
-  const gridTemplateColumns = $derived.by(() => {
-    return columnWidths.join(" ");
-  });
+  const gridTemplateColumns = $derived(columns.map((c) => c.width).join(" "));
 
   $effect(() => {
     tick().then(() => {
-      for (let index = 0; index < columnWidths.length; index++) {
+      for (let index = 0; index < columns.length; index++) {
         const element = document.getElementById(`column-index-${index}`);
         if (!element) {
           console.log(`Couldn't find column ${index}`);
           continue;
         }
 
-        columnWidths[index] = `${element.getBoundingClientRect().width}px`;
+        columns[index].width = `${element.getBoundingClientRect().width}px`;
       }
     });
   });
 
   const gridColumn = $derived(
-    `span ${props.columns.length} / span ${props.columns.length};`
+    `span ${columns.length} / span ${columns.length};`
   );
 
   let draggedRowId: string | null = $state(null);
@@ -192,7 +189,7 @@
 
     let newSize = Math.max(columnResize.startWidth + deltaX, 20);
 
-    columnWidths[columnResize.index] = `${newSize}px`;
+    columns[columnResize.index].width = `${newSize}px`;
     event.preventDefault();
   }
 
@@ -202,7 +199,7 @@
       element.getAttribute("data-column-index")!
     );
 
-    columnWidths[columnIndex] = "max-content";
+    columns[columnIndex].width = "max-content";
   }
 </script>
 
@@ -218,7 +215,7 @@
       class="sticky top-0 grid grid-cols-subgrid h-fit"
       style={`grid-column: ${gridColumn};`}
     >
-      {#each props.columns as column, index}
+      {#each columns as column, index}
         <div
           id="column-index-{index}"
           class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
@@ -286,7 +283,7 @@
 {/snippet}
 
 {#snippet itemRow(row: Row<T>)}
-  {#each props.columns as column, index}
+  {#each columns as column, index}
     {@const item = props.getItem(row)}
     <div
       class={[
