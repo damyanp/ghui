@@ -234,6 +234,8 @@
               onpointerup={handleColumnResizeOnPointerUp}
               onpointermove={handleColumnResizeOnPointerMove}
               ondblclick={handleColumnResizeDoubleClick}
+              role="separator"
+              aria-orientation="vertical"
             ></div>
           </div>
         </div>
