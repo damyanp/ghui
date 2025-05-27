@@ -263,11 +263,13 @@
             ondragover={dragOverHandler}
             ondrop={dropHandler}
           >
-            {#if row.isGroup}
-              {@render groupRow(row)}
-            {:else}
-              {@render itemRow(row)}
-            {/if}
+            {#key row}
+              {#if row.isGroup}
+                {@render groupRow(row)}
+              {:else}
+                {@render itemRow(row)}
+              {/if}
+            {/key}
           </div>
         {/snippet}
       </TreeTableContextMenu>
