@@ -37,10 +37,10 @@
 
     {#snippet children()}
       <SanitizeButton />
-      <ChangesToolbarButton />
     {/snippet}
 
     {#snippet trail()}
+      <ChangesToolbarButton />
       <Pat />
     {/snippet}
   </AppBar>
