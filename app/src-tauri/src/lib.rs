@@ -40,6 +40,7 @@ pub fn run() {
             data::delete_changes,
             data::set_preview_changes,
             data::save_changes,
+            data::set_filters,
             actions::convert_tracked_to_sub_issues,
             actions::sanitize,
             actions::add_change,

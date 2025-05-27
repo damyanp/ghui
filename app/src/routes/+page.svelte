@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AppBar } from "@skeletonlabs/skeleton-svelte";
+  import { AppBar, Switch } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
   import { Channel, invoke } from "@tauri-apps/api/core";
   import WorkItemTree from "../components/WorkItemTree.svelte";
@@ -11,6 +11,7 @@
     WorkItemContext,
   } from "$lib/WorkItemContext.svelte";
   import SanitizeButton from "../components/SanitizeButton.svelte";
+  import AppBarSwitch from "../components/AppBarSwitch.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
 
@@ -37,6 +38,10 @@
 
     {#snippet children()}
       <SanitizeButton />
+      <AppBarSwitch
+        label="Hide Closed"
+        bind:checked={context.hideClosed}
+      />
     {/snippet}
 
     {#snippet trail()}

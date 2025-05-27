@@ -2,7 +2,8 @@ import { getContext, setContext, tick } from "svelte";
 import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { WorkItemId } from "./bindings/WorkItemId";
-  import type { Change } from "./bindings/Change";
+import type { Change } from "./bindings/Change";
+import type { Filters } from "./bindings/Filters";
 
 const key = Symbol("WorkItemContext");
 
@@ -19,6 +20,7 @@ export class WorkItemContext {
   data = $state<Data>({
     workItems: {},
     nodes: [],
+    filters: { hideClosed: true },
     originalWorkItems: {},
     changes: { data: {} },
   });
@@ -56,6 +58,18 @@ export class WorkItemContext {
     await this.refresh(false);
   }
 
+  public get hideClosed() {
+    return this.data.filters.hideClosed;
+  }
+
+  public set hideClosed(value: boolean) {
+    console.log(`set hideClosed: ${value}`);
+    this.data.filters.hideClosed = value;
+    invoke("set_filters", { filters: this.data.filters }).then(() =>
+      this.refresh(false)
+    );
+  }
+
   // #region Managing Changes
 
   previewChanges = $derived(
@@ -79,7 +93,7 @@ export class WorkItemContext {
 
   public async addChange(change: Change) {
     await invoke("add_change", { change });
-    await this.refresh(false);    
+    await this.refresh(false);
   }
 
   public async removeChange(change: Change) {

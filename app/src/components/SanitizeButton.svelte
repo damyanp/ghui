@@ -1,7 +1,6 @@
 <script lang="ts">
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import { Bubbles } from "@lucide/svelte";
-  import { scale } from "svelte/transition";
   import AppBarButton from "./AppBarButton.svelte";
 
   let context = getWorkItemContext();

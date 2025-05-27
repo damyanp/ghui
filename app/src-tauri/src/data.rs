@@ -4,9 +4,10 @@ use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::data::{
-    Change, Changes, SaveMode, WorkItem, WorkItemData, WorkItemId, WorkItems,
+    Change, Changes, SaveMode, SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId,
+    WorkItems,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufReader, BufWriter};
@@ -26,7 +27,27 @@ pub struct Data {
     // ones are stored here.  When changes aren't applied this will be empty.
     original_work_items: HashMap<WorkItemId, WorkItem>,
 
+    filters: Filters,
     changes: Changes,
+}
+
+#[derive(Default, Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Filters {
+    hide_closed: bool,
+}
+
+impl Filters {
+    fn should_include(&self, work_item: &WorkItem) -> bool {
+        if self.hide_closed {
+            if let Some(SingleSelectFieldValue { name, .. }) = &work_item.project_item.status {
+                if name == "Closed" {
+                    return false;
+                }
+            }
+        }
+        true
+    }
 }
 
 #[derive(Serialize, TS, Debug)]
@@ -49,6 +70,7 @@ enum NodeData {
 pub struct DataState {
     app: AppHandle,
     pub work_items: Option<WorkItems>,
+    filters: Filters,
     changes: Changes,
     preview_changes: bool,
 }
@@ -58,6 +80,7 @@ impl DataState {
         Self {
             app,
             work_items: None,
+            filters: Filters::default(),
             changes: Changes::default(),
             preview_changes: true,
         }
@@ -99,6 +122,10 @@ impl DataState {
 
         self.work_items = Some(work_items.clone());
         Ok(work_items)
+    }
+
+    pub fn set_filters(&mut self, filters: Filters) {
+        self.filters = filters;
     }
 
     pub fn add_changes(&mut self, changes: Changes) {
@@ -181,11 +208,12 @@ pub async fn get_data(
         HashMap::default()
     };
 
-    let nodes = NodeBuilder::new(&work_items, &original_work_items).build();
+    let nodes = NodeBuilder::new(&work_items, &data_state.filters, &original_work_items).build();
     Ok(Data {
         nodes,
         work_items: work_items.work_items,
         original_work_items,
+        filters: data_state.filters.clone(),
         changes: data_state.changes.clone(),
     })
 }
@@ -220,8 +248,19 @@ pub async fn save_changes(
     Ok(data_state.save_changes(&report_progress).await?)
 }
 
+#[tauri::command]
+pub async fn set_filters(
+    data_state: State<'_, Mutex<DataState>>,
+    filters: Filters,
+) -> TauriCommandResult<()> {
+    let mut data_state = data_state.lock().await;
+    data_state.set_filters(filters);
+    Ok(())
+}
+
 struct NodeBuilder<'a> {
     work_items: &'a WorkItems,
+    filters: &'a Filters,
     original_work_items: &'a HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
 }
@@ -229,10 +268,12 @@ struct NodeBuilder<'a> {
 impl<'a> NodeBuilder<'a> {
     fn new(
         work_items: &'a WorkItems,
+        filters: &'a Filters,
         original_work_items: &'a HashMap<WorkItemId, WorkItem>,
     ) -> Self {
         NodeBuilder {
             work_items,
+            filters,
             original_work_items,
             nodes: Vec::new(),
         }
@@ -244,6 +285,8 @@ impl<'a> NodeBuilder<'a> {
     }
 
     fn add_nodes(&mut self, items: &[WorkItemId], level: u32, path: &str) {
+        let items = self.apply_filters(items);
+
         // For now, group by "Epic"
         let group = |id| {
             self.work_items
@@ -294,6 +337,35 @@ impl<'a> NodeBuilder<'a> {
         }
     }
 
+    fn apply_filters(&self, work_items: &'a [WorkItemId]) -> Vec<&'a WorkItemId> {
+        Vec::from_iter(work_items.iter().filter(|i| self.should_include(i)))
+    }
+
+    fn should_include(&self, work_item_id: &WorkItemId) -> bool {
+        // NOTE: this works harder than it should. Consider memoizing the
+        // results for each work_item_id.
+
+        let work_item = self.work_items.get(work_item_id);
+        if let Some(work_item) = work_item {
+            if let WorkItem {
+                data: WorkItemData::Issue(issue),
+                ..
+            } = work_item
+            {
+                for child_id in &issue.sub_issues {
+                    if self.should_include(child_id) {
+                        // as soon as we find a descendant that should be
+                        // visible we know that this item must be visible
+                        return true;
+                    }
+                }
+            }
+            self.filters.should_include(work_item)
+        } else {
+            false
+        }
+    }
+
     fn add_node(&mut self, id: &WorkItemId, level: u32, path: &str) {
         if let Some(item) = self.work_items.get(id) {
             let children = if let WorkItemData::Issue(issue) = &item.data {
@@ -333,8 +405,9 @@ mod nodebuilder_tests {
         let mut data = TestData::default();
         let id = data.build().epic("Epic1").add();
         let work_items = data.work_items;
+        let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &original_work_items);
+        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Only one node (the work item) should be present, no group node
         assert_eq!(nodes.len(), 1);
@@ -349,8 +422,9 @@ mod nodebuilder_tests {
         let id1 = data.build().epic("EpicA").add();
         let id2 = data.build().epic("EpicB").add();
         let work_items = data.work_items;
+        let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &original_work_items);
+        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Should have two groups and two work items, in order: Group(EpicA), WorkItem(1), Group(EpicB), WorkItem(2)
         assert_eq!(nodes.len(), 4);
@@ -368,8 +442,9 @@ mod nodebuilder_tests {
         let id1 = data.build().epic("EpicA").add();
         let id2 = data.build().epic("EpicA").sub_issues(&[&id1]).add();
         let work_items = data.work_items;
+        let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &original_work_items);
+        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Should have two work items, no group node, in order: WorkItem(2), WorkItem(1)
         assert_eq!(nodes.len(), 2);
@@ -381,5 +456,64 @@ mod nodebuilder_tests {
         let parent_level = nodes.iter().find(|n| n.id == id2.0).unwrap().level;
         let child_level = nodes.iter().find(|n| n.id == id1.0).unwrap().level;
         assert!(child_level > parent_level);
+    }
+
+    #[test]
+    fn test_node_build_no_filters() {
+        let mut data = TestData::default();
+
+        let closed_item = data.build().status("Closed").add();
+
+        let filters = Filters::default();
+        let original_work_items = HashMap::new();
+        let mut builder = NodeBuilder::new(&data.work_items, &filters, &original_work_items);
+        let nodes = builder.build();
+
+        // The closed parent and its closed children should be filtered out
+        assert!(nodes.iter().any(|n| n.id == closed_item.0));
+    }
+
+    #[test]
+    fn test_node_builder_filters_closed() {
+        let mut data = TestData::default();
+
+        // Create a closed parent with two closed children
+        let child1_id = data.build().status("Closed").add();
+        let child2_id = data.build().status("Closed").add();
+        let parent1_id = data
+            .build()
+            .sub_issues(&[&child1_id, &child2_id])
+            .status("Closed")
+            .add();
+
+        // Create a closed parent, with closed child and open granchild
+        let grandchild1_id = data.build().status("Open").add();
+        let child3_id = data
+            .build()
+            .sub_issues(&[&grandchild1_id])
+            .status("Closed")
+            .add();
+        let parent2_id = data
+            .build()
+            .sub_issues(&[&child3_id])
+            .status("Closed")
+            .add();
+
+        let work_items = data.work_items;
+        let mut filters = Filters::default();
+        filters.hide_closed = true;
+        let original_work_items = HashMap::new();
+        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
+        let nodes = builder.build();
+
+        // The closed parent and its closed children should be filtered out
+        assert!(!nodes.iter().any(|n| n.id == parent1_id.0));
+        assert!(!nodes.iter().any(|n| n.id == child1_id.0));
+        assert!(!nodes.iter().any(|n| n.id == child2_id.0));
+
+        // The open grandchild should be present, and so should its ancestors
+        assert!(nodes.iter().any(|n| n.id == grandchild1_id.0));
+        assert!(nodes.iter().any(|n| n.id == child3_id.0));
+        assert!(nodes.iter().any(|n| n.id == parent2_id.0));
     }
 }
