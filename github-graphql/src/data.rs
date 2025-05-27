@@ -290,6 +290,19 @@ impl WorkItems {
                     });
                 }
             }
+
+            // Items that are Bugs shuold set their type to bug
+            if let WorkItemData::Issue(issue) = &item.data {
+                if let Some(SingleSelectFieldValue { name, .. }) = &item.project_item.kind {
+                    if name == "Bug" && issue.issue_type.as_ref().map(|s| s.as_str()) != Some("Bug")
+                    {
+                        changes.add(Change {
+                            work_item_id: item.id.clone(),
+                            data: ChangeData::IssueType(Some("Bug".to_owned())),
+                        });
+                    }
+                }
+            }
         }
 
         for root_item_id in self.get_roots() {
@@ -366,6 +379,11 @@ impl WorkItems {
             let work_item = work_item.unwrap();
 
             match &change.data {
+                ChangeData::IssueType(value) => {
+                    if let WorkItemData::Issue(issue) = &mut work_item.data {
+                        issue.issue_type = value.to_owned();
+                    }
+                }
                 ChangeData::Status(value) => {
                     work_item.project_item.status =
                         value.as_ref().map(|value| SingleSelectFieldValue {
@@ -522,6 +540,9 @@ impl Change {
         work_items: &WorkItems,
     ) -> Result<()> {
         match &self.data {
+            ChangeData::IssueType(_) => {
+                todo!();
+            }
             ChangeData::Status(value) => {
                 self.save_field(
                     client,
@@ -623,6 +644,7 @@ pub struct Change {
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", tag = "type", content = "value")]
 pub enum ChangeData {
+    IssueType(Option<String>),
     Status(Option<String>),
     Blocked(Option<String>),
     Epic(Option<String>),
@@ -642,6 +664,10 @@ impl Change {
         let work_item = work_items.get(&self.work_item_id).unwrap();
 
         let old_value = match self.data {
+            ChangeData::IssueType(_) => match &work_item.data {
+                WorkItemData::Issue(issue) => issue.issue_type.as_ref().map(|v| v.as_str()),
+                _ => None,
+            },
             ChangeData::Status(_) => work_item.project_item.status.field_value(),
             ChangeData::Blocked(_) => work_item.project_item.blocked.field_value(),
             ChangeData::Epic(_) => work_item.project_item.epic.field_value(),
@@ -654,6 +680,7 @@ impl Change {
         .unwrap_or("<>");
 
         let name = match self.data {
+            ChangeData::IssueType(_) => "IssueType",
             ChangeData::Status(_) => "Status",
             ChangeData::Blocked(_) => "Blocked",
             ChangeData::Epic(_) => "Epic",
@@ -662,6 +689,7 @@ impl Change {
         };
 
         let new_value = match &self.data {
+            ChangeData::IssueType(value) => value.as_ref(),
             ChangeData::Status(value) => value.as_ref(),
             ChangeData::Blocked(value) => value.as_ref(),
             ChangeData::Epic(value) => value.as_ref(),
