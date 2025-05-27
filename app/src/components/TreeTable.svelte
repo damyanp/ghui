@@ -288,7 +288,7 @@
     <div
       class={[
         "overflow-hidden border-r border-surface-200-800 py-0.5",
-        index === 0 && "flex gap-1 flex-nowrap",
+        index === 0 && "pr-1 flex gap-1 flex-nowrap",
         index !== 0 && "px-1 overflow-ellipsis ",
       ]}
     >
