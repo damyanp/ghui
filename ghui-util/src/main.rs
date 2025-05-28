@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{get_all_items, get_custom_fields, get_viewer_info, project_items},
+    graphql::{get_all_items, get_viewer_info, project_items},
     transport::GithubClient,
 };
 use std::env;
@@ -19,7 +19,6 @@ struct Args {
 enum Commands {
     GetAllItems,
     Viewer,
-    GetCustomFields,
     Hygiene(hygiene::Options),
     AddItems(add_items::Options),
 }
@@ -35,7 +34,6 @@ async fn main() -> Result {
     match arg.command {
         Commands::GetAllItems => run_get_all_items().await,
         Commands::Viewer => run_get_viewer().await,
-        Commands::GetCustomFields => run_get_custom_fields().await,
         Commands::Hygiene(options) => hygiene::run(options).await,
         Commands::AddItems(options) => add_items::run(options).await,
     }
@@ -69,53 +67,6 @@ async fn run_get_viewer() -> Result {
     let info = get_viewer_info(&client).await?;
 
     println!("{:?}", info);
-
-    Ok(())
-}
-
-async fn run_get_custom_fields() -> Result {
-    let fields = get_custom_fields(&client()).await?;
-
-    use github_graphql::client::graphql::{
-        FieldConfig, FieldConfigOnProjectV2IterationField, FieldConfigOnProjectV2SingleSelectField,
-    };
-
-    fn dump(name: &str, config: &Option<FieldConfig>) {
-        println!("{name}:");
-
-        if let Some(config) = config {
-            dump_field_config(config);
-        } else {
-            println!("  <no data>");
-        }
-
-        println!();
-    }
-
-    fn dump_field_config(config: &FieldConfig) {
-        match config {
-            FieldConfig::ProjectV2IterationField(f) => dump_iteration_field(f),
-            FieldConfig::ProjectV2SingleSelectField(f) => dump_single_select_field(f),
-            _ => println!("  <unexpected field type>"),
-        }
-    }
-
-    fn dump_single_select_field(f: &FieldConfigOnProjectV2SingleSelectField) {
-        println!("Field ID: {}", f.id);
-        for o in &f.options {
-            println!("  {} = {}", o.id, o.name);
-        }
-    }
-
-    fn dump_iteration_field(f: &FieldConfigOnProjectV2IterationField) {
-        println!("Field ID: {}", f.id);
-        for o in &f.configuration.iterations {
-            println!("  {} = {}", o.id, o.title);
-        }
-    }
-    dump("Status", &fields.status);
-    dump("Blocked", &fields.blocked);
-    dump("Iteration", &fields.iteration);
 
     Ok(())
 }

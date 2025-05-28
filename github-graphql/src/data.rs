@@ -575,10 +575,10 @@ impl Change {
                     .await
             }
             ChangeData::SetParent(new_parent) => {
-                add_sub_issue::add(client, &new_parent.0, &self.work_item_id.0).await
+                add_sub_issue(client, &new_parent.0, &self.work_item_id.0).await
             }
             ChangeData::AddToProject => {
-                add_to_project::add(client, &fields.project_id, &self.work_item_id.0)
+                add_to_project(client, &fields.project_id, &self.work_item_id.0)
                     .await
                     .map(|_| ())
             }
@@ -598,7 +598,7 @@ impl Change {
             .map(|item| &item.project_item.id)
         {
             if let Some(new_value_id) = value.as_ref().and_then(|name| field.id(name)) {
-                set_project_field_value::set(
+                set_project_field_value(
                     client,
                     project_id,
                     project_item_id,
@@ -607,7 +607,7 @@ impl Change {
                 )
                 .await?;
             } else {
-                clear_project_field_value::clear(client, project_id, project_item_id, &field.id)
+                clear_project_field_value(client, project_id, project_item_id, &field.id)
                     .await?;
             }
         }
@@ -630,7 +630,7 @@ impl Change {
                     .as_ref()
                     .and_then(|issue_type| issue_types.name_to_id.get(issue_type));
 
-                set_issue_type::set(
+                set_issue_type(
                     client,
                     &work_item.id.0,
                     issue_type_id.map(|id| id.0.as_str()),

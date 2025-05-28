@@ -56,9 +56,9 @@ async fn add_item(
     issue: &str,
 ) -> Result {
     let content_id = get_resource_id(client, issue).await?;
-    let item_id = add_to_project::add(client, &fields.project_id, &content_id).await?;
+    let item_id = add_to_project(client, &fields.project_id, &content_id).await?;
     if let Some(epic_id) = epic_id {
-        set_project_field_value::set(
+        set_project_field_value(
             client,
             &fields.project_id,
             &item_id,

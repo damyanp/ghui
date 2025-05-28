@@ -1,12 +1,25 @@
-pub mod add_sub_issue;
-pub mod add_to_project;
-pub mod clear_project_field_value;
+
+#[macro_export]
+macro_rules! gql {
+    ($name:ident, $query_file:expr) => {
+        #[derive(GraphQLQuery)]
+        #[graphql(
+            schema_path = "src/schema.docs.graphql",
+            query_path = $query_file,
+            response_derives = "Debug, Serialize, Eq, PartialEq",
+            variables_derives = "Debug"
+        )]
+        pub(crate) struct $name;
+    };
+}
+
+pub mod mutators;
+pub use mutators::*;
+
 pub mod custom_fields_query;
 pub mod get_issue_types;
 mod get_resource_id_query;
 pub mod project_items;
-pub mod set_issue_type;
-pub mod set_project_field_value;
 mod viewer_info;
 
 use crate::Result;
