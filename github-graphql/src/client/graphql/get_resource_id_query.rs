@@ -5,7 +5,10 @@ use graphql_client::{GraphQLQuery, Response};
 
 use super::URI;
 
-gql!(GetResourceIdQuery, "src/client/graphql/get_resource_id_query.graphql");
+gql!(
+    GetResourceIdQuery,
+    "src/client/graphql/get_resource_id_query.graphql"
+);
 
 pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<String> {
     let data = get_resource_id_query(client, url).await?;

@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{get_all_items, get_viewer_info, project_items},
+    graphql::{get_viewer_info, paged_query::get_all_items, project_items},
     transport::GithubClient,
 };
 use std::env;

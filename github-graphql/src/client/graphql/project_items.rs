@@ -15,7 +15,7 @@ use project_items::{
     ProjectItemsOrganizationProjectV2ItemsNodesIteration,
 };
 
-use super::{get_all_items, PagedQuery, PagedQueryPageInfo, URI};
+use super::{paged_query::*, URI};
 
 type DateTime = String;
 
@@ -37,7 +37,7 @@ impl PagedQuery<ProjectItems> for ProjectItems {
 
     fn get_page_info(
         response: &<ProjectItems as GraphQLQuery>::ResponseData,
-    ) -> super::PagedQueryPageInfo {
+    ) -> PagedQueryPageInfo {
         if let Some(items) = &response
             .organization
             .as_ref()

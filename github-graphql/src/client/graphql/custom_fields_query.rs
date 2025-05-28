@@ -2,7 +2,10 @@ use crate::{Error, Result};
 use graphql_client::{GraphQLQuery, Response};
 use std::collections::HashMap;
 
-gql!(CustomFieldsQuery, "src/client/graphql/custom_fields_query.graphql");
+gql!(
+    CustomFieldsQuery,
+    "src/client/graphql/custom_fields_query.graphql"
+);
 pub use custom_fields_query::*;
 
 use crate::client::transport::Client;
