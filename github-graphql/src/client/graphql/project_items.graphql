@@ -44,11 +44,8 @@ query ProjectItems(
               id
               parent { id }
               resourcePath
-              repository {
-                owner {
-                  __typename
-                  login
-                }
+              repository {                
+                nameWithOwner
               }
               updatedAt
               title
@@ -72,10 +69,7 @@ query ProjectItems(
               id
               resourcePath
               repository {
-                owner {
-                  __typename
-                  login
-                }
+                nameWithOwner
               }
               title
               updatedAt

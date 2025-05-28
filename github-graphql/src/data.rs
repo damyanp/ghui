@@ -3,7 +3,7 @@ use crate::{
         graphql::{
             add_sub_issue, add_to_project, clear_project_field_value,
             custom_fields_query::{Field, Fields},
-            set_project_field_value,
+            get_issue_types, set_issue_type, set_project_field_value,
         },
         transport::Client,
     },
@@ -23,7 +23,7 @@ pub struct WorkItem {
     pub title: String,
     pub updated_at: Option<String>,
     pub resource_path: Option<String>,
-    pub repository: Option<String>,
+    pub repo_name_with_owner: Option<String>,
     pub data: WorkItemData,
     pub project_item: ProjectItem,
 }
@@ -57,6 +57,16 @@ impl WorkItem {
             Some(resource_path) => format!("https://github.com{}", resource_path),
             None => format!("[{}]", self.id.0),
         }
+    }
+
+    pub fn get_repository_info(&self) -> Option<(String, String)> {
+        if let Some(repo) = &self.repo_name_with_owner {
+            let mut parts = repo.splitn(2, '/');
+            if let (Some(owner), Some(name)) = (parts.next(), parts.next()) {
+                return Some((owner.to_string(), name.to_string()));
+            }
+        }
+        None
     }
 }
 
@@ -294,8 +304,7 @@ impl WorkItems {
             // Items that are Bugs shuold set their type to bug
             if let WorkItemData::Issue(issue) = &item.data {
                 if let Some(SingleSelectFieldValue { name, .. }) = &item.project_item.kind {
-                    if name == "Bug" && issue.issue_type.as_ref().map(|s| s.as_str()) != Some("Bug")
-                    {
+                    if name == "Bug" && issue.issue_type.as_deref() != Some("Bug") {
                         changes.add(Change {
                             work_item_id: item.id.clone(),
                             data: ChangeData::IssueType(Some("Bug".to_owned())),
@@ -540,9 +549,7 @@ impl Change {
         work_items: &WorkItems,
     ) -> Result<()> {
         match &self.data {
-            ChangeData::IssueType(_) => {
-                todo!();
-            }
+            ChangeData::IssueType(value) => self.set_issue_type(client, work_items, value).await,
             ChangeData::Status(value) => {
                 self.save_field(
                     client,
@@ -606,6 +613,33 @@ impl Change {
         }
         Ok(())
     }
+
+    async fn set_issue_type(
+        &self,
+        client: &impl Client,
+        work_items: &WorkItems,
+        value: &Option<String>,
+    ) -> Result<()> {
+        if let Some(work_item) = work_items.get(&self.work_item_id) {
+            if let Some((owner, name)) = work_item.get_repository_info() {
+                println!("TODO: cache issue types somehow, don't request for each change!");
+                let issue_types =
+                    get_issue_types::get_repo_issue_types(client, &owner, &name).await?;
+
+                let issue_type_id = value
+                    .as_ref()
+                    .and_then(|issue_type| issue_types.name_to_id.get(issue_type));
+
+                set_issue_type::set(
+                    client,
+                    &work_item.id.0,
+                    issue_type_id.map(|id| id.0.as_str()),
+                )
+                .await?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'a> IntoIterator for &'a Changes {
@@ -665,7 +699,7 @@ impl Change {
 
         let old_value = match self.data {
             ChangeData::IssueType(_) => match &work_item.data {
-                WorkItemData::Issue(issue) => issue.issue_type.as_ref().map(|v| v.as_str()),
+                WorkItemData::Issue(issue) => issue.issue_type.as_deref(),
                 _ => None,
             },
             ChangeData::Status(_) => work_item.project_item.status.field_value(),

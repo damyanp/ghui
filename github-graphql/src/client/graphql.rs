@@ -2,8 +2,10 @@ pub mod add_sub_issue;
 pub mod add_to_project;
 pub mod clear_project_field_value;
 pub mod custom_fields_query;
+pub mod get_issue_types;
 mod get_resource_id_query;
 pub mod project_items;
+pub mod set_issue_type;
 pub mod set_project_field_value;
 mod viewer_info;
 

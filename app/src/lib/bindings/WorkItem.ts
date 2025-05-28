@@ -8,7 +8,7 @@ export type WorkItem = {
   title: string;
   updatedAt: string | null;
   resourcePath: string | null;
-  repository: string | null;
+  repoNameWithOwner: string | null;
   data: WorkItemData;
   projectItem: ProjectItem;
 };

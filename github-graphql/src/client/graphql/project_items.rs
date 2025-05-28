@@ -165,7 +165,7 @@ fn build_work_item(
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: None,
-            repository: None,
+            repo_name_with_owner: None,
             data: WorkItemData::DraftIssue,
             project_item: ProjectItem::default(),
         },
@@ -174,7 +174,7 @@ fn build_work_item(
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
-            repository: Some(c.repository.owner.login),
+            repo_name_with_owner: Some(c.repository.name_with_owner),
             data: WorkItemData::Issue(Issue {
                 parent_id: c.parent.map(|p| WorkItemId(p.id)),
                 issue_type: c.issue_type.map(|it| it.name),
@@ -189,7 +189,7 @@ fn build_work_item(
             title: c.title,
             updated_at: Some(c.updated_at),
             resource_path: Some(c.resource_path),
-            repository: Some(c.repository.owner.login),
+            repo_name_with_owner: Some(c.repository.name_with_owner),
             data: WorkItemData::PullRequest(PullRequest {
                 state: c.pull_request_state.into(),
             }),
@@ -300,10 +300,7 @@ mod tests {
       "id": "I_kwDOBITxeM6tjuXs",
       "resourcePath": "/llvm/llvm-project/issues/130826",
       "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
+        "nameWithOwner": "llvm/llvm-project"
       },
       "updatedAt": "2025-03-27T21:01:40Z",
       "title": "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite",
@@ -332,10 +329,7 @@ mod tests {
       "id": "PR_kwDOMbLzis6KxhQb",
       "resourcePath": "/llvm/wg-hlsl/pull/171",
       "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
+        "nameWithOwner": "llvm/wg-hlsl"
       },
       "title": "Add a proposal for how to explicitly specify struct layouts",
       "updatedAt": "2025-02-24T19:33:41Z",
@@ -354,7 +348,7 @@ mod tests {
             title: "[HLSL] Disallow multiple inheritance".into(),
             updated_at: Some("2024-08-05T21:47:26Z".into()),
             resource_path: None,
-            repository: None,
+            repo_name_with_owner: None,
             data: WorkItemData::DraftIssue,
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
@@ -381,7 +375,7 @@ mod tests {
                 .into(),
             updated_at: Some("2025-03-27T21:01:40Z".into()),
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
-            repository: Some("llvm".into()),
+            repo_name_with_owner: Some("llvm/llvm-project".into()),
             data: WorkItemData::Issue(Issue {
                 parent_id: None,
                 issue_type: None,
@@ -411,7 +405,7 @@ mod tests {
             title: "Add a proposal for how to explicitly specify struct layouts".into(),
             updated_at: Some("2025-02-24T19:33:41Z".into()),
             resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
-            repository: Some("llvm".into()),
+            repo_name_with_owner: Some("llvm/wg-hlsl".into()),
             data: WorkItemData::PullRequest(PullRequest {
                 state: data::PullRequestState::OPEN,
             }),
@@ -441,12 +435,9 @@ mod tests {
     "content": {
       "__typename": "Issue",
       "id": "I_kwDOMbLzis6RouY5",
-      "resourcePath": "/llvm/wg-hlsl/issues/7",
+      "resourcePath": "/llvm/wg-hlsl/issues/7",      
       "repository": {
-        "owner": {
-          "login": "llvm",
-          "__typename": "Organization"
-        }
+        "nameWithOwner": "llvm/wg-hlsl"
       },
       "updatedAt": "2025-02-06T00:48:41Z",
       "title": "[milestone] Compile a runnable shader from clang",

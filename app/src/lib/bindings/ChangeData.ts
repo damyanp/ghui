@@ -2,6 +2,7 @@
 import type { WorkItemId } from "./WorkItemId";
 
 export type ChangeData =
+  | { "type": "issueType"; "value": string | null }
   | { "type": "status"; "value": string | null }
   | { "type": "blocked"; "value": string | null }
   | { "type": "epic"; "value": string | null }

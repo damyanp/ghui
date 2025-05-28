@@ -14,7 +14,7 @@ pub use custom_fields_query::*;
 
 use crate::client::transport::Client;
 
-pub async fn get_custom_fields<ClientType: crate::client::transport::Client>(
+pub async fn get_custom_fields<ClientType: Client>(
     client: &ClientType,
 ) -> Result<CustomFieldsQueryOrganizationProjectV2> {
     let request_body = CustomFieldsQuery::build_query(custom_fields_query::Variables {});
