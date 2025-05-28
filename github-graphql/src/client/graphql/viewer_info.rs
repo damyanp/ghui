@@ -4,13 +4,7 @@ use crate::{Error, Result};
 use graphql_client::{GraphQLQuery, Response};
 use serde::Serialize;
 
-#[derive(GraphQLQuery)]
-#[graphql(
-    schema_path = "src/schema.docs.graphql",
-    query_path = "src/client/graphql/viewer_info.graphql",
-    response_derives = "Debug, Serialize, Eq, PartialEq"
-)]
-struct ViewerInfoQuery;
+gql!(ViewerInfoQuery, "src/client/graphql/viewer_info.graphql");
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]

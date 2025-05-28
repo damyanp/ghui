@@ -5,14 +5,7 @@ use graphql_client::{GraphQLQuery, Response};
 
 use super::URI;
 
-#[derive(GraphQLQuery)]
-#[graphql(
-    schema_path = "src/schema.docs.graphql",
-    query_path = "src/client/graphql/get_resource_id_query.graphql",
-    response_derives = "Debug, Serialize, Eq, PartialEq",
-    variables_derives = "Debug"
-)]
-pub struct GetResourceIdQuery;
+gql!(GetResourceIdQuery, "src/client/graphql/get_resource_id_query.graphql");
 
 pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<String> {
     let data = get_resource_id_query(client, url).await?;

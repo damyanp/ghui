@@ -5,14 +5,7 @@ use graphql_client::{GraphQLQuery, Response};
 
 use crate::{client::transport::Client, Error, Result};
 
-#[derive(GraphQLQuery)]
-#[graphql(
-    schema_path = "src/schema.docs.graphql",
-    query_path = "src/client/graphql/get_issue_types.graphql",
-    response_derives = "Debug, Serialize, Eq, PartialEq",
-    variables_derives = "Debug"
-)]
-pub struct GetIssueTypes;
+gql!(GetIssueTypes, "src/client/graphql/get_issue_types.graphql");
 
 pub async fn get_repo_issue_types(
     client: &impl Client,

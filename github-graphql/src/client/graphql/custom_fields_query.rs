@@ -2,14 +2,7 @@ use crate::{Error, Result};
 use graphql_client::{GraphQLQuery, Response};
 use std::collections::HashMap;
 
-#[derive(GraphQLQuery)]
-#[graphql(
-    schema_path = "src/schema.docs.graphql",
-    query_path = "src/client/graphql/custom_fields_query.graphql",
-    response_derives = "Debug, Serialize, Eq, PartialEq",
-    variables_derives = "Debug"
-)]
-pub struct CustomFieldsQuery;
+gql!(CustomFieldsQuery, "src/client/graphql/custom_fields_query.graphql");
 pub use custom_fields_query::*;
 
 use crate::client::transport::Client;
