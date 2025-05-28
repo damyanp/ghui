@@ -1,14 +1,13 @@
-
 #[macro_export]
 macro_rules! gql {
     ($name:ident, $query_file:expr) => {
         #[derive(GraphQLQuery)]
         #[graphql(
-            schema_path = "src/schema.docs.graphql",
-            query_path = $query_file,
-            response_derives = "Debug, Serialize, Eq, PartialEq",
-            variables_derives = "Debug"
-        )]
+                    schema_path = "src/schema.docs.graphql",
+                    query_path = $query_file,
+                    response_derives = "Debug, Serialize, Eq, PartialEq",
+                    variables_derives = "Debug"
+                )]
         pub(crate) struct $name;
     };
 }

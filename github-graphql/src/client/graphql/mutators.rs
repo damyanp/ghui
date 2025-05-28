@@ -54,7 +54,10 @@ pub async fn add_to_project(
         ))
 }
 
-gql!(ClearProjectFieldValue, "src/client/graphql/clear_project_field_value.graphql");
+gql!(
+    ClearProjectFieldValue,
+    "src/client/graphql/clear_project_field_value.graphql"
+);
 
 pub async fn clear_project_field_value(
     client: &impl Client,
@@ -75,7 +78,10 @@ pub async fn clear_project_field_value(
     Ok(())
 }
 
-gql!(SetProjectFieldValue, "src/client/graphql/set_project_field_value.graphql");
+gql!(
+    SetProjectFieldValue,
+    "src/client/graphql/set_project_field_value.graphql"
+);
 
 pub async fn set_project_field_value(
     client: &impl Client,

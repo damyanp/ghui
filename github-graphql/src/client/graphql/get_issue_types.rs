@@ -14,8 +14,8 @@ use crate::{client::transport::Client, Error, Result};
 )]
 pub struct GetIssueTypes;
 
-pub async fn get_repo_issue_types<ClientType: Client>(
-    client: &ClientType,
+pub async fn get_repo_issue_types(
+    client: &impl Client,
     owner: &str,
     name: &str,
 ) -> Result<IssueTypes> {

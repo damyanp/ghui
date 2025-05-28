@@ -19,7 +19,7 @@ pub struct ViewerInfo {
     pub avatar_uri: String,
 }
 
-pub async fn get_viewer_info<ClientType: Client>(client: &ClientType) -> Result<ViewerInfo> {
+pub async fn get_viewer_info(client: &impl Client) -> Result<ViewerInfo> {
     let query = ViewerInfoQuery::build_query(viewer_info_query::Variables {});
     let response: Response<viewer_info_query::ResponseData> = client.request(&query).await?;
 

@@ -607,8 +607,7 @@ impl Change {
                 )
                 .await?;
             } else {
-                clear_project_field_value(client, project_id, project_item_id, &field.id)
-                    .await?;
+                clear_project_field_value(client, project_id, project_item_id, &field.id).await?;
             }
         }
         Ok(())
