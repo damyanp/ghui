@@ -270,6 +270,14 @@ pub struct WorkItems {
 }
 
 impl WorkItems {
+    pub fn from_iter(iter: impl IntoIterator<Item = WorkItem>) -> WorkItems {
+        let mut work_items = WorkItems::default();
+        for i in iter {
+            work_items.add(i);
+        }
+        work_items
+    }
+
     pub fn add(&mut self, item: WorkItem) {
         let issue_id = item.id.clone();
 

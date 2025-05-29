@@ -1,4 +1,4 @@
-use super::{paged_query::*, DateTime, URI};
+use super::{paged_query::*, project_hierarchy::get_project_hierarchy, DateTime, URI};
 use crate::{
     client::transport::Client,
     data::{
@@ -106,13 +106,17 @@ impl WorkItems {
         client: &impl Client,
         report_progress: &impl Fn(usize, usize),
     ) -> Result<WorkItems> {
-        let variables = project_items::Variables {
-            page_size: 100,
-            after: None,
-        };
-        let items = get_all_items::<ProjectItems>(client, variables, report_progress).await?;
 
-        WorkItems::from_graphql(items)
+        let items = get_project_hierarchy(client, report_progress).await?;
+        Ok(WorkItems::from_iter(items.into_iter()))
+
+        // let variables = project_items::Variables {
+        //     page_size: 100,
+        //     after: None,
+        // };
+        // let items = get_all_items::<ProjectItems>(client, variables, report_progress).await?;
+
+        // WorkItems::from_graphql(items)
     }
 
     pub fn from_graphql(
