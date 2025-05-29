@@ -500,8 +500,7 @@ mod nodebuilder_tests {
             .add();
 
         let work_items = data.work_items;
-        let mut filters = Filters::default();
-        filters.hide_closed = true;
+        let filters = Filters { hide_closed: true };
         let original_work_items = HashMap::new();
         let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
         let nodes = builder.build();

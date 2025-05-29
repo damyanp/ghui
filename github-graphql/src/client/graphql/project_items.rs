@@ -1,3 +1,4 @@
+use super::{paged_query::*, DateTime, URI};
 use crate::{
     client::transport::Client,
     data::{
@@ -14,10 +15,6 @@ use project_items::{
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
     ProjectItemsOrganizationProjectV2ItemsNodesIteration,
 };
-
-use super::{paged_query::*, URI};
-
-type DateTime = String;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -163,7 +160,7 @@ fn build_work_item(
         ProjectItemsOrganizationProjectV2ItemsNodesContent::DraftIssue(c) => WorkItem {
             id: WorkItemId(c.id),
             title: c.title,
-            updated_at: Some(c.updated_at),
+            updated_at: c.updated_at,
             resource_path: None,
             repo_name_with_owner: None,
             data: WorkItemData::DraftIssue,
@@ -172,7 +169,7 @@ fn build_work_item(
         ProjectItemsOrganizationProjectV2ItemsNodesContent::Issue(c) => WorkItem {
             id: WorkItemId(c.id),
             title: c.title,
-            updated_at: Some(c.updated_at),
+            updated_at: c.updated_at,
             resource_path: Some(c.resource_path),
             repo_name_with_owner: Some(c.repository.name_with_owner),
             data: WorkItemData::Issue(Issue {
@@ -187,7 +184,7 @@ fn build_work_item(
         ProjectItemsOrganizationProjectV2ItemsNodesContent::PullRequest(c) => WorkItem {
             id: WorkItemId(c.id),
             title: c.title,
-            updated_at: Some(c.updated_at),
+            updated_at: c.updated_at,
             resource_path: Some(c.resource_path),
             repo_name_with_owner: Some(c.repository.name_with_owner),
             data: WorkItemData::PullRequest(PullRequest {
@@ -346,7 +343,7 @@ mod tests {
         let expected_draft_issue = WorkItem {
             id: WorkItemId("DI_lADOAQWwKc4ABQXFzgHLyWE".into()),
             title: "[HLSL] Disallow multiple inheritance".into(),
-            updated_at: Some("2024-08-05T21:47:26Z".into()),
+            updated_at: "2024-08-05T21:47:26Z".into(),
             resource_path: None,
             repo_name_with_owner: None,
             data: WorkItemData::DraftIssue,
@@ -373,7 +370,7 @@ mod tests {
             id: WorkItemId("I_kwDOBITxeM6tjuXs".into()),
             title: "[HLSL] Add frontend test coverage of Root Signatures to Offload Test Suite"
                 .into(),
-            updated_at: Some("2025-03-27T21:01:40Z".into()),
+            updated_at: "2025-03-27T21:01:40Z".into(),
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
             repo_name_with_owner: Some("llvm/llvm-project".into()),
             data: WorkItemData::Issue(Issue {
@@ -403,7 +400,7 @@ mod tests {
         let expected_pull_request = WorkItem {
             id: WorkItemId("PR_kwDOMbLzis6KxhQb".into()),
             title: "Add a proposal for how to explicitly specify struct layouts".into(),
-            updated_at: Some("2025-02-24T19:33:41Z".into()),
+            updated_at: "2025-02-24T19:33:41Z".into(),
             resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
             repo_name_with_owner: Some("llvm/wg-hlsl".into()),
             data: WorkItemData::PullRequest(PullRequest {

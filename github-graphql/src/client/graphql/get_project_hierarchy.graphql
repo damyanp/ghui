@@ -1,0 +1,53 @@
+query ProjectHierarchy($after: String) {
+  organization(login: "llvm") {
+    projectV2(number: 4) {
+      items(first: 100, after: $after) {
+        totalCount
+        nodes {
+          __typename
+          id
+          updatedAt
+          content {
+            __typename
+            ... on DraftIssue {
+                id
+                title
+                updatedAt
+            }
+            ... on Issue {
+              id
+              title
+              updatedAt
+              resourcePath
+              repository {
+                nameWithOwner
+              }
+              parent {
+                id
+              }
+              subIssues(first: 100) {
+                totalCount
+                nodes {
+                  id
+                }
+              }
+            }
+            ... on PullRequest {
+              id
+              title
+              updatedAt
+              resourcePath
+              repository {
+                nameWithOwner
+              }
+            }
+          }
+        }
+        pageInfo {
+            endCursor
+            hasNextPage
+        }
+      }
+    }
+  }
+}

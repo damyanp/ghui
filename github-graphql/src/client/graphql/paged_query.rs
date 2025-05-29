@@ -2,6 +2,7 @@ use crate::client::transport::Client;
 use crate::Result;
 use graphql_client::{GraphQLQuery, Response};
 
+#[derive(Default)]
 pub struct PagedQueryPageInfo {
     pub total_items: usize,
     pub end_cursor: Option<String>,

@@ -6,7 +6,7 @@ import type { WorkItemId } from "./WorkItemId";
 export type WorkItem = {
   id: WorkItemId;
   title: string;
-  updatedAt: string | null;
+  updatedAt: string;
   resourcePath: string | null;
   repoNameWithOwner: string | null;
   data: WorkItemData;

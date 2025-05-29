@@ -21,7 +21,7 @@ use ts_rs::TS;
 pub struct WorkItem {
     pub id: WorkItemId,
     pub title: String,
-    pub updated_at: Option<String>,
+    pub updated_at: String,
     pub resource_path: Option<String>,
     pub repo_name_with_owner: Option<String>,
     pub data: WorkItemData,

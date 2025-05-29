@@ -1,5 +1,77 @@
 [
   {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb28",
+    "updatedAt": "2025-05-28T17:24:28Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqsyp",
+      "parent": {
+        "id": "I_kwDOBITxeM6zqsyN"
+      },
+      "resourcePath": "/llvm/llvm-project/issues/136893",
+      "repository": {
+        "nameWithOwner": "llvm/llvm-project"
+      },
+      "updatedAt": "2025-05-28T17:24:28Z",
+      "title": "[HLSL][SPIRV] Implement vk::location",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb3Q",
+    "updatedAt": "2025-05-28T17:25:07Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqs0w",
+      "parent": {
+        "id": "I_kwDOBITxeM6zqsyN"
+      },
+      "resourcePath": "/llvm/llvm-project/issues/136898",
+      "repository": {
+        "nameWithOwner": "llvm/llvm-project"
+      },
+      "updatedAt": "2025-05-28T17:25:05Z",
+      "title": "[HLSL][SPIRV] Implement vk::builtin",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
+    }
+  },
+  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgWvRgg",
     "updatedAt": "2025-05-02T15:48:52Z",
     "Status": {
@@ -464,6 +536,42 @@
       "issueType": {
         "name": "Task"
       }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb3I",
+    "updatedAt": "2025-05-28T17:25:10Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqs0V",
+      "parent": {
+        "id": "I_kwDOBITxeM6zqsyN"
+      },
+      "resourcePath": "/llvm/llvm-project/issues/136897",
+      "repository": {
+        "nameWithOwner": "llvm/llvm-project"
+      },
+      "updatedAt": "2025-05-28T17:25:09Z",
+      "title": "[HLSL][SPIRV] Implement vk::constant_id",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
     }
   },
   {
@@ -962,11 +1070,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ9Ssg",
-    "updatedAt": "2025-05-27T18:12:26Z",
+    "updatedAt": "2025-05-28T11:51:06Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": null,
     "Blocked": null,
@@ -988,9 +1096,9 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-02T13:29:19Z",
+      "updatedAt": "2025-05-28T11:51:05Z",
       "title": "[HLSL][SPIRV] Implement CBuffers in CommonSPIRTargetCodeGenInfo::getHLSLType",
-      "issueState": "OPEN",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -2598,7 +2706,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgOX1uM",
-    "updatedAt": "2025-05-27T03:24:40Z",
+    "updatedAt": "2025-05-28T23:48:25Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -2622,7 +2730,7 @@
       "repository": {
         "nameWithOwner": "llvm/wg-hlsl"
       },
-      "updatedAt": "2025-05-27T03:24:38Z",
+      "updatedAt": "2025-05-28T23:48:24Z",
       "title": "[milestone] Compile a broad selection of compute shaders",
       "issueState": "OPEN",
       "subIssues": {
@@ -14690,7 +14798,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgRi8dI",
-    "updatedAt": "2025-05-27T17:41:07Z",
+    "updatedAt": "2025-05-28T23:48:25Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -14714,7 +14822,7 @@
       "repository": {
         "nameWithOwner": "llvm/wg-hlsl"
       },
-      "updatedAt": "2025-05-27T17:41:06Z",
+      "updatedAt": "2025-05-28T23:48:23Z",
       "title": "[workstream] Resource Binding",
       "issueState": "OPEN",
       "subIssues": {
@@ -14759,7 +14867,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgRi87c",
-    "updatedAt": "2025-05-12T16:59:50Z",
+    "updatedAt": "2025-05-28T16:25:59Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -14783,7 +14891,7 @@
       "repository": {
         "nameWithOwner": "llvm/wg-hlsl"
       },
-      "updatedAt": "2025-05-12T16:59:49Z",
+      "updatedAt": "2025-05-28T16:25:53Z",
       "title": "[workstream] Root Signatures",
       "issueState": "OPEN",
       "subIssues": {
@@ -15954,11 +16062,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgSAqy0",
-    "updatedAt": "2025-05-27T22:20:57Z",
+    "updatedAt": "2025-05-28T23:47:39Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
+      "optionId": "47fc9ee4",
+      "name": "Active"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -16000,9 +16108,9 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-27T22:20:56Z",
+      "updatedAt": "2025-05-28T23:47:09Z",
       "title": "[DirectX] Capture the \"name of the resource variable\" in DXIL resource analysis",
-      "issueState": "CLOSED",
+      "issueState": "OPEN",
       "subIssues": {
         "nodes": []
       },
@@ -16880,7 +16988,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgTgJvA",
-    "updatedAt": "2025-05-22T02:13:56Z",
+    "updatedAt": "2025-05-28T23:48:32Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -16926,7 +17034,7 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-12T19:10:38Z",
+      "updatedAt": "2025-05-28T23:48:22Z",
       "title": "[HLSL] Diagnose overlapping resource bindings",
       "issueState": "OPEN",
       "subIssues": {
@@ -20041,12 +20149,8 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgVcHTc",
-    "updatedAt": "2025-04-22T01:41:13Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
+    "updatedAt": "2025-05-28T16:26:00Z",
+    "Status": null,
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
       "title": "Y25-S03",
@@ -20075,9 +20179,9 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-02-11T01:16:14Z",
+      "updatedAt": "2025-05-28T16:25:57Z",
       "title": "[HLSL] Add Root Signatures into DX Container",
-      "issueState": "CLOSED",
+      "issueState": "OPEN",
       "subIssues": {
         "nodes": [
           {
@@ -20795,32 +20899,6 @@
       "title": "[HLSL] Add SPIR-V version of getPointer.",
       "updatedAt": "2025-04-03T19:07:09Z",
       "pullRequestState": "MERGED"
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgWJ4Zw",
-    "updatedAt": "2025-02-26T22:47:17Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "PullRequest",
-      "id": "PR_kwDOBITxeM6HBcz0",
-      "resourcePath": "/llvm/llvm-project/pull/122052",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "title": "[DirectX] FIX 'tools/dxil-dis/debug-info.ll' test ",
-      "updatedAt": "2025-02-26T22:47:17Z",
-      "pullRequestState": "CLOSED"
     }
   },
   {
@@ -23183,52 +23261,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgVmuhk",
-    "updatedAt": "2025-02-26T00:25:02Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": {
-      "__typename": "ProjectV2ItemFieldIterationValue",
-      "title": "Y25-S04",
-      "iterationId": "f798209b"
-    },
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "b7887447",
-      "name": "Resources"
-    },
-    "ProjectMilestone": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "9586c976",
-      "name": "(old)4: Compute Shaders (2)"
-    },
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6i-0O1",
-      "parent": null,
-      "resourcePath": "/llvm/llvm-project/issues/119641",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-02-26T00:25:01Z",
-      "title": "[HLSL] `packoffset` validation does not handle 16-bit or 64-bit types well",
-      "issueState": "CLOSED",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgW5Z0Q",
     "updatedAt": "2025-05-14T17:45:53Z",
     "Status": {
@@ -23548,32 +23580,6 @@
       "title": "[clang] Improve diagnostics for vector builtins",
       "updatedAt": "2025-03-18T18:11:53Z",
       "pullRequestState": "MERGED"
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgXAMCs",
-    "updatedAt": "2025-02-26T19:18:05Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "PullRequest",
-      "id": "PR_kwDOBITxeM6KBs5V",
-      "resourcePath": "/llvm/llvm-project/pull/125718",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "title": "[HLSL] Fix resource wrapper declaration",
-      "updatedAt": "2025-02-26T19:18:03Z",
-      "pullRequestState": "CLOSED"
     }
   },
   {
@@ -30640,48 +30646,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgXmCsw",
-    "updatedAt": "2025-02-26T15:05:15Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "27a8d04a",
-      "name": "Language"
-    },
-    "ProjectMilestone": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "2184bc0a",
-      "name": "(old)3: Compute Shaders (1)"
-    },
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6rEjOW",
-      "parent": null,
-      "resourcePath": "/llvm/llvm-project/issues/128238",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-02-26T15:05:13Z",
-      "title": "[HLSL] Allow `EmptyDecl` in cbuffer",
-      "issueState": "CLOSED",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgXmHH8",
     "updatedAt": "2025-04-25T02:32:28Z",
     "Status": {
@@ -30731,40 +30695,6 @@
       "title": "[DirectX][OpLowering] Simplify named struct handling",
       "updatedAt": "2025-02-22T20:33:10Z",
       "pullRequestState": "MERGED"
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgXmI_g",
-    "updatedAt": "2025-02-26T15:04:22Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "6a15bfd1",
-      "name": "Closed"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": null,
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6rFDOk",
-      "parent": null,
-      "resourcePath": "/llvm/llvm-project/issues/128249",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-02-26T15:04:20Z",
-      "title": "[HLSL] `abs` missing unsigned integer overloads",
-      "issueState": "CLOSED",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
     }
   },
   {
@@ -38352,7 +38282,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgY8iDI",
-    "updatedAt": "2025-05-27T17:13:52Z",
+    "updatedAt": "2025-05-28T18:13:39Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -38372,7 +38302,7 @@
         "nameWithOwner": "llvm/llvm-project"
       },
       "title": "[HLSL] Implement `SpirvType` and `SpirvOpaqueType`",
-      "updatedAt": "2025-05-27T17:13:51Z",
+      "updatedAt": "2025-05-28T18:13:38Z",
       "pullRequestState": "MERGED"
     }
   },
@@ -40468,7 +40398,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZRGMo",
-    "updatedAt": "2025-05-16T02:15:00Z",
+    "updatedAt": "2025-05-28T16:22:54Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -40496,7 +40426,7 @@
       "repository": {
         "nameWithOwner": "llvm/wg-hlsl"
       },
-      "updatedAt": "2025-05-16T02:14:59Z",
+      "updatedAt": "2025-05-28T16:22:53Z",
       "title": "[Scenario] Intrinsics Functional Tests",
       "issueState": "OPEN",
       "subIssues": {
@@ -41341,7 +41271,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZXm_I",
-    "updatedAt": "2025-05-16T23:05:39Z",
+    "updatedAt": "2025-05-28T18:55:48Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -41363,7 +41293,7 @@
       "repository": {
         "nameWithOwner": "llvm/wg-hlsl"
       },
-      "updatedAt": "2025-05-16T01:41:39Z",
+      "updatedAt": "2025-05-28T18:55:46Z",
       "title": "[Deliverable] Implement Intrinsic tests in offload test suite",
       "issueState": "OPEN",
       "subIssues": {
@@ -42421,7 +42351,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZbpoI",
-    "updatedAt": "2025-05-27T17:08:52Z",
+    "updatedAt": "2025-05-28T23:44:15Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -42432,7 +42362,11 @@
       "title": "Y25-S10",
       "iterationId": "1ecc24c4"
     },
-    "Blocked": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
     "Kind": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "a2a60b34",
@@ -43075,7 +43009,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZiAt8",
-    "updatedAt": "2025-04-30T13:48:01Z",
+    "updatedAt": "2025-05-28T02:49:11Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -43099,7 +43033,7 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-04-30T13:47:59Z",
+      "updatedAt": "2025-05-28T02:49:09Z",
       "title": "[HLSL] Fix failing SPIR-V backend tests that specify --target-env vulkan1.3",
       "issueState": "CLOSED",
       "subIssues": {
@@ -43108,7 +43042,9 @@
       "trackedIssues": {
         "nodes": []
       },
-      "issueType": null
+      "issueType": {
+        "name": "Bug"
+      }
     }
   },
   {
@@ -44840,42 +44776,6 @@
     }
   },
   {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb28",
-    "updatedAt": "2025-05-02T18:13:24Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "a2a60b34",
-      "name": "Task"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqsyp",
-      "parent": {
-        "id": "I_kwDOBITxeM6zqsyN"
-      },
-      "resourcePath": "/llvm/llvm-project/issues/136893",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-05-02T18:12:56Z",
-      "title": "[HLSL][SPIRV] Implement vk::location",
-      "issueState": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
-    }
-  },
-  {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZqb3A",
     "updatedAt": "2025-04-23T15:39:59Z",
     "Status": null,
@@ -44937,78 +44837,6 @@
       },
       "updatedAt": "2025-04-23T14:54:54Z",
       "title": "[HLSL][SPIRV] Implement vk::counter_binding",
-      "issueState": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb3I",
-    "updatedAt": "2025-05-02T18:13:14Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "a2a60b34",
-      "name": "Task"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqs0V",
-      "parent": {
-        "id": "I_kwDOBITxeM6zqsyN"
-      },
-      "resourcePath": "/llvm/llvm-project/issues/136897",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-05-02T18:12:23Z",
-      "title": "[HLSL][SPIRV] Implement vk::constant_id",
-      "issueState": "OPEN",
-      "subIssues": {
-        "nodes": []
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqb3Q",
-    "updatedAt": "2025-05-02T18:11:55Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "a2a60b34",
-      "name": "Task"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqs0w",
-      "parent": {
-        "id": "I_kwDOBITxeM6zqsyN"
-      },
-      "resourcePath": "/llvm/llvm-project/issues/136898",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-05-02T18:11:54Z",
-      "title": "[HLSL][SPIRV] Decprecate vk::builtin",
       "issueState": "OPEN",
       "subIssues": {
         "nodes": []
@@ -45835,6 +45663,46 @@
       },
       "updatedAt": "2025-04-29T13:57:22Z",
       "title": "[HLSL][SPIRV] Implement vk::ext_builtin_input",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzgZqcE0",
+    "updatedAt": "2025-05-28T14:35:40Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "47fc9ee4",
+      "name": "Active"
+    },
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "a2a60b34",
+      "name": "Task"
+    },
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM6zqtcf",
+      "parent": {
+        "id": "I_kwDOBITxeM6zqtcJ"
+      },
+      "resourcePath": "/llvm/llvm-project/issues/136969",
+      "repository": {
+        "nameWithOwner": "llvm/llvm-project"
+      },
+      "updatedAt": "2025-04-28T20:10:17Z",
+      "title": "[HLSL][SPIRV] Implement system value semantic SV_POSITION",
       "issueState": "OPEN",
       "subIssues": {
         "nodes": []
@@ -47653,46 +47521,6 @@
             "id": "I_kwDOBITxeM6zshCE"
           }
         ]
-      },
-      "trackedIssues": {
-        "nodes": []
-      },
-      "issueType": null
-    }
-  },
-  {
-    "id": "PVTI_lADOAQWwKc4ABQXFzgZqcE0",
-    "updatedAt": "2025-04-28T20:10:22Z",
-    "Status": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
-    },
-    "Iteration": null,
-    "Blocked": null,
-    "Kind": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "a2a60b34",
-      "name": "Task"
-    },
-    "Epic": null,
-    "Workstream": null,
-    "ProjectMilestone": null,
-    "content": {
-      "__typename": "Issue",
-      "id": "I_kwDOBITxeM6zqtcf",
-      "parent": {
-        "id": "I_kwDOBITxeM6zqtcJ"
-      },
-      "resourcePath": "/llvm/llvm-project/issues/136969",
-      "repository": {
-        "nameWithOwner": "llvm/llvm-project"
-      },
-      "updatedAt": "2025-04-28T20:10:17Z",
-      "title": "[HLSL][SPIRV] Implement system value semantic SV_POSITION",
-      "issueState": "OPEN",
-      "subIssues": {
-        "nodes": []
       },
       "trackedIssues": {
         "nodes": []
@@ -50428,7 +50256,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZwBbc",
-    "updatedAt": "2025-05-27T18:31:26Z",
+    "updatedAt": "2025-05-28T17:56:33Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "47fc9ee4",
@@ -50464,7 +50292,7 @@
       "repository": {
         "nameWithOwner": "microsoft/DirectXShaderCompiler"
       },
-      "updatedAt": "2025-05-27T18:31:24Z",
+      "updatedAt": "2025-05-28T17:56:31Z",
       "title": "Release 1.8.2505 SM 6.9 Preview Release",
       "issueState": "OPEN",
       "subIssues": {
@@ -52470,7 +52298,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ7yHs",
-    "updatedAt": "2025-05-02T05:07:10Z",
+    "updatedAt": "2025-05-28T02:49:12Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -52502,7 +52330,7 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-02T05:07:09Z",
+      "updatedAt": "2025-05-28T02:49:10Z",
       "title": "[DirectX] Running DXILFinalizeLinkage late causes DXILForwardHandleAccesses to fall over in dead code",
       "issueState": "CLOSED",
       "subIssues": {
@@ -52511,7 +52339,9 @@
       "trackedIssues": {
         "nodes": []
       },
-      "issueType": null
+      "issueType": {
+        "name": "Bug"
+      }
     }
   },
   {
@@ -52976,8 +52806,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8azw",
-    "updatedAt": "2025-05-02T05:08:26Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:22:28Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -52998,7 +52832,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:07Z",
+      "updatedAt": "2025-05-28T15:44:04Z",
       "title": "Add test for AddUint64",
       "issueState": "OPEN",
       "subIssues": {
@@ -53048,8 +52882,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8az8",
-    "updatedAt": "2025-05-02T05:08:28Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:22:56Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -53070,7 +52908,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:07Z",
+      "updatedAt": "2025-05-28T15:34:35Z",
       "title": "Add test for all",
       "issueState": "OPEN",
       "subIssues": {
@@ -53160,8 +52998,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a0U",
-    "updatedAt": "2025-05-02T05:08:32Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:23:27Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -53182,7 +53024,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:09Z",
+      "updatedAt": "2025-05-28T16:21:02Z",
       "title": "Add test for cos",
       "issueState": "OPEN",
       "subIssues": {
@@ -53236,11 +53078,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a0o",
-    "updatedAt": "2025-05-27T17:19:04Z",
+    "updatedAt": "2025-05-28T18:55:47Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -53270,9 +53112,9 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-19T01:39:09Z",
+      "updatedAt": "2025-05-28T18:55:45Z",
       "title": "Add test for and",
-      "issueState": "OPEN",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -53392,7 +53234,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a1E",
-    "updatedAt": "2025-05-02T05:08:38Z",
+    "updatedAt": "2025-05-28T16:14:51Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
@@ -53414,7 +53256,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:12Z",
+      "updatedAt": "2025-05-28T16:14:49Z",
       "title": "Add test for ceil",
       "issueState": "OPEN",
       "subIssues": {
@@ -53684,11 +53526,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a2Q",
-    "updatedAt": "2025-05-22T17:30:09Z",
+    "updatedAt": "2025-05-28T18:41:57Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -53718,9 +53560,9 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-19T01:38:18Z",
+      "updatedAt": "2025-05-28T18:41:55Z",
       "title": "Add test for or",
-      "issueState": "OPEN",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -53804,8 +53646,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a2s",
-    "updatedAt": "2025-05-02T05:08:51Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:36Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -53826,7 +53672,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:17Z",
+      "updatedAt": "2025-05-28T15:34:54Z",
       "title": "Add test for any",
       "issueState": "OPEN",
       "subIssues": {
@@ -53840,8 +53686,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a24",
-    "updatedAt": "2025-05-02T05:08:52Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:27:32Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -53862,7 +53712,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:18Z",
+      "updatedAt": "2025-05-28T17:28:00Z",
       "title": "Add test for select",
       "issueState": "OPEN",
       "subIssues": {
@@ -54616,8 +54466,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a6Q",
-    "updatedAt": "2025-05-02T05:09:13Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:37Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -54638,7 +54492,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:28Z",
+      "updatedAt": "2025-05-28T16:11:11Z",
       "title": "Add test for atan",
       "issueState": "OPEN",
       "subIssues": {
@@ -54760,8 +54614,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a60",
-    "updatedAt": "2025-05-02T05:09:17Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:39Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -54782,7 +54640,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:29Z",
+      "updatedAt": "2025-05-28T15:53:30Z",
       "title": "Add test for abs",
       "issueState": "OPEN",
       "subIssues": {
@@ -54868,8 +54726,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a7M",
-    "updatedAt": "2025-05-02T05:09:21Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:43Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -54890,7 +54752,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:31Z",
+      "updatedAt": "2025-05-28T16:02:05Z",
       "title": "Add test for acos",
       "issueState": "OPEN",
       "subIssues": {
@@ -55132,8 +54994,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a8Q",
-    "updatedAt": "2025-05-02T05:09:28Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:45Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -55154,7 +55020,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:34Z",
+      "updatedAt": "2025-05-28T16:13:01Z",
       "title": "Add test for atan2",
       "issueState": "OPEN",
       "subIssues": {
@@ -55168,8 +55034,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a8Y",
-    "updatedAt": "2025-05-02T05:09:28Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:46Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -55190,7 +55060,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:35Z",
+      "updatedAt": "2025-05-28T16:08:11Z",
       "title": "Add test for asin",
       "issueState": "OPEN",
       "subIssues": {
@@ -55204,8 +55074,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a8g",
-    "updatedAt": "2025-05-02T05:09:30Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:48Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -55226,7 +55100,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:35Z",
+      "updatedAt": "2025-05-28T15:57:11Z",
       "title": "Add test for asint",
       "issueState": "OPEN",
       "subIssues": {
@@ -55348,8 +55222,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a80",
-    "updatedAt": "2025-05-02T05:09:34Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:49Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -55370,7 +55248,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:37Z",
+      "updatedAt": "2025-05-28T15:12:25Z",
       "title": "Add test for asint16",
       "issueState": "OPEN",
       "subIssues": {
@@ -55384,8 +55262,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a9A",
-    "updatedAt": "2025-05-02T05:09:35Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:30:51Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -55406,7 +55288,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:37Z",
+      "updatedAt": "2025-05-28T15:46:02Z",
       "title": "Add test for asuint",
       "issueState": "OPEN",
       "subIssues": {
@@ -55536,8 +55418,12 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a9s",
-    "updatedAt": "2025-05-02T05:09:39Z",
-    "Status": null,
+    "updatedAt": "2025-05-28T17:31:00Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "c35a9b00",
+      "name": "Ready"
+    },
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
@@ -55558,7 +55444,7 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-01T23:00:39Z",
+      "updatedAt": "2025-05-28T15:50:03Z",
       "title": "Add test for D3DCOLORtoUBYTE4",
       "issueState": "OPEN",
       "subIssues": {
@@ -56223,11 +56109,11 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgaHBoM",
-    "updatedAt": "2025-05-22T15:46:46Z",
+    "updatedAt": "2025-05-28T21:12:09Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "47fc9ee4",
-      "name": "Active"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": {
       "__typename": "ProjectV2ItemFieldIterationValue",
@@ -56257,9 +56143,9 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-13T22:45:36Z",
+      "updatedAt": "2025-05-28T21:12:08Z",
       "title": "[HLSL] Buffer SRV type",
-      "issueState": "OPEN",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -56509,7 +56395,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgaH1Y4",
-    "updatedAt": "2025-05-13T17:26:01Z",
+    "updatedAt": "2025-05-28T02:49:10Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "c35a9b00",
@@ -56537,7 +56423,7 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-07T23:59:34Z",
+      "updatedAt": "2025-05-28T02:49:08Z",
       "title": "[DirectX] DXILCBufferAccess gets tripped up by arrays that are exactly 64 bits long",
       "issueState": "OPEN",
       "subIssues": {
@@ -56546,7 +56432,9 @@
       "trackedIssues": {
         "nodes": []
       },
-      "issueType": null
+      "issueType": {
+        "name": "Bug"
+      }
     }
   },
   {
@@ -57664,7 +57552,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgaZii8",
-    "updatedAt": "2025-05-15T20:43:33Z",
+    "updatedAt": "2025-05-28T02:49:14Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -57708,7 +57596,7 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-15T20:43:31Z",
+      "updatedAt": "2025-05-28T02:49:13Z",
       "title": "[DirectX] StructuredBuffers with 16 bit types are failing validation",
       "issueState": "CLOSED",
       "subIssues": {
@@ -57717,7 +57605,9 @@
       "trackedIssues": {
         "nodes": []
       },
-      "issueType": null
+      "issueType": {
+        "name": "Bug"
+      }
     }
   },
   {
@@ -57868,7 +57758,7 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgacnHs",
-    "updatedAt": "2025-05-27T18:23:33Z",
+    "updatedAt": "2025-05-28T02:49:13Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "6a15bfd1",
@@ -57910,7 +57800,7 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-27T18:23:31Z",
+      "updatedAt": "2025-05-28T02:49:12Z",
       "title": "[DirectX] Arrays of vectors remain in alloca and global variables after scalarization",
       "issueState": "CLOSED",
       "subIssues": {
@@ -57919,7 +57809,9 @@
       "trackedIssues": {
         "nodes": []
       },
-      "issueType": null
+      "issueType": {
+        "name": "Bug"
+      }
     }
   },
   {
@@ -59253,10 +59145,22 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzgavp2s",
-    "updatedAt": "2025-05-27T17:55:42Z",
-    "Status": null,
-    "Iteration": null,
-    "Blocked": null,
+    "updatedAt": "2025-05-28T16:34:01Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "6a15bfd1",
+      "name": "Closed"
+    },
+    "Iteration": {
+      "__typename": "ProjectV2ItemFieldIterationValue",
+      "title": "Y25-S10",
+      "iterationId": "1ecc24c4"
+    },
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "80f1a2b1",
+      "name": "PR"
+    },
     "Kind": null,
     "Epic": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
@@ -59275,9 +59179,9 @@
       "repository": {
         "nameWithOwner": "llvm/offload-test-suite"
       },
-      "updatedAt": "2025-05-27T17:55:40Z",
+      "updatedAt": "2025-05-28T16:33:59Z",
       "title": "Update `compareFloat16ULP` to align with DXC's implementation",
-      "issueState": "OPEN",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -59721,12 +59625,16 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzga2BcQ",
-    "updatedAt": "2025-05-27T17:15:17Z",
+    "updatedAt": "2025-05-28T02:49:08Z",
     "Status": null,
     "Iteration": null,
     "Blocked": null,
     "Kind": null,
-    "Epic": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "7b7e149f",
+      "name": "DXC 2025 Q4"
+    },
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "ae45a9eb",
@@ -59759,18 +59667,14 @@
   },
   {
     "id": "PVTI_lADOAQWwKc4ABQXFzga2mSc",
-    "updatedAt": "2025-05-28T00:06:35Z",
+    "updatedAt": "2025-05-28T21:12:24Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "d56a747d",
-      "name": "Planning"
+      "optionId": "6a15bfd1",
+      "name": "Closed"
     },
     "Iteration": null,
-    "Blocked": {
-      "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "optionId": "00f5b073",
-      "name": "Refinement"
-    },
+    "Blocked": null,
     "Kind": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
       "optionId": "71900652",
@@ -59799,9 +59703,9 @@
       "repository": {
         "nameWithOwner": "llvm/llvm-project"
       },
-      "updatedAt": "2025-05-28T00:06:34Z",
+      "updatedAt": "2025-05-28T21:12:23Z",
       "title": "[DirectX] Legalization of memcpy is triggering a src/dst array mismatch assert",
-      "issueState": "OPEN",
+      "issueState": "CLOSED",
       "subIssues": {
         "nodes": []
       },
@@ -59811,6 +59715,170 @@
       "issueType": {
         "name": "Bug"
       }
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzga5NTw",
+    "updatedAt": "2025-05-28T18:46:32Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": null,
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOMbLzis64q5zu",
+      "parent": null,
+      "resourcePath": "/llvm/wg-hlsl/issues/281",
+      "repository": {
+        "nameWithOwner": "llvm/wg-hlsl"
+      },
+      "updatedAt": "2025-05-28T18:46:22Z",
+      "title": "Proposal for tracking unexpected vs unimplemented features in the offload test suite",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzga5WrA",
+    "updatedAt": "2025-05-28T21:12:18Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": null,
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "17f59798",
+      "name": "5: ML preview implementation"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM64rfNH",
+      "parent": null,
+      "resourcePath": "/llvm/llvm-project/issues/141840",
+      "repository": {
+        "nameWithOwner": "llvm/llvm-project"
+      },
+      "updatedAt": "2025-05-28T21:12:17Z",
+      "title": "[DirectX] DXILCBufferAccess pass is removing globals without replacing all uses",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzga5WzU",
+    "updatedAt": "2025-05-28T20:18:57Z",
+    "Status": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "d56a747d",
+      "name": "Planning"
+    },
+    "Iteration": null,
+    "Blocked": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "00f5b073",
+      "name": "Refinement"
+    },
+    "Kind": null,
+    "Epic": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "ad1defbf",
+      "name": "DML Demo"
+    },
+    "Workstream": null,
+    "ProjectMilestone": null,
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBITxeM64rhst",
+      "parent": null,
+      "resourcePath": "/llvm/llvm-project/issues/141842",
+      "repository": {
+        "nameWithOwner": "llvm/llvm-project"
+      },
+      "updatedAt": "2025-05-28T19:58:02Z",
+      "title": "[HLSL] Read Only Resources incorrectly allow writing",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
+    }
+  },
+  {
+    "id": "PVTI_lADOAQWwKc4ABQXFzga5xzY",
+    "updatedAt": "2025-05-29T00:36:56Z",
+    "Status": null,
+    "Iteration": null,
+    "Blocked": null,
+    "Kind": null,
+    "Epic": null,
+    "Workstream": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "4293ea77",
+      "name": "SER"
+    },
+    "ProjectMilestone": {
+      "__typename": "ProjectV2ItemFieldSingleSelectValue",
+      "optionId": "0ca3ac07",
+      "name": "DXC: SM 6.9 Release"
+    },
+    "content": {
+      "__typename": "Issue",
+      "id": "I_kwDOBIRuvs64tEPQ",
+      "parent": null,
+      "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7495",
+      "repository": {
+        "nameWithOwner": "microsoft/DirectXShaderCompiler"
+      },
+      "updatedAt": "2025-05-29T00:36:37Z",
+      "title": "[Shader Execution Reordering] using namespace dx; not working for MaybeReorderThread",
+      "issueState": "OPEN",
+      "subIssues": {
+        "nodes": []
+      },
+      "trackedIssues": {
+        "nodes": []
+      },
+      "issueType": null
     }
   }
 ]
