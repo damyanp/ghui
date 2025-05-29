@@ -7,12 +7,15 @@ query ProjectHierarchy($after: String) {
           __typename
           id
           updatedAt
+          epic: fieldValueByName(name: "Epic") {
+            ...CustomField
+          }
           content {
             __typename
             ... on DraftIssue {
-                id
-                title
-                updatedAt
+              id
+              title
+              updatedAt
             }
             ... on Issue {
               id
@@ -44,10 +47,20 @@ query ProjectHierarchy($after: String) {
           }
         }
         pageInfo {
-            endCursor
-            hasNextPage
+          endCursor
+          hasNextPage
         }
       }
     }
+  }
+}
+
+fragment CustomField on ProjectV2ItemFieldValue {
+  __typename
+  ... on ProjectV2ItemFieldSingleSelectValue {
+    optionId
+  }
+  ... on ProjectV2ItemFieldIterationValue {
+    iterationId
   }
 }

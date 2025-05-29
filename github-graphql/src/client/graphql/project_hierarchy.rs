@@ -4,7 +4,10 @@ use super::{
 };
 use crate::{
     client::transport::Client,
-    data::{Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem, WorkItemData, WorkItemId},
+    data::{
+        DelayLoad, Issue, ProjectItem, ProjectItemId, PullRequest, SingleSelectFieldValue,
+        WorkItem, WorkItemData, WorkItemId,
+    },
     Result,
 };
 use graphql_client::GraphQLQuery;
@@ -126,9 +129,26 @@ impl From<&short::Node> for ProjectItem {
         ProjectItem {
             id: ProjectItemId(node.id.clone()),
             updated_at: node.updated_at.clone(),
+            epic: get_loaded_single_select_custom_field(node.epic.as_ref()),
             ..Default::default()
         }
     }
+}
+
+fn get_loaded_single_select_custom_field(
+    value: Option<&CustomField>,
+) -> DelayLoad<Option<SingleSelectFieldValue>> {
+    value
+        .and_then(|value| match value {
+            CustomField::ProjectV2ItemFieldSingleSelectValue(v) => {
+                v.option_id.as_ref().map(|id| SingleSelectFieldValue {
+                    option_id: id.clone(),
+                    name: format!("lookup({})", id),
+                })
+            }
+            _ => None,
+        })
+        .into()
 }
 
 impl From<&short::Issue> for Issue {
