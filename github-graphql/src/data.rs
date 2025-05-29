@@ -269,15 +269,17 @@ pub struct WorkItems {
     pub work_items: HashMap<WorkItemId, WorkItem>,
 }
 
-impl WorkItems {
-    pub fn from_iter(iter: impl IntoIterator<Item = WorkItem>) -> WorkItems {
+impl FromIterator<WorkItem> for WorkItems {
+    fn from_iter<T: IntoIterator<Item = WorkItem>>(iter: T) -> Self {
         let mut work_items = WorkItems::default();
         for i in iter {
             work_items.add(i);
         }
         work_items
     }
+}
 
+impl WorkItems {
     pub fn add(&mut self, item: WorkItem) {
         let issue_id = item.id.clone();
 

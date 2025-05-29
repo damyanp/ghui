@@ -26,7 +26,7 @@ pub async fn get_minimal_project_items(
         get_all_items::<MinimalProjectItems>(client, Variables { after: None }, report_progress)
             .await?;
 
-    let items = r.into_iter().map(|v| Option::<WorkItem>::from(v));
+    let items = r.into_iter().map(Option::<WorkItem>::from);
     Ok(items.flatten().collect())
 }
 
