@@ -383,7 +383,7 @@ mod tests {
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
             repo_name_with_owner: Some("llvm/llvm-project".into()),
             data: WorkItemData::Issue(Issue {
-                parent_id: None.into(),
+                parent_id: None,
                 issue_type: None.into(),
                 state: data::IssueState::CLOSED.into(),
                 sub_issues: vec![],
