@@ -1,4 +1,4 @@
-query ProjectHierarchy($after: String) {
+query MinimalProjectItems($after: String) {
   organization(login: "llvm") {
     projectV2(number: 4) {
       items(first: 100, after: $after) {

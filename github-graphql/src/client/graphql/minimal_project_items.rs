@@ -13,36 +13,35 @@ use crate::{
 use graphql_client::GraphQLQuery;
 
 gql!(
-    ProjectHierarchy,
-    "src/client/graphql/get_project_hierarchy.graphql"
+    MinimalProjectItems,
+    "src/client/graphql/get_minimal_project_items.graphql"
 );
-use project_hierarchy::*;
+use minimal_project_items::*;
 
-pub async fn get_project_hierarchy(
+pub async fn get_minimal_project_items(
     client: &impl Client,
     report_progress: &impl Fn(usize, usize),
 ) -> Result<Vec<WorkItem>> {
-    let r = get_all_items::<ProjectHierarchy>(client, Variables { after: None }, report_progress)
-        .await?;
+    let r =
+        get_all_items::<MinimalProjectItems>(client, Variables { after: None }, report_progress)
+            .await?;
 
-    let items = r
-        .into_iter()
-        .map(|v: ProjectHierarchyOrganizationProjectV2ItemsNodes| Option::<WorkItem>::from(v));
+    let items = r.into_iter().map(|v| Option::<WorkItem>::from(v));
     Ok(items.flatten().collect())
 }
 
-impl PagedQuery<ProjectHierarchy> for ProjectHierarchy {
-    type ItemType = ProjectHierarchyOrganizationProjectV2ItemsNodes;
+impl PagedQuery<MinimalProjectItems> for MinimalProjectItems {
+    type ItemType = MinimalProjectItemsOrganizationProjectV2ItemsNodes;
 
     fn set_after(
-        variables: &mut <ProjectHierarchy as GraphQLQuery>::Variables,
+        variables: &mut <MinimalProjectItems as GraphQLQuery>::Variables,
         after: Option<String>,
     ) {
         variables.after = after;
     }
 
     fn get_page_info(
-        response: &<ProjectHierarchy as GraphQLQuery>::ResponseData,
+        response: &<MinimalProjectItems as GraphQLQuery>::ResponseData,
     ) -> super::paged_query::PagedQueryPageInfo {
         let organization = response.organization.as_ref();
         let project_v2 = organization.and_then(|v| v.project_v2.as_ref());
@@ -58,7 +57,7 @@ impl PagedQuery<ProjectHierarchy> for ProjectHierarchy {
     }
 
     fn get_items(
-        response: <ProjectHierarchy as GraphQLQuery>::ResponseData,
+        response: <MinimalProjectItems as GraphQLQuery>::ResponseData,
     ) -> Option<Vec<Self::ItemType>> {
         let organization = response.organization;
         let project_v2 = organization.and_then(|v| v.project_v2);
@@ -69,13 +68,13 @@ impl PagedQuery<ProjectHierarchy> for ProjectHierarchy {
 }
 
 mod short {
-    use super::project_hierarchy::*;
+    use super::minimal_project_items::*;
 
-    pub type Content = ProjectHierarchyOrganizationProjectV2ItemsNodesContent;
-    pub type Node = ProjectHierarchyOrganizationProjectV2ItemsNodes;
-    pub type DraftIssue = ProjectHierarchyOrganizationProjectV2ItemsNodesContentOnDraftIssue;
-    pub type Issue = ProjectHierarchyOrganizationProjectV2ItemsNodesContentOnIssue;
-    pub type PullRequest = ProjectHierarchyOrganizationProjectV2ItemsNodesContentOnPullRequest;
+    pub type Content = MinimalProjectItemsOrganizationProjectV2ItemsNodesContent;
+    pub type Node = MinimalProjectItemsOrganizationProjectV2ItemsNodes;
+    pub type DraftIssue = MinimalProjectItemsOrganizationProjectV2ItemsNodesContentOnDraftIssue;
+    pub type Issue = MinimalProjectItemsOrganizationProjectV2ItemsNodesContentOnIssue;
+    pub type PullRequest = MinimalProjectItemsOrganizationProjectV2ItemsNodesContentOnPullRequest;
 }
 
 impl From<short::Node> for Option<WorkItem> {

@@ -30,7 +30,7 @@ pub mod get_issue_types;
 pub mod project_items;
 pub use project_items::ProjectItems;
 
-pub mod project_hierarchy;
+pub mod minimal_project_items;
 
 mod viewer_info;
 pub use viewer_info::{get_viewer_info, ViewerInfo};

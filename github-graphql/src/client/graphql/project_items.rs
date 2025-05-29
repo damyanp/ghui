@@ -1,4 +1,4 @@
-use super::{paged_query::*, project_hierarchy::get_project_hierarchy, DateTime, URI};
+use super::{minimal_project_items::get_minimal_project_items, paged_query::*, DateTime, URI};
 use crate::{
     client::transport::Client,
     data::{
@@ -106,8 +106,7 @@ impl WorkItems {
         client: &impl Client,
         report_progress: &impl Fn(usize, usize),
     ) -> Result<WorkItems> {
-
-        let items = get_project_hierarchy(client, report_progress).await?;
+        let items = get_minimal_project_items(client, report_progress).await?;
         Ok(WorkItems::from_iter(items.into_iter()))
 
         // let variables = project_items::Variables {

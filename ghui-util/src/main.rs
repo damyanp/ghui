@@ -2,8 +2,8 @@ use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
     graphql::{
-        get_viewer_info, paged_query::get_all_items, project_hierarchy::get_project_hierarchy,
-        project_items,
+        get_viewer_info, minimal_project_items::get_minimal_project_items,
+        paged_query::get_all_items, project_items,
     },
     transport::GithubClient,
 };
@@ -69,7 +69,7 @@ async fn run_get_all_items() -> Result {
 async fn run_get_hierarchy() -> Result {
     let client = client();
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    let hierarchy = get_project_hierarchy(&client, &report_progress).await?;
+    let hierarchy = get_minimal_project_items(&client, &report_progress).await?;
 
     let json_data = serde_json::to_string_pretty(&hierarchy)?;
     let mut file = File::create("hiearchy.json")?;
