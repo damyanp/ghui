@@ -137,7 +137,7 @@
         else return null;
       }),
     },
-  ]);
+  ]);  
 
   function getGroup(n: Node) {
     if (n.data.type === "group") return n.data.name;
@@ -200,11 +200,14 @@
 
     if (change) await context.addChange(change);
   }
+
+  let expanded = $state([]);
 </script>
 
 <TreeTable
   {rows}
   bind:columns
+  bind:expanded
   {getGroup}
   {getItem}
   {renderGroup}

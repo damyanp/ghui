@@ -19,11 +19,12 @@
     name: string;
     width: string;
     render: Snippet<[ITEM]>;
-  };
+  };  
 
   type Props = {
     rows: Row<T>[];
     columns: Column[];
+    expanded?: string[];
     getGroup: (row: Row<T>) => GROUP;
     getItem: (row: Row<T>) => ITEM;
     renderGroup: Snippet<[GROUP]>;
@@ -31,11 +32,13 @@
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
   };
 
-  let { columns = $bindable(), ...props }: Props = $props();
+  let {
+    columns = $bindable(),
+    expanded = $bindable([]),
+    ...props
+  }: Props = $props();
 
   type MRow<T> = Row<T> & { modifiedDescendent: boolean };
-
-  let expanded = $state<string[]>([]);
 
   const rows: MRow<T>[] = $derived.by(() => {
     let rows: MRow<T>[] = [];
