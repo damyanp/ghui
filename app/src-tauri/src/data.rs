@@ -4,8 +4,8 @@ use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::data::{
-    Change, Changes, SaveMode, SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId,
-    WorkItems,
+    Change, Changes, DelayLoad, SaveMode, SingleSelectFieldValue, WorkItem, WorkItemData,
+    WorkItemId, WorkItems,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -40,7 +40,9 @@ pub struct Filters {
 impl Filters {
     fn should_include(&self, work_item: &WorkItem) -> bool {
         if self.hide_closed {
-            if let Some(SingleSelectFieldValue { name, .. }) = &work_item.project_item.status {
+            if let DelayLoad::Loaded(Some(SingleSelectFieldValue { name, .. })) =
+                &work_item.project_item.status
+            {
                 if name == "Closed" {
                     return false;
                 }
@@ -291,7 +293,7 @@ impl<'a> NodeBuilder<'a> {
         let group = |id| {
             self.work_items
                 .get(id)
-                .and_then(|item| item.project_item.epic.as_ref())
+                .and_then(|item| item.project_item.epic.flatten())
                 .map(|epic| epic.name.to_owned())
         };
 

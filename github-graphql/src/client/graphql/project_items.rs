@@ -2,7 +2,7 @@ use super::{paged_query::*, DateTime, URI};
 use crate::{
     client::transport::Client,
     data::{
-        self, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
+        self, DelayLoad, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
         SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId, WorkItems,
     },
     Error, Result,
@@ -121,13 +121,16 @@ impl WorkItems {
         let mut work_items = WorkItems::default();
 
         for item in items {
-            let status = item.status.get_single_select_field_value();
-            let iteration = item.iteration.get_iteration_title();
-            let blocked = item.blocked.get_single_select_field_value();
-            let kind = item.kind.get_single_select_field_value();
-            let epic = item.epic.get_single_select_field_value();
-            let workstream = item.workstream.get_single_select_field_value();
-            let project_milestone = item.project_milestone.get_single_select_field_value();
+            let status = item.status.get_single_select_field_value().into();
+            let iteration = item.iteration.get_iteration_title().into();
+            let blocked = item.blocked.get_single_select_field_value().into();
+            let kind = item.kind.get_single_select_field_value().into();
+            let epic = item.epic.get_single_select_field_value().into();
+            let workstream = item.workstream.get_single_select_field_value().into();
+            let project_milestone = item
+                .project_milestone
+                .get_single_select_field_value()
+                .into();
 
             let project_item = ProjectItem {
                 id: ProjectItemId(item.id),
@@ -174,10 +177,10 @@ fn build_work_item(
             repo_name_with_owner: Some(c.repository.name_with_owner),
             data: WorkItemData::Issue(Issue {
                 parent_id: c.parent.map(|p| WorkItemId(p.id)),
-                issue_type: c.issue_type.map(|it| it.name),
+                issue_type: c.issue_type.map(|it| it.name).into(),
                 state: c.issue_state.into(),
                 sub_issues: build_issue_id_vector(c.sub_issues.nodes),
-                tracked_issues: build_issue_id_vector(c.tracked_issues.nodes),
+                tracked_issues: build_issue_id_vector(c.tracked_issues.nodes).into(),
             }),
             project_item: ProjectItem::default(),
         },
@@ -195,17 +198,18 @@ fn build_work_item(
     })
 }
 
-impl From<project_items::IssueState> for data::IssueState {
+impl From<project_items::IssueState> for DelayLoad<data::IssueState> {
     fn from(state: project_items::IssueState) -> Self {
         match state {
             project_items::IssueState::OPEN => data::IssueState::OPEN,
             project_items::IssueState::CLOSED => data::IssueState::CLOSED,
             project_items::IssueState::Other(s) => data::IssueState::Other(s),
         }
+        .into()
     }
 }
 
-impl From<project_items::PullRequestState> for data::PullRequestState {
+impl From<project_items::PullRequestState> for DelayLoad<data::PullRequestState> {
     fn from(state: project_items::PullRequestState) -> Self {
         match state {
             project_items::PullRequestState::OPEN => data::PullRequestState::OPEN,
@@ -213,6 +217,7 @@ impl From<project_items::PullRequestState> for data::PullRequestState {
             project_items::PullRequestState::MERGED => data::PullRequestState::MERGED,
             project_items::PullRequestState::Other(s) => data::PullRequestState::Other(s),
         }
+        .into()
     }
 }
 
@@ -245,11 +250,12 @@ fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<
 mod tests {
     use super::*;
 
-    fn single_select_value(value: &str) -> Option<SingleSelectFieldValue> {
+    fn single_select_value(value: &str) -> DelayLoad<Option<SingleSelectFieldValue>> {
         Some(SingleSelectFieldValue {
             option_id: value.to_owned(),
             name: value.to_owned(),
         })
+        .into()
     }
 
     #[test]
@@ -350,11 +356,11 @@ mod tests {
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
                 updated_at: "2024-08-05T21:47:26Z".into(),
-                status: None,
-                kind: None,
+                status: None.into(),
+                kind: None.into(),
                 workstream: single_select_value("Language"),
-                project_milestone: None,
-                ..Default::default()
+                project_milestone: None.into(),
+                ..ProjectItem::default_loaded()
             },
         };
 
@@ -374,20 +380,20 @@ mod tests {
             resource_path: Some("/llvm/llvm-project/issues/130826".into()),
             repo_name_with_owner: Some("llvm/llvm-project".into()),
             data: WorkItemData::Issue(Issue {
-                parent_id: None,
-                issue_type: None,
-                state: data::IssueState::CLOSED,
+                parent_id: None.into(),
+                issue_type: None.into(),
+                state: data::IssueState::CLOSED.into(),
                 sub_issues: vec![],
-                tracked_issues: vec![],
+                tracked_issues: vec![].into(),
             }),
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgYLDkw".into()),
                 updated_at: "2025-03-27T21:01:45Z".into(),
                 status: single_select_value("Closed"),
-                kind: None,
+                kind: None.into(),
                 workstream: single_select_value("Root Signatures"),
                 project_milestone: single_select_value("(old)3: Compute Shaders (1)"),
-                ..Default::default()
+                ..ProjectItem::default_loaded()
             },
         };
         assert_eq!(*issue, expected_issue.id);
@@ -404,16 +410,16 @@ mod tests {
             resource_path: Some("/llvm/wg-hlsl/pull/171".into()),
             repo_name_with_owner: Some("llvm/wg-hlsl".into()),
             data: WorkItemData::PullRequest(PullRequest {
-                state: data::PullRequestState::OPEN,
+                state: data::PullRequestState::OPEN.into(),
             }),
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgXN2OI".into()),
                 updated_at: "2025-04-07T20:00:01Z".into(),
                 status: single_select_value("Needs Review"),
-                kind: None,
-                workstream: None,
-                project_milestone: None,
-                ..Default::default()
+                kind: None.into(),
+                workstream: None.into(),
+                project_milestone: None.into(),
+                ..ProjectItem::default_loaded()
             },
         };
         assert_eq!(*pull_request, expected_pull_request.id);
@@ -512,6 +518,7 @@ mod tests {
                 "I_kwDOBITxeM6TCeSQ",
                 "I_kwDOBITxeM6RoqRE"
             ])
+            .into()
         );
     }
 }

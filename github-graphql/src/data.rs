@@ -17,6 +17,46 @@ use std::{
 use ts_rs::TS;
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
+#[serde(tag = "loadState", content = "value")]
+#[serde(rename_all = "camelCase")]
+pub enum DelayLoad<T> {
+    #[default]
+    NotLoaded,
+    Loaded(T),
+}
+
+impl<T> DelayLoad<T> {
+    pub fn map<U>(&self, f: impl Fn(&T) -> U) -> DelayLoad<U> {
+        match self {
+            DelayLoad::NotLoaded => DelayLoad::NotLoaded,
+            DelayLoad::Loaded(v) => DelayLoad::Loaded(f(v)),
+        }
+    }
+
+    pub fn expect_loaded(&self) -> &T {
+        match self {
+            DelayLoad::NotLoaded => panic!(),
+            DelayLoad::Loaded(v) => v,
+        }
+    }
+}
+
+impl<T> DelayLoad<Option<T>> {
+    pub fn flatten(&self) -> Option<&T> {
+        match self {
+            DelayLoad::NotLoaded => None,
+            DelayLoad::Loaded(v) => v.as_ref(),
+        }
+    }
+}
+
+impl<T> From<T> for DelayLoad<T> {
+    fn from(value: T) -> Self {
+        DelayLoad::Loaded(value)
+    }
+}
+
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkItem {
     pub id: WorkItemId,
@@ -41,14 +81,13 @@ impl WorkItem {
         }
     }
 
-    pub fn is_closed(&self) -> bool {
+    pub fn is_closed(&self) -> DelayLoad<bool> {
         match &self.data {
-            WorkItemData::DraftIssue => false,
-            WorkItemData::Issue(issue) => issue.state == IssueState::CLOSED,
-            WorkItemData::PullRequest(pull_request) => {
-                pull_request.state == PullRequestState::MERGED
-                    || pull_request.state == PullRequestState::CLOSED
-            }
+            WorkItemData::DraftIssue => false.into(),
+            WorkItemData::Issue(issue) => issue.state.map(|s| *s == IssueState::CLOSED),
+            WorkItemData::PullRequest(pull_request) => pull_request
+                .state
+                .map(|s| *s == PullRequestState::MERGED || *s == PullRequestState::CLOSED),
         }
     }
 
@@ -67,6 +106,13 @@ impl WorkItem {
             }
         }
         None
+    }
+
+    pub fn default_loaded() -> Self {
+        WorkItem {
+            project_item: ProjectItem::default_loaded(),
+            ..Default::default()
+        }
     }
 }
 
@@ -93,10 +139,20 @@ pub enum WorkItemData {
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
     pub parent_id: Option<WorkItemId>,
-    pub issue_type: Option<String>,
-    pub state: IssueState,
+    pub issue_type: DelayLoad<Option<String>>,
+    pub state: DelayLoad<IssueState>,
     pub sub_issues: Vec<WorkItemId>,
-    pub tracked_issues: Vec<WorkItemId>,
+    pub tracked_issues: DelayLoad<Vec<WorkItemId>>,
+}
+impl Issue {
+    fn default_loaded() -> Issue {
+        Issue {
+            issue_type: None.into(),
+            state: IssueState::default().into(),
+            tracked_issues: Vec::new().into(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
@@ -111,7 +167,7 @@ pub enum IssueState {
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequest {
-    pub state: PullRequestState,
+    pub state: DelayLoad<PullRequestState>,
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
@@ -124,18 +180,35 @@ pub enum PullRequestState {
     Other(String),
 }
 
+type SingleSelectField = DelayLoad<Option<SingleSelectFieldValue>>;
+type IterationField = DelayLoad<Option<IterationFieldValue>>;
+
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,
-    pub status: Option<SingleSelectFieldValue>,
-    pub iteration: Option<IterationFieldValue>,
-    pub blocked: Option<SingleSelectFieldValue>,
-    pub kind: Option<SingleSelectFieldValue>,
-    pub epic: Option<SingleSelectFieldValue>,
-    pub workstream: Option<SingleSelectFieldValue>,
-    pub project_milestone: Option<SingleSelectFieldValue>,
+    pub status: SingleSelectField,
+    pub iteration: IterationField,
+    pub blocked: SingleSelectField,
+    pub kind: SingleSelectField,
+    pub epic: SingleSelectField,
+    pub workstream: SingleSelectField,
+    pub project_milestone: SingleSelectField,
+}
+impl ProjectItem {
+    pub fn default_loaded() -> ProjectItem {
+        ProjectItem {
+            status: None.into(),
+            iteration: None.into(),
+            blocked: None.into(),
+            kind: None.into(),
+            epic: None.into(),
+            workstream: None.into(),
+            project_milestone: None.into(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
@@ -249,7 +322,7 @@ impl WorkItems {
             ..
         }) = self.get(id)
         {
-            for tracked_issue_id in &parent_issue.tracked_issues {
+            for tracked_issue_id in parent_issue.tracked_issues.expect_loaded() {
                 if let Some(WorkItem {
                     data: WorkItemData::Issue(tracked_issue),
                     ..
@@ -274,7 +347,9 @@ impl WorkItems {
 
         for item in self.work_items.values() {
             // Closed items should have status set to Closed
-            if item.is_closed() && !item.project_item.status.matches("Closed") {
+            if *item.is_closed().expect_loaded()
+                && !item.project_item.status.expect_loaded().matches("Closed")
+            {
                 changes.add(Change {
                     work_item_id: item.id.clone(),
                     data: ChangeData::Status(Some("Closed".to_owned())),
@@ -282,8 +357,13 @@ impl WorkItems {
             }
 
             // Map project milestones to epics
-            if item.project_item.epic.is_none() {
-                let new_epic = match item.project_item.project_milestone.field_value() {
+            if item.project_item.epic.expect_loaded().is_none() {
+                let new_epic = match item
+                    .project_item
+                    .project_milestone
+                    .expect_loaded()
+                    .field_value()
+                {
                     Some("3: ML preview requirements")
                     | Some("4: ML preview planning")
                     | Some("5: ML preview implementation") => Some("DML Demo"),
@@ -303,8 +383,10 @@ impl WorkItems {
 
             // Items that are Bugs shuold set their type to bug
             if let WorkItemData::Issue(issue) = &item.data {
-                if let Some(SingleSelectFieldValue { name, .. }) = &item.project_item.kind {
-                    if name == "Bug" && issue.issue_type.as_deref() != Some("Bug") {
+                if let Some(SingleSelectFieldValue { name, .. }) =
+                    item.project_item.kind.expect_loaded()
+                {
+                    if name == "Bug" && issue.issue_type.expect_loaded().as_deref() != Some("Bug") {
                         changes.add(Change {
                             work_item_id: item.id.clone(),
                             data: ChangeData::IssueType(Some("Bug".to_owned())),
@@ -325,9 +407,9 @@ impl WorkItems {
             epic: Option<&str>,
         ) {
             if let Some(item) = items.get(id) {
-                if item.project_item.epic.field_value() != epic {
+                if item.project_item.epic.expect_loaded().field_value() != epic {
                     if let Some(epic) = epic {
-                        if let Some(current_epic) = &item.project_item.epic {
+                        if let Some(current_epic) = item.project_item.epic.expect_loaded() {
                             println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
                         item.describe(), current_epic.name, epic);
                         } else {
@@ -345,7 +427,7 @@ impl WorkItems {
                             items,
                             changes,
                             child_id,
-                            epic.or(item.project_item.epic.field_value()),
+                            epic.or(item.project_item.epic.expect_loaded().field_value()),
                         );
                     }
                 }
@@ -390,29 +472,35 @@ impl WorkItems {
             match &change.data {
                 ChangeData::IssueType(value) => {
                     if let WorkItemData::Issue(issue) = &mut work_item.data {
-                        issue.issue_type = value.to_owned();
+                        issue.issue_type = value.to_owned().into();
                     }
                 }
                 ChangeData::Status(value) => {
-                    work_item.project_item.status =
-                        value.as_ref().map(|value| SingleSelectFieldValue {
+                    work_item.project_item.status = value
+                        .as_ref()
+                        .map(|value| SingleSelectFieldValue {
                             option_id: "???".to_owned(),
                             name: value.clone(),
                         })
+                        .into()
                 }
                 ChangeData::Blocked(value) => {
-                    work_item.project_item.blocked =
-                        value.as_ref().map(|value| SingleSelectFieldValue {
+                    work_item.project_item.blocked = value
+                        .as_ref()
+                        .map(|value| SingleSelectFieldValue {
                             option_id: "???".to_owned(),
                             name: value.clone(),
                         })
+                        .into()
                 }
                 ChangeData::Epic(value) => {
-                    work_item.project_item.epic =
-                        value.as_ref().map(|value| SingleSelectFieldValue {
+                    work_item.project_item.epic = value
+                        .as_ref()
+                        .map(|value| SingleSelectFieldValue {
                             option_id: "???".to_owned(),
                             name: value.clone(),
                         })
+                        .into()
                 }
                 ChangeData::SetParent(new_parent_id) => {
                     let child_id = &change.work_item_id;
@@ -698,12 +786,12 @@ impl Change {
 
         let old_value = match self.data {
             ChangeData::IssueType(_) => match &work_item.data {
-                WorkItemData::Issue(issue) => issue.issue_type.as_deref(),
+                WorkItemData::Issue(issue) => issue.issue_type.expect_loaded().as_deref(),
                 _ => None,
             },
-            ChangeData::Status(_) => work_item.project_item.status.field_value(),
-            ChangeData::Blocked(_) => work_item.project_item.blocked.field_value(),
-            ChangeData::Epic(_) => work_item.project_item.epic.field_value(),
+            ChangeData::Status(_) => work_item.project_item.status.expect_loaded().field_value(),
+            ChangeData::Blocked(_) => work_item.project_item.blocked.expect_loaded().field_value(),
+            ChangeData::Epic(_) => work_item.project_item.epic.expect_loaded().field_value(),
             ChangeData::SetParent(_) => match &work_item.data {
                 WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
                 _ => None,
@@ -775,7 +863,7 @@ pub mod test_helpers {
                 data: self,
                 item: WorkItem {
                     id,
-                    ..Default::default()
+                    ..WorkItem::default_loaded()
                 },
             }
         }
@@ -805,7 +893,7 @@ pub mod test_helpers {
         }
 
         pub fn issue_state(mut self, state: IssueState) -> Self {
-            self.get_issue().state = state;
+            self.get_issue().state = state.into();
             self
         }
 
@@ -815,7 +903,7 @@ pub mod test_helpers {
         }
 
         pub fn tracked_issues(mut self, ids: &[&WorkItemId]) -> Self {
-            self.get_issue().tracked_issues = to_project_item_ref_vec(ids);
+            self.get_issue().tracked_issues = to_project_item_ref_vec(ids).into();
             self
         }
 
@@ -826,7 +914,7 @@ pub mod test_helpers {
 
         fn get_issue(&mut self) -> &mut Issue {
             if let WorkItemData::DraftIssue = self.item.data {
-                self.item.data = WorkItemData::Issue(Issue::default());
+                self.item.data = WorkItemData::Issue(Issue::default_loaded());
             }
 
             if let WorkItemData::PullRequest(_) = self.item.data {
@@ -841,18 +929,18 @@ pub mod test_helpers {
         }
 
         pub fn status(mut self, name: &str) -> Self {
-            self.item.project_item.status = Some(SingleSelectFieldValue::from_name(name));
+            self.item.project_item.status = Some(SingleSelectFieldValue::from_name(name)).into();
             self
         }
 
         pub fn project_milestone(mut self, name: &str) -> Self {
             self.item.project_item.project_milestone =
-                Some(SingleSelectFieldValue::from_name(name));
+                Some(SingleSelectFieldValue::from_name(name)).into();
             self
         }
 
         pub fn epic(mut self, name: &str) -> Self {
-            self.item.project_item.epic = Some(SingleSelectFieldValue::from_name(name));
+            self.item.project_item.epic = Some(SingleSelectFieldValue::from_name(name)).into();
             self
         }
     }
@@ -866,10 +954,10 @@ pub mod test_helpers {
             WorkItem {
                 data: WorkItemData::Issue(Issue {
                     sub_issues: to_project_item_ref_vec(sub_issues),
-                    tracked_issues: to_project_item_ref_vec(tracked_issues),
-                    ..Default::default()
+                    tracked_issues: to_project_item_ref_vec(tracked_issues).into(),
+                    ..Issue::default_loaded()
                 }),
-                ..Default::default()
+                ..WorkItem::default_loaded()
             }
         }
     }
