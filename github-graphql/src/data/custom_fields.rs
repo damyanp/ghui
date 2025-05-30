@@ -28,14 +28,14 @@ pub struct Fields {
 }
 
 impl Field {
-    pub fn id(&self, name: &str) -> Option<&FieldOptionId> {
+    pub fn option_id(&self, name: &str) -> Option<&FieldOptionId> {
         self.options
             .iter()
             .find(|option| option.1 == name)
             .map(|option| &option.0)
     }
 
-    pub fn name(&self, id: &FieldOptionId) -> Option<&str> {
+    pub fn option_name(&self, id: &FieldOptionId) -> Option<&str> {
         self.options
             .iter()
             .find(|option| option.0 == *id)

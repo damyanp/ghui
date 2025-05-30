@@ -146,7 +146,7 @@ impl Change {
             .get(&self.work_item_id)
             .map(|item| &item.project_item.id)
         {
-            if let Some(new_value_id) = value.as_ref().and_then(|name| field.id(name)) {
+            if let Some(new_value_id) = value.as_ref().and_then(|name| field.option_id(name)) {
                 set_project_field_value(
                     client,
                     project_id,

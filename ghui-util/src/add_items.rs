@@ -34,7 +34,7 @@ pub async fn run(options: Options) -> Result {
         Some(
             fields
                 .epic
-                .id(epic.as_str())
+                .option_id(epic.as_str())
                 .ok_or(anyhow!("Unable to find epic '{}'", epic))?,
         )
     } else {
