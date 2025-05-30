@@ -4,6 +4,9 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type { WorkItemId } from "./bindings/WorkItemId";
 import type { Change } from "./bindings/Change";
 import type { Filters } from "./bindings/Filters";
+import type { Fields } from "./bindings/Fields";
+import type { Field } from "./bindings/Field";
+import type { FieldOptionId } from "./bindings/FieldOptionId";
 
 const key = Symbol("WorkItemContext");
 
@@ -18,6 +21,7 @@ export function getWorkItemContext() {
 
 export class WorkItemContext {
   data = $state<Data>({
+    fields: make_blank_fields(),
     workItems: {},
     nodes: [],
     filters: { hideClosed: true },
@@ -70,6 +74,18 @@ export class WorkItemContext {
     );
   }
 
+  public getFieldOption(fieldName: keyof Fields, id: FieldOptionId | null): string|undefined {
+    if (!id)
+      return undefined;
+    
+    const field = this.data.fields[fieldName];
+    
+    if (typeof field === "string")
+      return undefined;
+
+    return field.options.find(o => o.id === id)?.value;
+  }
+
   // #region Managing Changes
 
   previewChanges = $derived(
@@ -118,3 +134,24 @@ export function makeProgressChannel(
 
   return getDataProgress;
 }
+
+function make_blank_fields(): Fields {
+  function blank(): Field {
+    return {
+      id: "",
+      name: "",
+      field_type: "SingleSelect",
+      options: []
+    };
+  }
+  return {
+    project_id: "",
+    status: blank(),
+    blocked: blank(),
+    epic: blank(),
+    iteration: blank(),
+    kind: blank(),
+    project_milestone: blank()
+  };
+}
+

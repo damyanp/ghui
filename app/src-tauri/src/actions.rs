@@ -25,10 +25,12 @@ pub async fn sanitize(data_state: State<'_, Mutex<DataState>>) -> TauriCommandRe
     let mut data_state = data_state.lock().await;
 
     if let Some(work_items) = data_state.work_items.as_ref() {
-        let changes = work_items.sanitize();
-        let num_changes = changes.len();
-        data_state.add_changes(changes);
-        return Ok(num_changes);
+        if let Some(fields) = data_state.fields.as_ref() {
+            let changes = work_items.sanitize(fields);
+            let num_changes = changes.len();
+            data_state.add_changes(changes);
+            return Ok(num_changes);
+        }
     }
     Ok(0)
 }

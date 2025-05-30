@@ -14,6 +14,12 @@ query CustomFieldsQuery {
       Epic: field(name: "Epic") {
         ...FieldConfig
       }
+      ProjectMilestone: field(name: "ProjectMilestone") {
+        ...FieldConfig
+      }
+      Kind: field(name: "Kind") {
+        ...FieldConfig
+      }
     }
   }
 }

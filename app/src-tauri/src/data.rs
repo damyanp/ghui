@@ -4,7 +4,7 @@ use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::data::{
-    Change, Changes, DelayLoad, SaveMode, SingleSelectFieldValue, WorkItem, WorkItemData,
+    Change, Changes, DelayLoad, FieldOptionId, Fields, SaveMode, WorkItem, WorkItemData,
     WorkItemId, WorkItems,
 };
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,7 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Data {
+    fields: Fields,
     work_items: HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
 
@@ -38,12 +39,11 @@ pub struct Filters {
 }
 
 impl Filters {
-    fn should_include(&self, work_item: &WorkItem) -> bool {
+    fn should_include(&self, fields: &Fields, work_item: &WorkItem) -> bool {
         if self.hide_closed {
-            if let DelayLoad::Loaded(Some(SingleSelectFieldValue { name, .. })) =
-                &work_item.project_item.status
-            {
-                if name == "Closed" {
+            if let DelayLoad::Loaded(status) = &work_item.project_item.status {
+                // TODO: looking up the option_name each time is wasteful
+                if fields.status.option_name(status.as_ref()) == Some("Closed") {
                     return false;
                 }
             }
@@ -71,6 +71,7 @@ enum NodeData {
 
 pub struct DataState {
     app: AppHandle,
+    pub fields: Option<Fields>,
     pub work_items: Option<WorkItems>,
     filters: Filters,
     changes: Changes,
@@ -81,6 +82,7 @@ impl DataState {
     pub(crate) fn new(app: AppHandle) -> Self {
         Self {
             app,
+            fields: None,
             work_items: None,
             filters: Filters::default(),
             changes: Changes::default(),
@@ -88,7 +90,36 @@ impl DataState {
         }
     }
 
-    async fn refresh(
+    async fn refresh_fields(&mut self, force: bool) -> Result<Fields> {
+        if !force {
+            if let Some(fields) = &self.fields {
+                return Ok(fields.clone());
+            }
+
+            let load_result = load_fields_from_appdata();
+            if let Ok(fields) = load_result {
+                self.fields = Some(fields.clone());
+                return Ok(fields);
+            } else {
+                println!(
+                    "WARNING: failed to load cached fields: {}",
+                    load_result.err().unwrap()
+                );
+            }
+        }
+
+        let client = new_github_client(&self.app).await?;
+        let fields = get_fields(&client).await?;
+        let save_result = save_fields_to_appdata(&fields);
+        if let Err(error) = save_result {
+            println!("WARNING: failed to save cached fields: {error}");
+        }
+
+        self.fields = Some(fields.clone());
+        Ok(fields)
+    }
+
+    async fn refresh_work_items(
         &mut self,
         force: bool,
         report_progress: &impl Fn(usize, usize),
@@ -167,8 +198,31 @@ impl DataState {
     }
 }
 
+const FIELDS_FILENAME: &str = "fields";
+
+fn load_fields_from_appdata() -> anyhow::Result<Fields> {
+    let path = get_appdata_path(FIELDS_FILENAME);
+    println!("Attempting to load fields cache from {path:?}");
+
+    let reader = fs::File::open(path)?;
+    Ok(serde_json::from_reader(BufReader::new(reader))?)
+}
+
+fn save_fields_to_appdata(fields: &Fields) -> anyhow::Result<()> {
+    let path = get_appdata_path(FIELDS_FILENAME);
+    println!("Attempting to save fields cache to {path:?}");
+
+    let writer = fs::File::create(path)?;
+    Ok(serde_json::to_writer_pretty(
+        BufWriter::new(writer),
+        fields,
+    )?)
+}
+
+const WORK_ITEMS_FILENAME: &str = "work_items";
+
 fn load_workitems_from_appdata() -> anyhow::Result<WorkItems> {
-    let path = get_appdata_path();
+    let path = get_appdata_path(WORK_ITEMS_FILENAME);
     println!("Attempting to load work item cache from {path:?}");
 
     let reader = fs::File::open(path)?;
@@ -176,7 +230,7 @@ fn load_workitems_from_appdata() -> anyhow::Result<WorkItems> {
 }
 
 fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
-    let path = get_appdata_path();
+    let path = get_appdata_path(WORK_ITEMS_FILENAME);
     println!("Attempting to save work item cache to {path:?}");
 
     let writer = fs::File::create(path)?;
@@ -186,9 +240,9 @@ fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
     )?)
 }
 
-fn get_appdata_path() -> PathBuf {
+fn get_appdata_path(name: &str) -> PathBuf {
     let mut path = home_dir().unwrap();
-    path.push(".ghui.json");
+    path.push(format!("{name}.ghui.json"));
     path
 }
 
@@ -203,17 +257,27 @@ pub async fn get_data(
     };
 
     let mut data_state = data_state.lock().await;
-    let mut work_items = data_state.refresh(force_refresh, &report_progress).await?;
+    let fields = data_state.refresh_fields(force_refresh).await?;
+    let mut work_items = data_state
+        .refresh_work_items(force_refresh, &report_progress)
+        .await?;
     let original_work_items = if data_state.preview_changes {
         data_state.apply_changes(&mut work_items)
     } else {
         HashMap::default()
     };
 
-    let nodes = NodeBuilder::new(&work_items, &data_state.filters, &original_work_items).build();
+    let nodes = NodeBuilder::new(
+        &fields,
+        &work_items,
+        &data_state.filters,
+        &original_work_items,
+    )
+    .build();
     Ok(Data {
         nodes,
         work_items: work_items.work_items,
+        fields,
         original_work_items,
         filters: data_state.filters.clone(),
         changes: data_state.changes.clone(),
@@ -261,6 +325,7 @@ pub async fn set_filters(
 }
 
 struct NodeBuilder<'a> {
+    fields: &'a Fields,
     work_items: &'a WorkItems,
     filters: &'a Filters,
     original_work_items: &'a HashMap<WorkItemId, WorkItem>,
@@ -269,11 +334,13 @@ struct NodeBuilder<'a> {
 
 impl<'a> NodeBuilder<'a> {
     fn new(
+        fields: &'a Fields,
         work_items: &'a WorkItems,
         filters: &'a Filters,
         original_work_items: &'a HashMap<WorkItemId, WorkItem>,
     ) -> Self {
         NodeBuilder {
+            fields,
             work_items,
             filters,
             original_work_items,
@@ -294,16 +361,15 @@ impl<'a> NodeBuilder<'a> {
             self.work_items
                 .get(id)
                 .and_then(|item| item.project_item.epic.flatten())
-                .map(|epic| epic.name.to_owned())
         };
 
-        let mut group_item: Vec<_> = items.iter().map(|id| (group(id), id)).collect();
-        group_item.sort_by_key(|a| a.0.clone());
+        let mut group_item: Vec<_> = items.iter().map(|id| (group(id), *id)).collect();
+        group_item.sort_by_key(|a| a.0);
 
         let has_multiple_groups =
             !(group_item.is_empty() || group_item.iter().all(|i| i.0 == group_item[0].0));
 
-        let mut current_group: Option<Option<String>> = None;
+        let mut current_group: Option<Option<&FieldOptionId>> = None;
         let mut current_path = path.to_owned();
 
         for (key, id) in group_item {
@@ -313,7 +379,12 @@ impl<'a> NodeBuilder<'a> {
                     .is_none_or(|group| group.as_ref() != key.as_ref());
 
                 if start_new {
-                    let name = key.clone().unwrap_or("None".to_owned());
+                    let name = self
+                        .fields
+                        .epic
+                        .option_name(key)
+                        .unwrap_or("None")
+                        .to_owned();
                     let id = format!("{}{}", path, name);
 
                     current_group = Some(key);
@@ -362,7 +433,7 @@ impl<'a> NodeBuilder<'a> {
                     }
                 }
             }
-            self.filters.should_include(work_item)
+            self.filters.should_include(self.fields, work_item)
         } else {
             false
         }
@@ -405,11 +476,12 @@ mod nodebuilder_tests {
     #[test]
     fn test_node_builder_single_item() {
         let mut data = TestData::default();
-        let id = data.build().epic("Epic1").add();
+        let id = data.build().epic("EpicA").add();
         let work_items = data.work_items;
         let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
+        let mut builder =
+            NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Only one node (the work item) should be present, no group node
         assert_eq!(nodes.len(), 1);
@@ -426,9 +498,12 @@ mod nodebuilder_tests {
         let work_items = data.work_items;
         let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
+        let mut builder =
+            NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Should have two groups and two work items, in order: Group(EpicA), WorkItem(1), Group(EpicB), WorkItem(2)
+        println!("{:?}", work_items.work_items.values());
+        println!("{nodes:?}");
         assert_eq!(nodes.len(), 4);
         assert!(matches!(nodes[0].data, NodeData::Group { ref name } if name == "EpicA"));
         assert!(matches!(nodes[1].data, NodeData::WorkItem));
@@ -446,7 +521,8 @@ mod nodebuilder_tests {
         let work_items = data.work_items;
         let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
+        let mut builder =
+            NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Should have two work items, no group node, in order: WorkItem(2), WorkItem(1)
         assert_eq!(nodes.len(), 2);
@@ -468,7 +544,12 @@ mod nodebuilder_tests {
 
         let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&data.work_items, &filters, &original_work_items);
+        let mut builder = NodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+        );
         let nodes = builder.build();
 
         // The closed parent and its closed children should be filtered out
@@ -504,7 +585,8 @@ mod nodebuilder_tests {
         let work_items = data.work_items;
         let filters = Filters { hide_closed: true };
         let original_work_items = HashMap::new();
-        let mut builder = NodeBuilder::new(&work_items, &filters, &original_work_items);
+        let mut builder =
+            NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);
         let nodes = builder.build();
 
         // The closed parent and its closed children should be filtered out

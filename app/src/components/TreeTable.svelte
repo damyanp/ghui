@@ -19,14 +19,14 @@
     name: string;
     width: string;
     render: Snippet<[ITEM]>;
-  };  
+  };
 
   type Props = {
     rows: Row<T>[];
     columns: Column[];
     expanded?: string[];
     getGroup: (row: Row<T>) => GROUP;
-    getItem: (row: Row<T>) => ITEM;
+    getItem: (row: Row<T>) => ITEM | undefined;
     renderGroup: Snippet<[GROUP]>;
     getContextMenuItems: (row: Row<T>) => MenuItem[];
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
@@ -300,7 +300,11 @@
       {#if index === 0}
         {@render expander(row)}
       {/if}
-      {@render column.render(item)}
+      {#if item}
+        {@render column.render(item)}
+      {:else}
+        &nbsp;
+      {/if}
     </div>
   {/each}
 {/snippet}

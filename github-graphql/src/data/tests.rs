@@ -85,12 +85,15 @@ fn test_closed_issues_set_state_to_closed() {
         .status("Active")
         .add();
 
-    let actual_changes = data.work_items.sanitize();
+    let actual_changes = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
+
+    let closed_option = data.fields.status.option_id(Some("Closed")).cloned();
+
     expected_changes.add(Change {
         work_item_id: closed_item_id,
-        data: ChangeData::Status(Some("Closed".to_owned())),
+        data: ChangeData::Status(closed_option),
     });
 
     assert_eq!(actual_changes, expected_changes);
@@ -118,7 +121,7 @@ fn test_set_epic_from_project_milestone() {
 
         // Unrecognized milestones shouldn't change epic
         data.build()
-            .project_milestone(format!("{}-XXX", project_milestone).as_str())
+            .project_milestone("Another Project Milestone")
             .add();
 
         // Already matching ones shouldn't change
@@ -131,12 +134,12 @@ fn test_set_epic_from_project_milestone() {
         // change
         let id = data.build().project_milestone(project_milestone).add();
 
-        let actual_changes = data.work_items.sanitize();
+        let actual_changes = data.work_items.sanitize(&data.fields);
 
         let mut expected_changes = Changes::default();
         expected_changes.add(Change {
             work_item_id: id,
-            data: ChangeData::Epic(Some(epic.to_owned())),
+            data: ChangeData::Epic(data.fields.epic.option_id(epic.into()).cloned()),
         });
 
         assert_eq!(actual_changes, expected_changes);
@@ -147,8 +150,8 @@ fn test_set_epic_from_project_milestone() {
 fn test_set_epic_from_parent() {
     let mut data = TestData::default();
 
-    const RIGHT_EPIC: &str = "right epic";
-    const WRONG_EPIC: &str = "wrong epic";
+    const RIGHT_EPIC: &str = "DML Demo";
+    const WRONG_EPIC: &str = "MiniEngine Demo";
 
     let child_no_epic = data.build().add();
     let child_wrong_epic = data.build().epic(WRONG_EPIC).add();
@@ -159,12 +162,12 @@ fn test_set_epic_from_parent() {
         .sub_issues(&[&child_no_epic, &child_wrong_epic, &child_right_epic])
         .add();
 
-    let actual_changes = data.work_items.sanitize();
+    let actual_changes = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {
         work_item_id: child_no_epic,
-        data: ChangeData::Epic(Some(RIGHT_EPIC.to_owned())),
+        data: ChangeData::Epic(data.fields.epic.option_id(RIGHT_EPIC.into()).cloned()),
     });
 
     assert_eq!(actual_changes, expected_changes);
@@ -174,7 +177,7 @@ fn test_set_epic_from_parent() {
 fn test_set_epic_from_grandparent() {
     let mut data = TestData::default();
 
-    const EPIC: &str = "epic";
+    const EPIC: &str = "DML Demo";
 
     let child_a = data.build().add();
     let parent_a = data.build().epic(EPIC).sub_issues(&[&child_a]).add();
@@ -187,9 +190,9 @@ fn test_set_epic_from_grandparent() {
         .sub_issues(&[&parent_a, &parent_b])
         .add();
 
-    let epic = ChangeData::Epic(Some(EPIC.to_owned()));
+    let epic = ChangeData::Epic(data.fields.epic.option_id(EPIC.into()).cloned());
 
-    let actual_changes = data.work_items.sanitize();
+    let actual_changes = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {

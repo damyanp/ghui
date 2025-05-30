@@ -1,5 +1,5 @@
 use crate::{
-    data::{Field, FieldId, FieldOptionId, FieldType, Fields},
+    data::{Field, FieldId, FieldOption, FieldOptionId, FieldType, Fields},
     Error, Result,
 };
 use graphql_client::{GraphQLQuery, Response};
@@ -53,7 +53,10 @@ impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field {
                     .configuration
                     .iterations
                     .into_iter()
-                    .map(|i| (FieldOptionId(i.id), i.title))
+                    .map(|i| FieldOption {
+                        id: FieldOptionId(i.id),
+                        value: i.title,
+                    })
                     .collect(),
             }),
             FieldConfig::ProjectV2SingleSelectField(field) => Ok(Field {
@@ -63,7 +66,10 @@ impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field {
                 options: field
                     .options
                     .into_iter()
-                    .map(|i| (FieldOptionId(i.id), i.name))
+                    .map(|i| FieldOption {
+                        id: FieldOptionId(i.id),
+                        value: i.name,
+                    })
                     .collect(),
             }),
         }
@@ -79,5 +85,7 @@ pub async fn get_fields(client: &impl Client) -> Result<Fields> {
         blocked: fields.blocked.try_into()?,
         epic: fields.epic.try_into()?,
         iteration: fields.iteration.try_into()?,
+        project_milestone: fields.project_milestone.try_into()?,
+        kind: fields.kind.try_into()?,
     })
 }

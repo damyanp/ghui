@@ -1,9 +1,19 @@
 use super::*;
 
-#[derive(Default)]
 pub struct TestData {
     pub work_items: WorkItems,
+    pub fields: Fields,
     next_id: i32,
+}
+
+impl Default for TestData {
+    fn default() -> Self {
+        Self {
+            work_items: Default::default(),
+            fields: Fields::test(),
+            next_id: Default::default(),
+        }
+    }
 }
 
 impl TestData {
@@ -102,18 +112,26 @@ impl TestDataWorkItemBuilder<'_> {
     }
 
     pub fn status(mut self, name: &str) -> Self {
-        self.item.project_item.status = Some(SingleSelectFieldValue::from_name(name)).into();
+        let id = self.data.fields.status.option_id(Some(name)).cloned();
+        self.item.project_item.status = id.into();
         self
     }
 
     pub fn project_milestone(mut self, name: &str) -> Self {
-        self.item.project_item.project_milestone =
-            Some(SingleSelectFieldValue::from_name(name)).into();
+        let id = self
+            .data
+            .fields
+            .project_milestone
+            .option_id(Some(name))
+            .cloned();
+        self.item.project_item.project_milestone = id.into();
         self
     }
 
     pub fn epic(mut self, name: &str) -> Self {
-        self.item.project_item.epic = Some(SingleSelectFieldValue::from_name(name)).into();
+        let id = self.data.fields.epic.option_id(Some(name)).cloned();
+        assert!(id.is_some());
+        self.item.project_item.epic = id.into();
         self
     }
 }
@@ -141,11 +159,59 @@ impl WorkItem {
     }
 }
 
-impl SingleSelectFieldValue {
-    fn from_name(name: &str) -> SingleSelectFieldValue {
-        SingleSelectFieldValue {
+impl Field {
+    pub fn test(name: &str, field_type: FieldType, options: &[&str]) -> Self {
+        Field {
+            id: FieldId(format!("id{name}")),
             name: name.to_owned(),
-            ..Default::default()
+            field_type,
+            options: options
+                .iter()
+                .map(|name| FieldOption {
+                    id: FieldOptionId(format!("id({name})")),
+                    value: name.to_string(),
+                })
+                .collect(),
+        }
+    }
+}
+
+impl Fields {
+    pub fn test() -> Self {
+        use FieldType::*;
+
+        Fields {
+            project_id: "project_id".to_owned(),
+            status: Field::test("status", SingleSelect, &["Active", "Open", "Closed"]),
+            blocked: Field::test("blocked", SingleSelect, &["PR"]),
+            epic: Field::test(
+                "epic",
+                SingleSelect,
+                &[
+                    "DML Demo",
+                    "MiniEngine Demo",
+                    "SM 6.9 Preview",
+                    "DXC 2025 Q4",
+                    "Do Not Change",
+                    "EpicA",
+                    "EpicB",
+                ],
+            ),
+            iteration: Field::test("iteration", Iteration, &["S1", "S2"]),
+            project_milestone: Field::test(
+                "Project Milestone",
+                SingleSelect,
+                &[
+                    "3: ML preview requirements",
+                    "4: ML preview planning",
+                    "5: ML preview implementation",
+                    "Graphics preview feature analysis",
+                    "DXC: SM 6.9 Preview",
+                    "DXC: SM 6.9 Release",
+                    "Another Project Milestone",
+                ],
+            ),
+            kind: Field::test("Kind", SingleSelect, &["Bug", "Task"]),
         }
     }
 }

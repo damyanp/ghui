@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::DelayLoad;
+use super::{DelayLoad, FieldOptionId};
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
@@ -120,21 +120,20 @@ pub enum PullRequestState {
     Other(String),
 }
 
-type SingleSelectField = DelayLoad<Option<SingleSelectFieldValue>>;
-type IterationField = DelayLoad<Option<IterationFieldValue>>;
+type FieldValue = DelayLoad<Option<FieldOptionId>>;
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,
-    pub status: SingleSelectField,
-    pub iteration: IterationField,
-    pub blocked: SingleSelectField,
-    pub kind: SingleSelectField,
-    pub epic: SingleSelectField,
-    pub workstream: SingleSelectField,
-    pub project_milestone: SingleSelectField,
+    pub status: FieldValue,
+    pub iteration: FieldValue,
+    pub blocked: FieldValue,
+    pub kind: FieldValue,
+    pub epic: FieldValue,
+    pub workstream: FieldValue,
+    pub project_milestone: FieldValue,
 }
 impl ProjectItem {
     pub fn default_loaded() -> ProjectItem {
@@ -153,37 +152,9 @@ impl ProjectItem {
 
 #[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
 #[serde(rename_all = "camelCase")]
-pub struct SingleSelectFieldValue {
-    pub option_id: String,
-    pub name: String,
-}
-
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
-#[serde(rename_all = "camelCase")]
 pub struct IterationFieldValue {
     pub iteration_id: String,
     pub title: String,
-}
-
-pub trait HasFieldValue {
-    fn matches(&self, value: &str) -> bool;
-    fn field_value(&self) -> Option<&str>;
-}
-
-impl HasFieldValue for Option<SingleSelectFieldValue> {
-    fn matches(&self, value: &str) -> bool {
-        match self {
-            Some(SingleSelectFieldValue { name, .. }) => name == value,
-            None => false,
-        }
-    }
-
-    fn field_value(&self) -> Option<&str> {
-        match self {
-            Some(SingleSelectFieldValue { name, .. }) => Some(name.as_str()),
-            None => None,
-        }
-    }
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]

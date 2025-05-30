@@ -1,5 +1,6 @@
-use super::{Change, ChangeData, Changes, WorkItem, WorkItemData, WorkItemId};
-use crate::data::{work_item::HasFieldValue, SingleSelectFieldValue};
+use crate::data::FieldOptionId;
+
+use super::{Change, ChangeData, Changes, Fields, WorkItem, WorkItemData, WorkItemId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -92,27 +93,30 @@ impl WorkItems {
         changes
     }
 
-    pub fn sanitize(&self) -> Changes {
+    pub fn sanitize(&self, fields: &Fields) -> Changes {
         let mut changes = Changes::default();
+
+        let closed_option_id = fields.status.option_id("Closed".into()).cloned();
+        let bug_kind_id = fields.kind.option_id("Bug".into()).cloned();
 
         for item in self.work_items.values() {
             // Closed items should have status set to Closed
             if *item.is_closed().expect_loaded()
-                && !item.project_item.status.expect_loaded().matches("Closed")
+                && *item.project_item.status.expect_loaded() != closed_option_id
             {
                 changes.add(Change {
                     work_item_id: item.id.clone(),
-                    data: ChangeData::Status(Some("Closed".to_owned())),
+                    data: ChangeData::Status(closed_option_id.clone()),
                 });
             }
 
             // Map project milestones to epics
             if item.project_item.epic.expect_loaded().is_none() {
-                let new_epic = match item
-                    .project_item
+                let project_milestone = item.project_item.project_milestone.expect_loaded();
+
+                let new_epic = match fields
                     .project_milestone
-                    .expect_loaded()
-                    .field_value()
+                    .option_name(project_milestone.as_ref())
                 {
                     Some("3: ML preview requirements")
                     | Some("4: ML preview planning")
@@ -123,62 +127,65 @@ impl WorkItems {
                     _ => None,
                 };
 
-                if let Some(new_epic) = new_epic {
+                if let Some(new_epic) = fields.epic.option_id(new_epic).cloned() {
                     changes.add(Change {
                         work_item_id: item.id.clone(),
-                        data: ChangeData::Epic(Some(new_epic.to_owned())),
+                        data: ChangeData::Epic(Some(new_epic)),
                     });
                 }
             }
 
             // Items that are Bugs shuold set their type to bug
             if let WorkItemData::Issue(issue) = &item.data {
-                if let Some(SingleSelectFieldValue { name, .. }) =
-                    item.project_item.kind.expect_loaded()
+                let kind = item.project_item.kind.expect_loaded();
+
+                if *kind == bug_kind_id
+                    && issue.issue_type.expect_loaded().as_deref() != Some("Bug")
                 {
-                    if name == "Bug" && issue.issue_type.expect_loaded().as_deref() != Some("Bug") {
-                        changes.add(Change {
-                            work_item_id: item.id.clone(),
-                            data: ChangeData::IssueType(Some("Bug".to_owned())),
-                        });
-                    }
+                    changes.add(Change {
+                        work_item_id: item.id.clone(),
+                        data: ChangeData::IssueType(Some("Bug".to_owned())),
+                    });
                 }
             }
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(self, &mut changes, &root_item_id, None);
+            sanitize_issue_hierarchy(fields, self, &mut changes, &root_item_id, &None);
         }
 
         fn sanitize_issue_hierarchy(
+            fields: &Fields,
             items: &WorkItems,
             changes: &mut Changes,
             id: &WorkItemId,
-            epic: Option<&str>,
+            epic: &Option<FieldOptionId>,
         ) {
             if let Some(item) = items.get(id) {
-                if item.project_item.epic.expect_loaded().field_value() != epic {
-                    if let Some(epic) = epic {
-                        if let Some(current_epic) = item.project_item.epic.expect_loaded() {
-                            println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
-                    item.describe(), current_epic.name, epic);
-                        } else {
-                            changes.add(Change {
-                                work_item_id: id.clone(),
-                                data: ChangeData::Epic(Some(epic.to_owned())),
-                            });
-                        }
+                let this_item_epic = item.project_item.epic.expect_loaded();
+
+                if epic.is_some() && item.project_item.epic.expect_loaded() != epic {
+                    if this_item_epic.is_some() {
+                        println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
+                            item.describe(),
+                            fields.epic.option_name(this_item_epic.as_ref()).unwrap(),
+                            fields.epic.option_name(epic.as_ref()).unwrap());
+                    } else {
+                        changes.add(Change {
+                            work_item_id: id.clone(),
+                            data: ChangeData::Epic(epic.clone()),
+                        });
                     }
                 }
 
+                let epic = match epic {
+                    Some(_) => epic,
+                    None => this_item_epic,
+                };
+
                 if let WorkItemData::Issue(issue) = &item.data {
                     for child_id in &issue.sub_issues {
-                        sanitize_issue_hierarchy(
-                            items,
-                            changes,
-                            child_id,
-                            epic.or(item.project_item.epic.expect_loaded().field_value()),
-                        );
+                        sanitize_issue_hierarchy(fields, items, changes, child_id, epic);
                     }
                 }
             } else {

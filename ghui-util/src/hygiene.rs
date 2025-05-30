@@ -40,7 +40,9 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     println!("{} items", items.work_items.len());
 
-    let mut changes = items.sanitize();
+    let fields = get_fields(client).await?;
+
+    let mut changes = items.sanitize(&fields);
 
     let report_progress = |change: &Change, _, _| {
         println!(
@@ -49,7 +51,7 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
                 .get(&change.work_item_id)
                 .map(|i| i.describe())
                 .unwrap_or("??".to_owned()),
-            change.describe(&items)
+            change.describe(&fields, &items)
         );
     };
 
@@ -57,8 +59,6 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
         RunHygieneMode::DryRun | RunHygieneMode::TestData => SaveMode::DryRun,
         RunHygieneMode::Commit => SaveMode::Commit,
     };
-
-    let fields = get_fields(client).await?;
 
     changes
         .save(client, &fields, &items, save_mode, &report_progress)

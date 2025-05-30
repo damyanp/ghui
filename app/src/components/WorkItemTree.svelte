@@ -4,9 +4,14 @@
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable from "./TreeTable.svelte";
-  import { createRawSnippet } from "svelte";
+  import { createRawSnippet, type Snippet } from "svelte";
   import type { Change } from "$lib/bindings/Change";
   import type { DelayLoad } from "$lib/bindings/DelayLoad";
+  import { type FieldOptionId } from "$lib/bindings/FieldOptionId";
+  import { type ProjectItem } from "$lib/bindings/ProjectItem";
+  import { type IssueState } from "$lib/bindings/IssueState";
+  import { type PullRequestState } from "$lib/bindings/PullRequestState";
+  import { type Fields } from "$lib/bindings/Fields";
 
   let context = getWorkItemContext();
 
@@ -84,13 +89,7 @@
     {
       name: "Type",
       width: "1fr",
-      render: renderTextCell((i) => {
-        if (i.data.type === "issue")
-          return i.data.issueType.loadState == "notLoaded"
-            ? "not loaded"
-            : i.data.issueType.value;
-        return null;
-      }),
+      render: renderType,
     },
     {
       name: "Updated",
@@ -105,40 +104,32 @@
     {
       name: "State",
       width: "1fr",
-      render: renderTextCell((i) => {
-        if (i.data.type !== "issue" && i.data.type !== "pullRequest")
-          return null;
-
-        if (i.data.state.loadState === "notLoaded")
-          return "not loaded";
-
-        return i.data.state.value.toString();
-      }),
+      render: renderState,
     },
     {
       name: "Status",
       width: "1fr",
-      render: renderCustomField((i) => i.projectItem.status),
+      render: renderStatus,
     },
     {
       name: "Iteration",
       width: "1fr",
-      render: renderCustomField((i) => i.projectItem.iteration),
+      render: renderIteration,
     },
     {
       name: "Blocked",
       width: "1fr",
-      render: renderCustomField((i) => i.projectItem.blocked),
+      render: renderBlocked,
     },
     {
       name: "Kind",
       width: "1fr",
-      render: renderCustomField((i) => i.projectItem.kind),
+      render: renderKind,
     },
     {
       name: "Epic",
       width: "1fr",
-      render: renderCustomField((i) => i.projectItem.epic),
+      render: renderEpic,
     },
     {
       name: "#Tracked",
@@ -161,23 +152,6 @@
 
   function getItem(n: Node) {
     return context.data.workItems[n.id];
-  }
-
-  function renderCustomField(
-    getField: (
-      item: WorkItem
-    ) => DelayLoad<{ name: string } | { title: string } | null>
-  ) {
-    return renderTextCell((item) => {
-      const field = getField(item);
-      if (field.loadState === "notLoaded") return "not loaded";
-
-      if (field.value === null) return null;
-      if ("name" in field.value) return field.value.name;
-      if ("title" in field.value) return field.value.title;
-
-      return null;
-    });
   }
 
   function renderTextCell(getText: (item: WorkItem) => string | null) {
@@ -268,4 +242,66 @@
   {:else}
     &nbsp;
   {/if}
+{/snippet}
+
+{#snippet renderDelayLoad<T>(item: DelayLoad<T>, snippet: Snippet<[T]>)}
+  {#if item.loadState === "notLoaded"}
+    <div class="flex items-center justify-center h-full w-full">
+      <div class="bg-surface-300-700 rounded w-3/4 h-3/4"></div>
+    </div>
+  {:else}
+    {@render snippet(item.value)}
+  {/if}
+{/snippet}
+
+{#snippet renderType(item: WorkItem)}
+  {#if item.data.type === "issue"}
+    {#snippet render(issueType: string | null)}
+      {#if issueType}
+        {issueType}
+      {:else}
+        &nbsp;
+      {/if}
+    {/snippet}
+    {@render renderDelayLoad(item.data.issueType, render)}
+  {:else}
+    &nbsp;
+  {/if}
+{/snippet}
+
+{#snippet renderState(item: WorkItem)}
+  {#if item.data.type === "issue" || item.data.type === "pullRequest"}
+    {#snippet render(state: IssueState|PullRequestState)}
+      {state.toString()}
+    {/snippet}
+    {@render renderDelayLoad(item.data.state, render)}
+  {:else}
+    &nbsp;
+  {/if}
+{/snippet}
+
+{#snippet renderStatus(item: WorkItem)}
+  {@render renderCustomField(item, "status")}
+{/snippet}
+{#snippet renderIteration(item: WorkItem)}
+  {@render renderCustomField(item, "iteration")}
+{/snippet}
+{#snippet renderBlocked(item: WorkItem)}
+  {@render renderCustomField(item, "blocked")}
+{/snippet}
+{#snippet renderKind(item: WorkItem)}
+  {@render renderCustomField(item, "kind")}
+{/snippet}
+{#snippet renderEpic(item: WorkItem)}
+  {@render renderCustomField(item, "epic")}
+{/snippet}
+
+{#snippet renderCustomField(item: WorkItem, field: keyof ProjectItem)}
+  {#snippet render(value: FieldOptionId | null)}
+    {context.getFieldOption(field as keyof Fields, value)}
+  {/snippet}
+  {@render renderDelayLoad(
+    item.projectItem[field] as DelayLoad<FieldOptionId | null>,
+    render
+  )}
 {/snippet}

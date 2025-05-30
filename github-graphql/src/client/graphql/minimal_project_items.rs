@@ -5,8 +5,8 @@ use super::{
 use crate::{
     client::transport::Client,
     data::{
-        DelayLoad, Issue, ProjectItem, ProjectItemId, PullRequest, SingleSelectFieldValue,
-        WorkItem, WorkItemData, WorkItemId,
+        DelayLoad, FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem,
+        WorkItemData, WorkItemId,
     },
     Result,
 };
@@ -136,14 +136,11 @@ impl From<&short::Node> for ProjectItem {
 
 fn get_loaded_single_select_custom_field(
     value: Option<&CustomField>,
-) -> DelayLoad<Option<SingleSelectFieldValue>> {
+) -> DelayLoad<Option<FieldOptionId>> {
     value
         .and_then(|value| match value {
             CustomField::ProjectV2ItemFieldSingleSelectValue(v) => {
-                v.option_id.as_ref().map(|id| SingleSelectFieldValue {
-                    option_id: id.clone(),
-                    name: format!("lookup({})", id),
-                })
+                v.option_id.as_ref().map(|id| FieldOptionId(id.clone()))
             }
             _ => None,
         })

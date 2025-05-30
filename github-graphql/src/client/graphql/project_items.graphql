@@ -90,10 +90,8 @@ fragment CustomField on ProjectV2ItemFieldValue {
   __typename
   ... on ProjectV2ItemFieldSingleSelectValue {
     optionId
-    name
   }
   ... on ProjectV2ItemFieldIterationValue {
-    title
     iterationId
   }
 }

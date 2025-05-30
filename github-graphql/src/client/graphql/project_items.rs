@@ -2,8 +2,8 @@ use super::{minimal_project_items::get_minimal_project_items, paged_query::*, Da
 use crate::{
     client::transport::Client,
     data::{
-        self, DelayLoad, Issue, IterationFieldValue, ProjectItem, ProjectItemId, PullRequest,
-        SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId, WorkItems,
+        self, DelayLoad, FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem,
+        WorkItemData, WorkItemId, WorkItems,
     },
     Error, Result,
 };
@@ -13,7 +13,6 @@ use project_items::{
     ProjectItemsOrganizationProjectV2ItemsNodesContent,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueSubIssuesNodes,
     ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueTrackedIssuesNodes,
-    ProjectItemsOrganizationProjectV2ItemsNodesIteration,
 };
 
 #[derive(GraphQLQuery)]
@@ -64,41 +63,15 @@ impl PagedQuery<ProjectItems> for ProjectItems {
     }
 }
 
-trait CustomFieldAccessors {
-    fn get_single_select_field_value(&self) -> Option<SingleSelectFieldValue>;
-    fn get_iteration_title(&self) -> Option<IterationFieldValue>;
-}
-
-impl CustomFieldAccessors for Option<CustomField> {
-    fn get_single_select_field_value(&self) -> Option<SingleSelectFieldValue> {
-        self.as_ref().and_then(|v| {
-            if let CustomField::ProjectV2ItemFieldSingleSelectValue(v) = v {
-                if let Some(option_id) = &v.option_id {
-                    if let Some(name) = &v.name {
-                        return Some(SingleSelectFieldValue {
-                            option_id: option_id.clone(),
-                            name: name.clone(),
-                        });
-                    }
-                }
-            }
-            None
+fn get_field_option_id(field: &Option<CustomField>) -> Option<FieldOptionId> {
+    field
+        .as_ref()
+        .and_then(|field| match field {
+            CustomField::ProjectV2ItemFieldIterationValue(v) => Some(v.iteration_id.as_str()),
+            CustomField::ProjectV2ItemFieldSingleSelectValue(v) => v.option_id.as_deref(),
+            _ => None,
         })
-    }
-
-    fn get_iteration_title(&self) -> Option<IterationFieldValue> {
-        use ProjectItemsOrganizationProjectV2ItemsNodesIteration as I;
-        self.as_ref().and_then(|v| {
-            if let I::ProjectV2ItemFieldIterationValue(v) = v {
-                Some(IterationFieldValue {
-                    iteration_id: v.iteration_id.clone(),
-                    title: v.title.clone(),
-                })
-            } else {
-                None
-            }
-        })
-    }
+        .map(|id| FieldOptionId(id.to_owned()))
 }
 
 impl WorkItems {
@@ -108,14 +81,6 @@ impl WorkItems {
     ) -> Result<WorkItems> {
         let items = get_minimal_project_items(client, report_progress).await?;
         Ok(WorkItems::from_iter(items.into_iter()))
-
-        // let variables = project_items::Variables {
-        //     page_size: 100,
-        //     after: None,
-        // };
-        // let items = get_all_items::<ProjectItems>(client, variables, report_progress).await?;
-
-        // WorkItems::from_graphql(items)
     }
 
     pub fn from_graphql(
@@ -124,16 +89,13 @@ impl WorkItems {
         let mut work_items = WorkItems::default();
 
         for item in items {
-            let status = item.status.get_single_select_field_value().into();
-            let iteration = item.iteration.get_iteration_title().into();
-            let blocked = item.blocked.get_single_select_field_value().into();
-            let kind = item.kind.get_single_select_field_value().into();
-            let epic = item.epic.get_single_select_field_value().into();
-            let workstream = item.workstream.get_single_select_field_value().into();
-            let project_milestone = item
-                .project_milestone
-                .get_single_select_field_value()
-                .into();
+            let status = get_field_option_id(&item.status).into();
+            let iteration = get_field_option_id(&item.iteration).into();
+            let blocked = get_field_option_id(&item.blocked).into();
+            let kind = get_field_option_id(&item.kind).into();
+            let epic = get_field_option_id(&item.epic).into();
+            let workstream = get_field_option_id(&item.workstream).into();
+            let project_milestone = get_field_option_id(&item.project_milestone).into();
 
             let project_item = ProjectItem {
                 id: ProjectItemId(item.id),
@@ -253,12 +215,8 @@ fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<
 mod tests {
     use super::*;
 
-    fn single_select_value(value: &str) -> DelayLoad<Option<SingleSelectFieldValue>> {
-        Some(SingleSelectFieldValue {
-            option_id: value.to_owned(),
-            name: value.to_owned(),
-        })
-        .into()
+    fn single_select_value(value: &str) -> DelayLoad<Option<FieldOptionId>> {
+        Some(FieldOptionId(value.to_owned())).into()
     }
 
     #[test]
@@ -271,7 +229,6 @@ mod tests {
     "Category": null,
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Language",
       "optionId": "Language"
     },
     "ProjectMilestone": null,
@@ -287,18 +244,15 @@ mod tests {
     "updatedAt": "2025-03-27T21:01:45Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Closed",
       "optionId": "Closed"
     },
     "Category": null,
     "Workstream": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Root Signatures",
       "optionId": "Root Signatures"
     },
     "ProjectMilestone": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "(old)3: Compute Shaders (1)",
       "optionId": "(old)3: Compute Shaders (1)"
     },
     "content": {
@@ -324,7 +278,6 @@ mod tests {
     "updatedAt": "2025-04-07T20:00:01Z",
     "Status": {
       "__typename": "ProjectV2ItemFieldSingleSelectValue",
-      "name": "Needs Review",
       "optionId": "Needs Review"
     },
     "Category": null,

@@ -1,16 +1,12 @@
 use super::{
-    Field, Fields, Issue, Result, SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId,
-    WorkItems,
+    Field, FieldOptionId, Fields, Issue, Result, WorkItem, WorkItemData, WorkItemId, WorkItems,
 };
-use crate::{
-    client::{
-        graphql::{
-            add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
-            set_issue_type, set_project_field_value,
-        },
-        transport::Client,
+use crate::client::{
+    graphql::{
+        add_sub_issue, add_to_project, clear_project_field_value, get_issue_types, set_issue_type,
+        set_project_field_value,
     },
-    data::work_item::HasFieldValue,
+    transport::Client,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -140,13 +136,13 @@ impl Change {
         work_items: &WorkItems,
         project_id: &str,
         field: &Field,
-        value: &Option<String>,
+        value: &Option<FieldOptionId>,
     ) -> Result<()> {
         if let Some(project_item_id) = work_items
             .get(&self.work_item_id)
             .map(|item| &item.project_item.id)
         {
-            if let Some(new_value_id) = value.as_ref().and_then(|name| field.option_id(name)) {
+            if let Some(new_value_id) = value {
                 set_project_field_value(
                     client,
                     project_id,
@@ -227,9 +223,9 @@ pub struct Change {
 #[serde(rename_all = "camelCase", tag = "type", content = "value")]
 pub enum ChangeData {
     IssueType(Option<String>),
-    Status(Option<String>),
-    Blocked(Option<String>),
-    Epic(Option<String>),
+    Status(Option<FieldOptionId>),
+    Blocked(Option<FieldOptionId>),
+    Epic(Option<FieldOptionId>),
     SetParent(WorkItemId),
     AddToProject,
 }
@@ -242,7 +238,7 @@ impl Change {
         }
     }
 
-    pub fn describe(&self, work_items: &WorkItems) -> String {
+    pub fn describe(&self, fields: &Fields, work_items: &WorkItems) -> String {
         let work_item = work_items.get(&self.work_item_id).unwrap();
 
         let old_value = match self.data {
@@ -250,9 +246,15 @@ impl Change {
                 WorkItemData::Issue(issue) => issue.issue_type.expect_loaded().as_deref(),
                 _ => None,
             },
-            ChangeData::Status(_) => work_item.project_item.status.expect_loaded().field_value(),
-            ChangeData::Blocked(_) => work_item.project_item.blocked.expect_loaded().field_value(),
-            ChangeData::Epic(_) => work_item.project_item.epic.expect_loaded().field_value(),
+            ChangeData::Status(_) => fields
+                .status
+                .option_name(work_item.project_item.status.expect_loaded().as_ref()),
+            ChangeData::Blocked(_) => fields
+                .blocked
+                .option_name(work_item.project_item.blocked.expect_loaded().as_ref()),
+            ChangeData::Epic(_) => fields
+                .epic
+                .option_name(work_item.project_item.epic.expect_loaded().as_ref()),
             ChangeData::SetParent(_) => match &work_item.data {
                 WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
                 _ => None,
@@ -271,14 +273,13 @@ impl Change {
         };
 
         let new_value = match &self.data {
-            ChangeData::IssueType(value) => value.as_ref(),
-            ChangeData::Status(value) => value.as_ref(),
-            ChangeData::Blocked(value) => value.as_ref(),
-            ChangeData::Epic(value) => value.as_ref(),
-            ChangeData::SetParent(value) => Some(&value.0),
+            ChangeData::IssueType(value) => value.as_ref().map(|v| v.as_str()),
+            ChangeData::Status(value) => fields.status.option_name(value.as_ref()),
+            ChangeData::Blocked(value) => fields.blocked.option_name(value.as_ref()),
+            ChangeData::Epic(value) => fields.epic.option_name(value.as_ref()),
+            ChangeData::SetParent(value) => Some(value.0.as_str()),
             ChangeData::AddToProject => None,
         }
-        .map(|v| v.as_str())
         .unwrap_or("<>");
 
         format!("{}({} -> {})", name, old_value, new_value).to_owned()
@@ -318,33 +319,9 @@ impl WorkItems {
                         issue.issue_type = value.to_owned().into();
                     }
                 }
-                ChangeData::Status(value) => {
-                    work_item.project_item.status = value
-                        .as_ref()
-                        .map(|value| SingleSelectFieldValue {
-                            option_id: "???".to_owned(),
-                            name: value.clone(),
-                        })
-                        .into()
-                }
-                ChangeData::Blocked(value) => {
-                    work_item.project_item.blocked = value
-                        .as_ref()
-                        .map(|value| SingleSelectFieldValue {
-                            option_id: "???".to_owned(),
-                            name: value.clone(),
-                        })
-                        .into()
-                }
-                ChangeData::Epic(value) => {
-                    work_item.project_item.epic = value
-                        .as_ref()
-                        .map(|value| SingleSelectFieldValue {
-                            option_id: "???".to_owned(),
-                            name: value.clone(),
-                        })
-                        .into()
-                }
+                ChangeData::Status(value) => work_item.project_item.status = value.clone().into(),
+                ChangeData::Blocked(value) => work_item.project_item.blocked = value.clone().into(),
+                ChangeData::Epic(value) => work_item.project_item.epic = value.clone().into(),
                 ChangeData::SetParent(new_parent_id) => {
                     let child_id = &change.work_item_id;
 
