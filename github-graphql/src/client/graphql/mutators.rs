@@ -1,4 +1,8 @@
-use crate::{client::transport::Client, data::ProjectItemId, Error, Result};
+use crate::{
+    client::transport::Client,
+    data::{FieldId, FieldOptionId, ProjectItemId},
+    Error, Result,
+};
 use graphql_client::{GraphQLQuery, Response};
 
 gql!(AddSubIssue, "src/client/graphql/add_sub_issue.graphql");
@@ -63,12 +67,12 @@ pub async fn clear_project_field_value(
     client: &impl Client,
     project_id: &str,
     item_id: &ProjectItemId,
-    field_id: &str,
+    field_id: &FieldId,
 ) -> Result {
     let variables = clear_project_field_value::Variables {
         project_id: project_id.to_owned(),
         item_id: item_id.0.to_owned(),
-        field_id: field_id.to_owned(),
+        field_id: field_id.0.to_owned(),
     };
     let request_body = ClearProjectFieldValue::build_query(variables);
 
@@ -87,14 +91,14 @@ pub async fn set_project_field_value(
     client: &impl Client,
     project_id: &str,
     item_id: &ProjectItemId,
-    field_id: &str,
-    option_id: &str,
+    field_id: &FieldId,
+    option_id: &FieldOptionId,
 ) -> Result {
     let variables = set_project_field_value::Variables {
         project_id: project_id.to_owned(),
         item_id: item_id.0.to_owned(),
-        field_id: field_id.to_owned(),
-        option_id: option_id.to_owned(),
+        field_id: field_id.0.to_owned(),
+        option_id: option_id.0.to_owned(),
     };
 
     let request_body = SetProjectFieldValue::build_query(variables);

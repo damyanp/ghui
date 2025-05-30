@@ -12,6 +12,9 @@ pub use work_items::*;
 mod changes;
 pub use changes::*;
 
+mod custom_fields;
+pub use custom_fields::*;
+
 pub mod test_helpers;
 
 #[cfg(test)]

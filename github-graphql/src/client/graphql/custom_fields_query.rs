@@ -1,6 +1,8 @@
-use crate::{Error, Result};
+use crate::{
+    data::{Field, FieldId, FieldOptionId, FieldType, Fields},
+    Error, Result,
+};
 use graphql_client::{GraphQLQuery, Response};
-use std::collections::HashMap;
 
 gql!(
     CustomFieldsQuery,
@@ -30,62 +32,42 @@ pub async fn get_custom_fields(
         ))
 }
 
-#[derive(Default, Debug)]
-pub struct Field {
-    pub id: String,
-    pub name: String,
-    id_to_name: HashMap<String, String>,
-    name_to_id: HashMap<String, String>,
-}
+impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field {
+    type Error = Error;
 
-impl From<Option<custom_fields_query::FieldConfig>> for Field {
-    fn from(config: Option<custom_fields_query::FieldConfig>) -> Self {
+    fn try_from(config: Option<custom_fields_query::FieldConfig>) -> Result<Field> {
         use custom_fields_query::FieldConfig;
 
-        if let Some(config) = &config {
-            let (id, name) = match config {
-                FieldConfig::ProjectV2Field => ("<no id>".to_owned(), "<unknown>".to_owned()),
-                FieldConfig::ProjectV2IterationField(f) => (f.id.clone(), f.name.clone()),
-                FieldConfig::ProjectV2SingleSelectField(f) => (f.id.clone(), f.name.clone()),
-            };
+        let config =
+            config.ok_or_else(|| Error::GraphQlResponseUnexpected("Field missing!".to_string()))?;
 
-            let mut id_to_name = HashMap::new();
-            let mut name_to_id = HashMap::new();
-
-            if let FieldConfig::ProjectV2SingleSelectField(config) = config {
-                for option in &config.options {
-                    id_to_name.insert(option.id.clone(), option.name.clone());
-                    name_to_id.insert(option.name.clone(), option.id.clone());
-                }
-            }
-
-            Field {
-                id,
-                name,
-                id_to_name,
-                name_to_id,
-            }
-        } else {
-            Field::default()
+        match config {
+            FieldConfig::ProjectV2Field => Err(Error::GraphQlResponseUnexpected(
+                "ProjectV2Field".to_string(),
+            )),
+            FieldConfig::ProjectV2IterationField(field) => Ok(Field {
+                id: FieldId(field.id),
+                name: field.name,
+                field_type: FieldType::Iteration,
+                options: field
+                    .configuration
+                    .iterations
+                    .into_iter()
+                    .map(|i| (FieldOptionId(i.id), i.title))
+                    .collect(),
+            }),
+            FieldConfig::ProjectV2SingleSelectField(field) => Ok(Field {
+                id: FieldId(field.id),
+                name: field.name,
+                field_type: FieldType::SingleSelect,
+                options: field
+                    .options
+                    .into_iter()
+                    .map(|i| (FieldOptionId(i.id), i.name))
+                    .collect(),
+            }),
         }
     }
-}
-
-impl Field {
-    pub fn id(&self, name: &str) -> Option<&str> {
-        self.name_to_id.get(name).map(|n| n.as_str())
-    }
-
-    pub fn name(&self, id: Option<&str>) -> Option<&str> {
-        id.and_then(|id| self.id_to_name.get(id).map(|n| n.as_str()))
-    }
-}
-
-pub struct Fields {
-    pub project_id: String,
-    pub status: Field,
-    pub blocked: Field,
-    pub epic: Field,
 }
 
 pub async fn get_fields(client: &impl Client) -> Result<Fields> {
@@ -93,8 +75,9 @@ pub async fn get_fields(client: &impl Client) -> Result<Fields> {
 
     Ok(Fields {
         project_id: fields.id,
-        status: fields.status.into(),
-        blocked: fields.blocked.into(),
-        epic: fields.epic.into(),
+        status: fields.status.try_into()?,
+        blocked: fields.blocked.try_into()?,
+        epic: fields.epic.try_into()?,
+        iteration: fields.iteration.try_into()?,
     })
 }

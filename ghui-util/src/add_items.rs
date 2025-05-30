@@ -1,8 +1,9 @@
 use crate::Result;
 use anyhow::anyhow;
-use github_graphql::client::graphql::custom_fields_query::{get_fields, Fields};
+use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::client::graphql::{add_to_project, get_resource_id, set_project_field_value};
 use github_graphql::client::transport::GithubClient;
+use github_graphql::data::{FieldOptionId, Fields};
 use regex::Regex;
 use std::fs::File;
 use std::io::Read;
@@ -52,7 +53,7 @@ pub async fn run(options: Options) -> Result {
 async fn add_item(
     client: &GithubClient,
     fields: &Fields,
-    epic_id: Option<&str>,
+    epic_id: Option<&FieldOptionId>,
     issue: &str,
 ) -> Result {
     let content_id = get_resource_id(client, issue).await?;

@@ -1,10 +1,12 @@
-use super::{Issue, Result, SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId, WorkItems};
+use super::{
+    Field, Fields, Issue, Result, SingleSelectFieldValue, WorkItem, WorkItemData, WorkItemId,
+    WorkItems,
+};
 use crate::{
     client::{
         graphql::{
-            add_sub_issue, add_to_project, clear_project_field_value,
-            custom_fields_query::{Field, Fields},
-            get_issue_types, set_issue_type, set_project_field_value,
+            add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
+            set_issue_type, set_project_field_value,
         },
         transport::Client,
     },
