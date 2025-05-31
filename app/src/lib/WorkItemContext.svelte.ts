@@ -8,6 +8,7 @@ import type { Field } from "./bindings/Field";
 import type { FieldOptionId } from "./bindings/FieldOptionId";
 import { type DataUpdate } from "./bindings/DataUpdate";
 import { ItemUpdateBatcher } from "./ItemUpdater";
+import type { WorkItem } from "./bindings/WorkItem";
 
 const key = Symbol("WorkItemContext");
 
@@ -40,23 +41,29 @@ export class WorkItemContext {
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
   }  
 
-  on_data_update(data_update: DataUpdate) {
-    console.log(data_update);
-    switch (data_update.type) {
+  on_data_update(dataUpdate: DataUpdate) {
+    console.log(dataUpdate);
+    switch (dataUpdate.type) {
       case "data":
-        this.on_data_update_data(data_update.value);
+        this.onDataUpdateData(dataUpdate.value);
         break;
       case "progress":
-        this.on_progress_update(data_update.value);
+        this.onDataUpdateProgress(dataUpdate.value);
         break;
+      case "workItem":
+        this.onDataUpdateWorkItem(dataUpdate.value);
     }
   }
 
-  on_data_update_data(data: Data) {
+  onDataUpdateData(data: Data) {
     this.data = data;
   }
 
-  on_progress_update({ done, total }: { done: number; total: number }) {
+  onDataUpdateWorkItem(workItem: WorkItem) {
+    this.data.workItems[workItem.id] = workItem;
+  }
+
+  onDataUpdateProgress({ done, total }: { done: number; total: number }) {
     this.loadProgress = total === 0 ? 0 : 1 - done / total;
   }
 

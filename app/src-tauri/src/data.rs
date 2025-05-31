@@ -31,9 +31,7 @@ pub async fn update_items(
     data_state: State<'_, DataState>,
     items: Vec<ItemToUpdate>,
 ) -> TauriCommandResult<()> {
-    let data_state = data_state.lock().await;
-    todo!();
-    // data_state.request_update_items(items);
+    data_state.request_update_items(items);
     Ok(())
 }
 

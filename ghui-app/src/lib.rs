@@ -11,6 +11,7 @@ use std::{
     io::{BufReader, BufWriter},
     ops::Deref,
     path::PathBuf,
+    sync::Arc,
 };
 use tokio::sync::Mutex;
 use ts_rs::TS;
@@ -63,6 +64,7 @@ pub struct Data {
 #[ts(export)]
 pub enum DataUpdate {
     Progress { done: usize, total: usize },
+    WorkItem(WorkItem),
     Data(Box<Data>),
 }
 
@@ -77,7 +79,7 @@ pub struct ItemToUpdate {
 type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
 #[derive(Default)]
-pub struct DataState(pub Mutex<AppState>);
+pub struct DataState(pub Arc<Mutex<AppState>>);
 
 impl Deref for DataState {
     type Target = Mutex<AppState>;
@@ -212,6 +214,17 @@ impl AppState {
         Ok(work_items)
     }
 
+    pub async fn update_item(&mut self, item_to_update: ItemToUpdate) -> Result<()> {
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        if let Some(work_items) = &mut self.work_items {
+            if let Some(work_item) = work_items.get_mut(&item_to_update.work_item_id) {
+                work_item.title = format!("!{}", work_item.title);
+                (self.watcher)(DataUpdate::WorkItem(work_item.clone()))
+            }
+        }
+        Ok(())
+    }
+
     pub fn set_filters(&mut self, filters: Filters) {
         self.filters = filters;
     }
@@ -250,6 +263,18 @@ impl AppState {
                 &|_, a, b| report_progress(a, b),
             )
             .await?)
+    }
+}
+
+impl DataState {
+    pub fn request_update_items(&self, items: Vec<ItemToUpdate>) {
+        let app_state = Arc::clone(&self.0);
+        tokio::spawn(async move {
+            for item in items {
+                let mut data_state = app_state.lock().await;
+                data_state.update_item(item).await.unwrap();
+            }
+        });
     }
 }
 
