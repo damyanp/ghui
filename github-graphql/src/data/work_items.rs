@@ -105,9 +105,7 @@ impl WorkItems {
 
         for item in self.work_items.values() {
             // Closed items should have status set to Closed
-            if *item.is_closed().expect_loaded()
-                && item.project_item.status != closed_option_id
-            {
+            if *item.is_closed().expect_loaded() && item.project_item.status != closed_option_id {
                 changes.add(Change {
                     work_item_id: item.id.clone(),
                     data: ChangeData::Status(closed_option_id.clone()),

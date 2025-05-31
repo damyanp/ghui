@@ -5,8 +5,8 @@ use super::{
 use crate::{
     client::transport::Client,
     data::{
-        FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem,
-        WorkItemData, WorkItemId,
+        FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem, WorkItemData,
+        WorkItemId,
     },
     Result,
 };

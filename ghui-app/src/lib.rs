@@ -2,10 +2,7 @@ use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::{
     client::graphql::{custom_fields_query::get_fields, get_items::get_items},
-    data::{
-        Change, Changes, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId,
-        WorkItems,
-    },
+    data::{Change, Changes, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId, WorkItems},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -35,7 +32,11 @@ impl Filters {
     fn should_include(&self, fields: &Fields, work_item: &WorkItem) -> bool {
         if self.hide_closed {
             // TODO: looking up the option_name each time is wasteful
-            if fields.status.option_name(work_item.project_item.status.as_ref()) == Some("Closed") {
+            if fields
+                .status
+                .option_name(work_item.project_item.status.as_ref())
+                == Some("Closed")
+            {
                 return false;
             }
         }
@@ -92,12 +93,12 @@ impl Deref for DataState {
 
 pub struct AppState {
     pub pat: PATState,
-    pub watcher: Arc<SendDataUpdate>,
-    pub fields: Option<Fields>,
-    pub work_items: Option<WorkItems>,
-    pub filters: Filters,
-    pub changes: Changes,
-    pub preview_changes: bool,
+    watcher: Arc<SendDataUpdate>,
+    fields: Option<Fields>,
+    work_items: Option<WorkItems>,
+    filters: Filters,
+    changes: Changes,
+    preview_changes: bool,
 }
 
 impl Default for AppState {
@@ -119,6 +120,11 @@ impl AppState {
             changes: Changes::default(),
             preview_changes: true,
         }
+    }
+
+    pub async fn set_watcher(&mut self, watcher: SendDataUpdate) -> Result<()> {
+        self.watcher = Arc::new(watcher);
+        self.refresh(false).await
     }
 
     pub async fn refresh(&mut self, force_refresh: bool) -> Result<()> {
@@ -246,6 +252,14 @@ impl AppState {
         self.changes.remove(change);
     }
 
+    pub fn clear_changes(&mut self) {
+        self.changes = Changes::default();
+    }
+
+    pub fn set_preview_changes(&mut self, preview: bool) {
+        self.preview_changes = preview;
+    }
+
     /// Updates in-place the provided work items with the changes set on self.
     /// Returns the original values of the work items.
     pub fn apply_changes(&self, work_items: &mut WorkItems) -> HashMap<WorkItemId, WorkItem> {
@@ -268,6 +282,24 @@ impl AppState {
                 &|_, a, b| report_progress(a, b),
             )
             .await?)
+    }
+
+    pub fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) {
+        if let Some(work_items) = self.work_items.as_ref() {
+            self.add_changes(work_items.convert_tracked_to_sub_issues(&id));
+        }
+    }
+
+    pub fn sanitize(&mut self) -> usize {
+        if let Some(work_items) = self.work_items.as_ref() {
+            if let Some(fields) = self.fields.as_ref() {
+                let changes = work_items.sanitize(fields);
+                let num_changes = changes.len();
+                self.add_changes(changes);
+                return num_changes;
+            }
+        }
+        0
     }
 }
 
