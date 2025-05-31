@@ -3,10 +3,10 @@ import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { WorkItemId } from "./bindings/WorkItemId";
 import type { Change } from "./bindings/Change";
-import type { Filters } from "./bindings/Filters";
 import type { Fields } from "./bindings/Fields";
 import type { Field } from "./bindings/Field";
 import type { FieldOptionId } from "./bindings/FieldOptionId";
+import { type DataUpdate } from "./bindings/DataUpdate";
 
 const key = Symbol("WorkItemContext");
 
@@ -31,23 +31,36 @@ export class WorkItemContext {
 
   loadProgress = $state<number>(0);
 
-  public async refresh(forceRefresh: boolean): Promise<void> {
-    if (this.loadProgress !== 0) return;
+  updates_channel = new Channel<DataUpdate>();
 
-    // If we're expecting this to take a long time start the progress spinner
-    // immediately
-    if (forceRefresh || this.data.nodes.length === 0) this.loadProgress = 1;
+  constructor() {
+    this.updates_channel.onmessage = (data_update) =>
+      this.on_data_update(data_update);
+    tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
+  }  
 
-    const progress = makeProgressChannel(
-      (value) => (this.loadProgress = value)
-    );
+  on_data_update(data_update: DataUpdate) {
+    console.log(data_update);
+    switch (data_update.type) {
+      case "data":
+        this.on_data_update_data(data_update.value);
+        break;
+      case "progress":
+        this.on_progress_update(data_update.value);
+        break;
+    }
+  }
 
-    this.data = await invoke<Data>("get_data", {
-      forceRefresh,
-      progress,
-    });
+  on_data_update_data(data: Data) {
+    this.data = data;
+  }
 
-    this.loadProgress = 0;
+  on_progress_update({ done, total }: { done: number; total: number }) {
+    this.loadProgress = total === 0 ? 0 : 1 - done / total;
+  }
+
+  public async refresh(): Promise<void> {
+    await invoke("force_refresh_data");
   }
 
   public async updateWorkItem(workItemId: WorkItemId) {
@@ -58,12 +71,10 @@ export class WorkItemContext {
     await invoke("convert_tracked_to_sub_issues", {
       id,
     });
-    await this.refresh(false);
   }
 
   public async sanitize() {
     await invoke("sanitize");
-    await this.refresh(false);
   }
 
   public get hideClosed() {
@@ -73,9 +84,7 @@ export class WorkItemContext {
   public set hideClosed(value: boolean) {
     console.log(`set hideClosed: ${value}`);
     this.data.filters.hideClosed = value;
-    invoke("set_filters", { filters: this.data.filters }).then(() =>
-      this.refresh(false)
-    );
+    invoke("set_filters", { filters: this.data.filters });
   }
 
   public getFieldOption(
@@ -99,27 +108,22 @@ export class WorkItemContext {
 
   public async deleteChanges() {
     await invoke("delete_changes");
-    await this.refresh(false);
   }
 
   public async setPreviewChanges(preview: boolean) {
     await invoke("set_preview_changes", { preview });
-    await this.refresh(false);
   }
 
   public async saveChanges(progress: Channel<Progress>) {
     await invoke("save_changes", { progress });
-    await this.refresh(true);
   }
 
   public async addChange(change: Change) {
     await invoke("add_change", { change });
-    await this.refresh(false);
   }
 
   public async removeChange(change: Change) {
     await invoke("remove_change", { change });
-    await this.refresh(false);
   }
 
   // #endregion

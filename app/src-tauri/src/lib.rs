@@ -35,8 +35,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             pat::check_pat_status,
-            pat::set_pat,
-            data::get_data,
+            pat::set_pat,            
+            data::watch_data,
+            data::force_refresh_data,
             data::delete_changes,
             data::set_preview_changes,
             data::save_changes,

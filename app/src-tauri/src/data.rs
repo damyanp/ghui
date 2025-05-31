@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use tauri::{async_runtime::Mutex, ipc::Channel, AppHandle, State};
 use ts_rs::TS;
 
-#[derive(Serialize, TS)]
+#[derive(Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Data {
@@ -69,8 +69,17 @@ enum NodeData {
     Group { name: String },
 }
 
+#[derive(Serialize, TS, Debug)]
+#[serde(rename_all = "camelCase", tag = "type", content = "value")]
+#[ts(export)]
+pub enum DataUpdate {
+    Progress { done: usize, total: usize },
+    Data(Box<Data>),
+}
+
 pub struct DataState {
     app: AppHandle,
+    watcher: Option<Channel<DataUpdate>>,
     pub fields: Option<Fields>,
     pub work_items: Option<WorkItems>,
     filters: Filters,
@@ -82,12 +91,38 @@ impl DataState {
     pub(crate) fn new(app: AppHandle) -> Self {
         Self {
             app,
+            watcher: None,
             fields: None,
             work_items: None,
             filters: Filters::default(),
             changes: Changes::default(),
             preview_changes: true,
         }
+    }
+
+    async fn refresh(&mut self, force_refresh: bool) -> Result<()> {
+        let fields = self.refresh_fields(force_refresh).await?;
+        let mut work_items = self.refresh_work_items(force_refresh).await?;
+        let original_work_items = if self.preview_changes {
+            self.apply_changes(&mut work_items)
+        } else {
+            HashMap::default()
+        };
+
+        let nodes =
+            NodeBuilder::new(&fields, &work_items, &self.filters, &original_work_items).build();
+
+        if let Some(watcher) = &self.watcher {
+            watcher.send(DataUpdate::Data(Box::new(Data {
+                nodes,
+                work_items: work_items.work_items,
+                fields,
+                original_work_items,
+                filters: self.filters.clone(),
+                changes: self.changes.clone(),
+            })))?;
+        }
+        Ok(())
     }
 
     async fn refresh_fields(&mut self, force: bool) -> Result<Fields> {
@@ -119,11 +154,7 @@ impl DataState {
         Ok(fields)
     }
 
-    async fn refresh_work_items(
-        &mut self,
-        force: bool,
-        report_progress: &impl Fn(usize, usize),
-    ) -> Result<WorkItems> {
+    async fn refresh_work_items(&mut self, force: bool) -> Result<WorkItems> {
         if !force {
             if self.work_items.is_some() {
                 return Ok(self.work_items.clone().unwrap());
@@ -146,12 +177,22 @@ impl DataState {
         // Try retrieving from github
         let client = new_github_client(&self.app).await?;
 
+        let report_progress = |done, total| {
+            if let Some(watcher) = &self.watcher {
+                let _ = watcher.send(DataUpdate::Progress { done, total });
+            }
+        };
+
+        report_progress(0, 1);
+
         let work_items = WorkItems::from_client(&client, &report_progress).await?;
 
         let save_result = save_workitems_to_appdata(&work_items);
         if let Err(error) = save_result {
             println!("WARNING: failed to save cached work items: {error}");
         }
+
+        report_progress(0, 0);
 
         self.work_items = Some(work_items.clone());
         Ok(work_items)
@@ -247,41 +288,21 @@ fn get_appdata_path(name: &str) -> PathBuf {
 }
 
 #[tauri::command]
-pub async fn get_data(
+pub async fn watch_data(
     data_state: State<'_, Mutex<DataState>>,
-    force_refresh: bool,
-    progress: Channel<(usize, usize)>,
-) -> TauriCommandResult<Data> {
-    let report_progress = |c, t| {
-        progress.send((c, t)).unwrap();
-    };
-
+    channel: Channel<DataUpdate>,
+) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
-    let fields = data_state.refresh_fields(force_refresh).await?;
-    let mut work_items = data_state
-        .refresh_work_items(force_refresh, &report_progress)
-        .await?;
-    let original_work_items = if data_state.preview_changes {
-        data_state.apply_changes(&mut work_items)
-    } else {
-        HashMap::default()
-    };
+    data_state.watcher = Some(channel);
+    data_state.refresh(false).await?;
+    Ok(())
+}
 
-    let nodes = NodeBuilder::new(
-        &fields,
-        &work_items,
-        &data_state.filters,
-        &original_work_items,
-    )
-    .build();
-    Ok(Data {
-        nodes,
-        work_items: work_items.work_items,
-        fields,
-        original_work_items,
-        filters: data_state.filters.clone(),
-        changes: data_state.changes.clone(),
-    })
+#[tauri::command]
+pub async fn force_refresh_data(data_state: State<'_, Mutex<DataState>>) -> TauriCommandResult<()> {
+    let mut data_state = data_state.lock().await;
+    data_state.refresh(true).await?;
+    Ok(())
 }
 
 #[tauri::command]

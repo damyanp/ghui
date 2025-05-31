@@ -15,11 +15,9 @@
 
   const context = setWorkItemContext(new WorkItemContext());
 
-  async function onRefreshClicked(forceRefresh: boolean): Promise<void> {
-    await context.refresh(forceRefresh);
+  async function onRefreshClicked(): Promise<void> {
+    await context.refresh();
   }
-
-  onRefreshClicked(false);
 </script>
 
 <div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
@@ -32,7 +30,7 @@
       </div>
       <RefreshButton
         progress={context.loadProgress}
-        onclick={() => onRefreshClicked(true)}
+        onclick={onRefreshClicked}
       />
     {/snippet}
 
