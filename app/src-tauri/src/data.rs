@@ -1,5 +1,5 @@
 use crate::TauriCommandResult;
-use ghui_app::{DataState, DataUpdate, Filters};
+use ghui_app::{DataState, DataUpdate, Filters, ItemToUpdate};
 use github_graphql::data::Changes;
 use tauri::{async_runtime::Mutex, ipc::Channel, State};
 
@@ -22,6 +22,17 @@ pub async fn watch_data(
 pub async fn force_refresh_data(data_state: State<'_, Mutex<DataState>>) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.refresh(true).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn update_items(
+    data_state: State<'_, Mutex<DataState>>,
+    items: Vec<ItemToUpdate>,
+) -> TauriCommandResult<()> {
+    let mut data_state = data_state.lock().await;
+    todo!();
+    // data_state.request_update_items(items);
     Ok(())
 }
 

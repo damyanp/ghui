@@ -7,6 +7,7 @@ import type { Fields } from "./bindings/Fields";
 import type { Field } from "./bindings/Field";
 import type { FieldOptionId } from "./bindings/FieldOptionId";
 import { type DataUpdate } from "./bindings/DataUpdate";
+import { ItemUpdateBatcher } from "./ItemUpdater";
 
 const key = Symbol("WorkItemContext");
 
@@ -63,8 +64,10 @@ export class WorkItemContext {
     await invoke("force_refresh_data");
   }
 
+  itemUpdateBatcher = new ItemUpdateBatcher();
+
   public async updateWorkItem(workItemId: WorkItemId) {
-    throw new Error("Method not implemented.");
+    this.itemUpdateBatcher.add(workItemId, false);
   }
 
   public async convertTrackedIssuesToSubIssue(id: WorkItemId) {

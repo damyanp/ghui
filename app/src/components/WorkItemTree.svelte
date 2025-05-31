@@ -208,8 +208,8 @@
     if (change) await context.addChange(change);
   }
 
-  function onRowFirstVisible(rowId: string) {
-    context.updateWorkItem(rowId);
+  function onRowFirstVisible(row: Node) {
+    if (row.data.type === "workItem") context.updateWorkItem(row.id);
   }
 
   let expanded = $state([]);

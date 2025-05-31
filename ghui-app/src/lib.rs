@@ -11,6 +11,7 @@ use std::{
     io::{BufReader, BufWriter},
     path::PathBuf,
 };
+use tokio::sync::Mutex;
 use ts_rs::TS;
 
 mod nodes;
@@ -64,6 +65,14 @@ pub enum DataUpdate {
     Data(Box<Data>),
 }
 
+#[derive(Deserialize, Serialize, TS, Debug)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ItemToUpdate {
+    pub work_item_id: WorkItemId,
+    pub force: bool,
+}
+
 type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
 pub struct DataState {
@@ -86,7 +95,9 @@ impl DataState {
     pub fn new() -> Self {
         Self {
             pat: PATState::default(),
-            watcher: Box::new(|_| { println!("No watcher set!"); }),
+            watcher: Box::new(|_| {
+                println!("No watcher set!");
+            }),
             fields: None,
             work_items: None,
             filters: Filters::default(),

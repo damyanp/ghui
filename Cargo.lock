@@ -1674,6 +1674,7 @@ dependencies = [
  "keyring",
  "serde",
  "serde_json",
+ "tokio",
  "ts-rs",
 ]
 

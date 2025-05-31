@@ -36,6 +36,7 @@ pub fn run() {
             pat::set_pat,
             data::watch_data,
             data::force_refresh_data,
+            data::update_items,
             data::delete_changes,
             data::set_preview_changes,
             data::save_changes,

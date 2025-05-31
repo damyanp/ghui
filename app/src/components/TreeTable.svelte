@@ -32,7 +32,7 @@
     renderGroup: Snippet<[GROUP]>;
     getContextMenuItems: (row: Row<T>) => MenuItem[];
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
-    onRowFirstVisible?: (rowId: string) => void;
+    onRowFirstVisible?: (row: Row<T>) => void;
   };
 
   let {
@@ -270,7 +270,7 @@
             ondragover={dragOverHandler}
             ondrop={dropHandler}
             {@attach flash}
-            {@attach onFirstVisible(row.id, onRowFirstVisible)}
+            {@attach onFirstVisible(row, onRowFirstVisible)}
           >
             {#if row.isGroup}
               {@render groupRow(row)}
