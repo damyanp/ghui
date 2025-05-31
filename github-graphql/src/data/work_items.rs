@@ -28,6 +28,10 @@ impl WorkItems {
         self.ordered_items.push(issue_id);
     }
 
+    pub fn update(&mut self, item: WorkItem) {
+        self.work_items.insert(item.id.clone(), item);
+    }
+
     pub fn iter(&self) -> std::slice::Iter<'_, WorkItemId> {
         self.ordered_items.iter()
     }

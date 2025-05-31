@@ -42,7 +42,6 @@ export class WorkItemContext {
   }  
 
   on_data_update(dataUpdate: DataUpdate) {
-    console.log(dataUpdate);
     switch (dataUpdate.type) {
       case "data":
         this.onDataUpdateData(dataUpdate.value);

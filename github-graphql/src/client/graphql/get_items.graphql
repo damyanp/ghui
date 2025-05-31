@@ -1,0 +1,91 @@
+query GetItems($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    ...Item
+  }
+}
+
+fragment Item on Node {
+  __typename
+  ... on ProjectV2Item {
+    id
+    updatedAt
+    Status: fieldValueByName(name: "Status") {
+      ...CustomField
+    }
+    Iteration: fieldValueByName(name: "Iteration") {
+      ...CustomField
+    }
+    Blocked: fieldValueByName(name: "Blocked") {
+      ...CustomField
+    }
+    Kind: fieldValueByName(name: "Kind") {
+      ...CustomField
+    }
+    Epic: fieldValueByName(name: "Epic") {
+      ...CustomField
+    }
+    Workstream: fieldValueByName(name: "Workstream") {
+      ...CustomField
+    }
+    ProjectMilestone: fieldValueByName(name: "ProjectMilestone") {
+      ...CustomField
+    }
+    content {
+      __typename
+
+      ... on DraftIssue {
+        id
+        title
+        updatedAt
+      }
+
+      ... on Issue {
+        id
+        parent {
+          id
+        }
+        resourcePath
+        repository {
+          nameWithOwner
+        }
+        updatedAt
+        title
+        issueState: state
+        subIssues(first: 100) {
+          nodes {
+            id
+          }
+        }
+        trackedIssues(first: 100) {
+          nodes {
+            id
+          }
+        }
+        issueType {
+          name
+        }
+      }
+
+      ... on PullRequest {
+        id
+        resourcePath
+        repository {
+          nameWithOwner
+        }
+        title
+        updatedAt
+        pullRequestState: state
+      }
+    }
+  }
+}
+
+fragment CustomField on ProjectV2ItemFieldValue {
+  __typename
+  ... on ProjectV2ItemFieldSingleSelectValue {
+    optionId
+  }
+  ... on ProjectV2ItemFieldIterationValue {
+    iterationId
+  }
+}

@@ -1,8 +1,11 @@
 use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::{
-    client::graphql::custom_fields_query::get_fields,
-    data::{Change, Changes, DelayLoad, Fields, SaveMode, WorkItem, WorkItemId, WorkItems},
+    client::graphql::{custom_fields_query::get_fields, get_items::get_items},
+    data::{
+        Change, Changes, DelayLoad, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId,
+        WorkItems,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -64,7 +67,7 @@ pub struct Data {
 #[ts(export)]
 pub enum DataUpdate {
     Progress { done: usize, total: usize },
-    WorkItem(WorkItem),
+    WorkItem(Box<WorkItem>),
     Data(Box<Data>),
 }
 
@@ -91,7 +94,7 @@ impl Deref for DataState {
 
 pub struct AppState {
     pub pat: PATState,
-    pub watcher: SendDataUpdate,
+    pub watcher: Arc<SendDataUpdate>,
     pub fields: Option<Fields>,
     pub work_items: Option<WorkItems>,
     pub filters: Filters,
@@ -109,9 +112,9 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             pat: PATState::default(),
-            watcher: Box::new(|_| {
+            watcher: Arc::new(Box::new(|_| {
                 println!("No watcher set!");
-            }),
+            })),
             fields: None,
             work_items: None,
             filters: Filters::default(),
@@ -214,15 +217,19 @@ impl AppState {
         Ok(work_items)
     }
 
-    pub async fn update_item(&mut self, item_to_update: ItemToUpdate) -> Result<()> {
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        if let Some(work_items) = &mut self.work_items {
-            if let Some(work_item) = work_items.get_mut(&item_to_update.work_item_id) {
-                work_item.title = format!("!{}", work_item.title);
-                (self.watcher)(DataUpdate::WorkItem(work_item.clone()))
-            }
+    pub fn get_project_ids(&self, work_item_ids: &[ItemToUpdate]) -> Vec<ProjectItemId> {
+        if let Some(work_items) = &self.work_items {
+            work_item_ids
+                .iter()
+                .filter_map(|item| {
+                    work_items
+                        .get(&item.work_item_id)
+                        .map(|work_item| work_item.project_item.id.clone())
+                })
+                .collect()
+        } else {
+            Vec::default()
         }
-        Ok(())
     }
 
     pub fn set_filters(&mut self, filters: Filters) {
@@ -270,9 +277,32 @@ impl DataState {
     pub fn request_update_items(&self, items: Vec<ItemToUpdate>) {
         let app_state = Arc::clone(&self.0);
         tokio::spawn(async move {
-            for item in items {
-                let mut data_state = app_state.lock().await;
-                data_state.update_item(item).await.unwrap();
+            let state = app_state.lock().await;
+            let project_item_ids = state.get_project_ids(items.as_slice());
+            let client = match state.pat.new_github_client() {
+                Ok(client) => client,
+                Err(e) => {
+                    eprintln!("Failed to create GitHub client: {}", e);
+                    return;
+                }
+            };
+            drop(state);
+
+            let updated_work_items = match get_items(&client, project_item_ids).await {
+                Ok(items) => items,
+                Err(e) => {
+                    eprintln!("Failed to get items: {}", e);
+                    return;
+                }
+            };
+
+            let mut state = app_state.lock().await;
+            let watcher = state.watcher.clone();
+            if let Some(work_items) = &mut state.work_items {
+                for item in updated_work_items {
+                    work_items.update(item.clone());
+                    (watcher)(DataUpdate::WorkItem(Box::new(item)));
+                }
             }
         });
     }

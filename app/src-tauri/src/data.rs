@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::TauriCommandResult;
 use ghui_app::{DataState, DataUpdate, Filters, ItemToUpdate};
 use github_graphql::data::Changes;
@@ -10,10 +12,9 @@ pub async fn watch_data(
 ) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
 
-
-    data_state.watcher = Box::new(move |d| {
+    data_state.watcher = Arc::new(Box::new(move |d| {
         let _ = channel.send(d);
-    });
+    }));
 
     data_state.refresh(false).await?;
     Ok(())

@@ -186,7 +186,7 @@ impl From<project_items::PullRequestState> for DelayLoad<data::PullRequestState>
     }
 }
 
-trait HasContentId {
+pub trait HasContentId {
     fn id(&self) -> WorkItemId;
 }
 
@@ -202,7 +202,7 @@ impl HasContentId for ProjectItemsOrganizationProjectV2ItemsNodesContentOnIssueT
     }
 }
 
-fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<WorkItemId> {
+pub fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<WorkItemId> {
     if let Some(nodes) = nodes {
         let nodes = nodes.iter().filter_map(|i| i.as_ref());
         nodes.map(|n| n.id()).collect()

@@ -1,6 +1,6 @@
 use crate::TauriCommandResult;
-use ghui_app::DataState;
 use anyhow::{Context, Result};
+use ghui_app::DataState;
 use github_graphql::client::{
     graphql::{get_viewer_info, ViewerInfo},
     transport::GithubClient,
