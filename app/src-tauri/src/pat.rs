@@ -1,4 +1,5 @@
-use crate::{AppState, TauriCommandResult};
+use crate::TauriCommandResult;
+use ghui_app::DataState;
 use anyhow::{Context, Result};
 use github_graphql::client::{
     graphql::{get_viewer_info, ViewerInfo},
@@ -46,30 +47,28 @@ async fn update_pat_status(app: &AppHandle, password: &keyring::Result<String>) 
 #[tauri::command]
 pub async fn check_pat_status(
     app: AppHandle,
-    app_state: State<'_, Mutex<AppState>>,
+    data_state: State<'_, Mutex<DataState>>,
 ) -> TauriCommandResult<()> {
-    let app_state = app_state.lock().await;
-    let password = app_state.data.pat.get_password();
+    let data_state = data_state.lock().await;
+    let password = data_state.pat.get_password();
     Ok(update_pat_status(&app, &password).await?)
 }
 
 #[tauri::command]
 pub async fn set_pat(
     app: AppHandle,
-    app_state: State<'_, Mutex<AppState>>,
+    data_state: State<'_, Mutex<DataState>>,
     pat: String,
 ) -> TauriCommandResult<()> {
-    let app_state = app_state.lock().await;
+    let data_state = data_state.lock().await;
     let result = if !pat.is_empty() {
-        app_state
-            .data
+        data_state
             .pat
             .set_password(&pat)
             .context("set_password failed")?;
         Ok(pat)
     } else {
-        app_state
-            .data
+        data_state
             .pat
             .delete_password()
             .context("delete_password failed")?;

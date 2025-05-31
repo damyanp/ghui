@@ -10,7 +10,6 @@ use std::{
     fs,
     io::{BufReader, BufWriter},
     path::PathBuf,
-    sync::Arc,
 };
 use ts_rs::TS;
 
@@ -65,7 +64,7 @@ pub enum DataUpdate {
     Data(Box<Data>),
 }
 
-type SendDataUpdate = Arc<dyn Fn(DataUpdate) + Send + Sync>;
+type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
 pub struct DataState {
     pub pat: PATState,
@@ -77,11 +76,17 @@ pub struct DataState {
     pub preview_changes: bool,
 }
 
+impl Default for DataState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DataState {
-    pub fn new(watcher: SendDataUpdate) -> Self {
+    pub fn new() -> Self {
         Self {
             pat: PATState::default(),
-            watcher,
+            watcher: Box::new(|_| { println!("No watcher set!"); }),
             fields: None,
             work_items: None,
             filters: Filters::default(),
