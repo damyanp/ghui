@@ -1,6 +1,6 @@
 [workspace]
 resolver="2"
-members=[ "ghui-util","github-graphql", "app/src-tauri"]
+members=[ "ghui-util","github-graphql", "app/src-tauri", "ghui-app"]
 
 
 [profile.dev]

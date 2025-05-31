@@ -29,6 +29,7 @@ keyring = { version = "3", features = [
     "crypto-rust",
 ] }
 github-graphql = { path = "../../github-graphql" }
+ghui-app = { path = "../../ghui-app" }
 tauri-plugin-window-state = "2.2.2"
 dirs = "6.0.0"
 ts-rs = { version = "10.1.0", features = ["serde-compat", "format"] }

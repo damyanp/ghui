@@ -1,5 +1,5 @@
-use crate::data::DataState;
 use crate::TauriCommandResult;
+use ghui_app::DataState;
 use github_graphql::data::{Change, WorkItemId};
 use tauri::{async_runtime::Mutex, State};
 

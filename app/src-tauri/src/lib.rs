@@ -1,5 +1,4 @@
-use data::DataState;
-use pat::PATState;
+use ghui_app::{DataState, PATState};
 use tauri::{async_runtime::Mutex, Manager};
 
 mod actions;
@@ -30,12 +29,12 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             app.manage(Mutex::new(PATState::default()));
-            app.manage(Mutex::new(DataState::new(app.handle().clone())));
+            app.manage(Mutex::new(DataState::new()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             pat::check_pat_status,
-            pat::set_pat,            
+            pat::set_pat,
             data::watch_data,
             data::force_refresh_data,
             data::delete_changes,

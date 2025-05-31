@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
+use ghui_app::PATState;
 use github_graphql::client::{
     graphql::{get_viewer_info, ViewerInfo},
     transport::GithubClient,
 };
 use serde::Serialize;
-use tauri::{async_runtime::Mutex, AppHandle, Emitter, Manager, State};
+use tauri::{async_runtime::Mutex, AppHandle, Emitter, State};
 
 use crate::TauriCommandResult;
 
@@ -14,7 +15,7 @@ use crate::TauriCommandResult;
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-enum PatStatus {
+pub enum PatStatus {
     NotSet,
     Checking,
     Set(ViewerInfo),
@@ -25,37 +26,20 @@ fn notify_pat_status(app: &AppHandle, status: PatStatus) {
     let _ = app.emit("pat-status", status);
 }
 
-pub struct PATState {
-    pat_entry: keyring::Entry,
-}
-
-impl Default for PATState {
-    fn default() -> Self {
-        let pat_entry = keyring::Entry::new("ghui", "PAT").expect("keyring failed to get entry");
-        Self { pat_entry }
-    }
-}
-
 async fn get_password(state: &Mutex<PATState>) -> keyring::Result<String> {
     let state = state.lock().await;
-    state.pat_entry.get_password()
+    state.get_password()
 }
 
 async fn set_password(state: &Mutex<PATState>, password: &str) -> keyring::Result<()> {
     assert!(!password.is_empty());
     let state = state.lock().await;
-    state.pat_entry.set_password(password)
+    state.set_password(password)
 }
 
 async fn delete_password(state: &Mutex<PATState>) -> keyring::Result<()> {
     let state = state.lock().await;
-    state.pat_entry.delete_credential()
-}
-
-pub async fn new_github_client(app: &AppHandle) -> Result<GithubClient> {
-    let state = app.state::<Mutex<PATState>>();
-    let password = get_password(&state).await?;
-    Ok(GithubClient::new(&password)?)
+    state.delete_password()
 }
 
 async fn update_pat_status(app: &AppHandle, password: &keyring::Result<String>) -> Result<()> {

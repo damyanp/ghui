@@ -1651,6 +1651,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dirs",
+ "ghui-app",
  "github-graphql",
  "keyring",
  "serde",
@@ -1660,6 +1661,20 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-window-state",
  "thiserror 2.0.12",
+ "ts-rs",
+]
+
+[[package]]
+name = "ghui-app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dirs",
+ "github-graphql",
+ "keyring",
+ "serde",
+ "serde_json",
+ "tauri",
  "ts-rs",
 ]
 
