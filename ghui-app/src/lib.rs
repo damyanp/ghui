@@ -236,28 +236,34 @@ impl AppState {
         }
     }
 
-    pub fn set_filters(&mut self, filters: Filters) {
+    pub async fn set_filters(&mut self, filters: Filters) -> Result<()> {
         self.filters = filters;
+        self.refresh(false).await
     }
 
-    pub fn add_changes(&mut self, changes: Changes) {
+    pub async fn add_changes(&mut self, changes: Changes) -> Result<()> {
         self.changes.add_changes(changes);
+        self.refresh(false).await
     }
 
-    pub fn add_change(&mut self, change: Change) {
+    pub async fn add_change(&mut self, change: Change) -> Result<()> {
         self.changes.add(change);
+        self.refresh(false).await
     }
 
-    pub fn remove_change(&mut self, change: Change) {
+    pub async fn remove_change(&mut self, change: Change) -> Result<()> {
         self.changes.remove(change);
+        self.refresh(false).await
     }
 
-    pub fn clear_changes(&mut self) {
+    pub async fn clear_changes(&mut self) -> Result<()> {
         self.changes = Changes::default();
+        self.refresh(false).await
     }
 
-    pub fn set_preview_changes(&mut self, preview: bool) {
+    pub async fn set_preview_changes(&mut self, preview: bool) -> Result<()> {
         self.preview_changes = preview;
+        self.refresh(false).await
     }
 
     /// Updates in-place the provided work items with the changes set on self.
@@ -269,11 +275,9 @@ impl AppState {
     pub async fn save_changes(&mut self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
         let client = self.pat.new_github_client()?;
 
-        println!("TODO: only get_fields once, not every time we hit save!");
-        let fields = get_fields(&client).await?;
+        let fields = self.refresh_fields(false).await?;
 
-        Ok(self
-            .changes
+        self.changes
             .save(
                 &client,
                 &fields,
@@ -281,25 +285,28 @@ impl AppState {
                 SaveMode::Commit,
                 &|_, a, b| report_progress(a, b),
             )
-            .await?)
+            .await?;
+
+        self.refresh(false).await
     }
 
-    pub fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) {
+    pub async fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) -> Result<()> {
         if let Some(work_items) = self.work_items.as_ref() {
-            self.add_changes(work_items.convert_tracked_to_sub_issues(&id));
+            self.add_changes(work_items.convert_tracked_to_sub_issues(&id)).await?;
         }
+        Ok(())
     }
 
-    pub fn sanitize(&mut self) -> usize {
+    pub async fn sanitize(&mut self) -> Result<usize> {
         if let Some(work_items) = self.work_items.as_ref() {
             if let Some(fields) = self.fields.as_ref() {
                 let changes = work_items.sanitize(fields);
                 let num_changes = changes.len();
-                self.add_changes(changes);
-                return num_changes;
+                self.add_changes(changes).await?;
+                return Ok(num_changes);
             }
         }
-        0
+        Ok(0)
     }
 }
 

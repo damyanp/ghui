@@ -35,7 +35,7 @@ pub async fn update_items(
 
 #[tauri::command]
 pub async fn delete_changes(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
-    data_state.lock().await.clear_changes();
+    data_state.lock().await.clear_changes().await?;
     Ok(())
 }
 
@@ -44,7 +44,7 @@ pub async fn set_preview_changes(
     data_state: State<'_, DataState>,
     preview: bool,
 ) -> TauriCommandResult<()> {
-    data_state.lock().await.set_preview_changes(preview);
+    data_state.lock().await.set_preview_changes(preview).await?;
     Ok(())
 }
 
@@ -67,6 +67,6 @@ pub async fn set_filters(
     filters: Filters,
 ) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
-    data_state.set_filters(filters);
+    data_state.set_filters(filters).await?;
     Ok(())
 }

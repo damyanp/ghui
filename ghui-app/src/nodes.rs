@@ -7,7 +7,7 @@ use crate::Filters;
 
 #[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Node {
+pub struct Node {
     pub level: u32,
     pub id: String,
     pub data: NodeData,
@@ -17,7 +17,7 @@ pub(crate) struct Node {
 
 #[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase", tag = "type")]
-pub(crate) enum NodeData {
+pub enum NodeData {
     WorkItem,
     Group { name: String },
 }
