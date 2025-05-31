@@ -1,5 +1,6 @@
-use ghui_app::{DataState, PATState};
-use tauri::{async_runtime::Mutex, Manager};
+use ghui_app::{DataState, DataUpdate};
+use std::sync::Arc;
+use tauri::{async_runtime::Mutex, ipc::Channel, Manager};
 
 mod actions;
 mod data;
@@ -22,14 +23,38 @@ impl serde::Serialize for TauriCommandError {
     }
 }
 
+type Watcher = Arc<std::sync::Mutex<Option<Channel<DataUpdate>>>>;
+
+struct AppState {
+    watcher: Watcher,
+    pub data: DataState,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        let watcher = Watcher::default();
+
+        let watcher_clone = watcher.clone();
+        let data = DataState::new(Arc::new(move |d: DataUpdate| {
+            let watcher = watcher_clone.lock().unwrap();
+            if let Some(watcher) = watcher.as_ref() {
+                let _ = watcher.send(d);
+            } else {
+                println!("Data update, but no watcher!");
+            }
+        }));
+
+        AppState { watcher, data }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
-            app.manage(Mutex::new(PATState::default()));
-            app.manage(Mutex::new(DataState::new()));
+            app.manage(Mutex::new(AppState::default()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

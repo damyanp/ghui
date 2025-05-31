@@ -10,8 +10,8 @@ use std::{
     fs,
     io::{BufReader, BufWriter},
     path::PathBuf,
+    sync::Arc,
 };
-use tauri::ipc::Channel;
 use ts_rs::TS;
 
 mod nodes;
@@ -65,9 +65,11 @@ pub enum DataUpdate {
     Data(Box<Data>),
 }
 
+type SendDataUpdate = Arc<dyn Fn(DataUpdate) + Send + Sync>;
+
 pub struct DataState {
     pub pat: PATState,
-    pub watcher: Option<Channel<DataUpdate>>,
+    pub watcher: SendDataUpdate,
     pub fields: Option<Fields>,
     pub work_items: Option<WorkItems>,
     pub filters: Filters,
@@ -75,17 +77,11 @@ pub struct DataState {
     pub preview_changes: bool,
 }
 
-impl Default for DataState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl DataState {
-    pub fn new() -> Self {
+    pub fn new(watcher: SendDataUpdate) -> Self {
         Self {
             pat: PATState::default(),
-            watcher: None,
+            watcher,
             fields: None,
             work_items: None,
             filters: Filters::default(),
@@ -106,16 +102,14 @@ impl DataState {
         let nodes =
             NodeBuilder::new(&fields, &work_items, &self.filters, &original_work_items).build();
 
-        if let Some(watcher) = &self.watcher {
-            watcher.send(DataUpdate::Data(Box::new(Data {
-                nodes,
-                work_items: work_items.work_items,
-                fields,
-                original_work_items,
-                filters: self.filters.clone(),
-                changes: self.changes.clone(),
-            })))?;
-        }
+        (self.watcher)(DataUpdate::Data(Box::new(Data {
+            nodes,
+            work_items: work_items.work_items,
+            fields,
+            original_work_items,
+            filters: self.filters.clone(),
+            changes: self.changes.clone(),
+        })));
         Ok(())
     }
 
@@ -172,9 +166,7 @@ impl DataState {
         let client = self.pat.new_github_client()?;
 
         let report_progress = |done, total| {
-            if let Some(watcher) = &self.watcher {
-                let _ = watcher.send(DataUpdate::Progress { done, total });
-            }
+            (self.watcher)(DataUpdate::Progress { done, total });
         };
 
         report_progress(0, 1);

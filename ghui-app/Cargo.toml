@@ -14,7 +14,6 @@ keyring = { version = "3", features = [
     "crypto-rust",
 ] }
 ts-rs = { version = "10.1.0", features = ["serde-compat", "format"] }
-tauri = { version = "2", features = [] }
 anyhow = "1.0.98"
 dirs = "6.0.0"
 

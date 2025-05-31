@@ -1,13 +1,11 @@
+use crate::{AppState, TauriCommandResult};
 use anyhow::{Context, Result};
-use ghui_app::PATState;
 use github_graphql::client::{
     graphql::{get_viewer_info, ViewerInfo},
     transport::GithubClient,
 };
 use serde::Serialize;
 use tauri::{async_runtime::Mutex, AppHandle, Emitter, State};
-
-use crate::TauriCommandResult;
 
 #[derive(Clone, Serialize)]
 #[serde(
@@ -24,22 +22,6 @@ pub enum PatStatus {
 
 fn notify_pat_status(app: &AppHandle, status: PatStatus) {
     let _ = app.emit("pat-status", status);
-}
-
-async fn get_password(state: &Mutex<PATState>) -> keyring::Result<String> {
-    let state = state.lock().await;
-    state.get_password()
-}
-
-async fn set_password(state: &Mutex<PATState>, password: &str) -> keyring::Result<()> {
-    assert!(!password.is_empty());
-    let state = state.lock().await;
-    state.set_password(password)
-}
-
-async fn delete_password(state: &Mutex<PATState>) -> keyring::Result<()> {
-    let state = state.lock().await;
-    state.delete_password()
 }
 
 async fn update_pat_status(app: &AppHandle, password: &keyring::Result<String>) -> Result<()> {
@@ -64,26 +46,32 @@ async fn update_pat_status(app: &AppHandle, password: &keyring::Result<String>) 
 #[tauri::command]
 pub async fn check_pat_status(
     app: AppHandle,
-    state: State<'_, Mutex<PATState>>,
+    app_state: State<'_, Mutex<AppState>>,
 ) -> TauriCommandResult<()> {
-    let password = get_password(&state).await;
+    let app_state = app_state.lock().await;
+    let password = app_state.data.pat.get_password();
     Ok(update_pat_status(&app, &password).await?)
 }
 
 #[tauri::command]
 pub async fn set_pat(
     app: AppHandle,
-    state: State<'_, Mutex<PATState>>,
+    app_state: State<'_, Mutex<AppState>>,
     pat: String,
 ) -> TauriCommandResult<()> {
+    let app_state = app_state.lock().await;
     let result = if !pat.is_empty() {
-        set_password(&state, &pat)
-            .await
+        app_state
+            .data
+            .pat
+            .set_password(&pat)
             .context("set_password failed")?;
         Ok(pat)
     } else {
-        delete_password(&state)
-            .await
+        app_state
+            .data
+            .pat
+            .delete_password()
             .context("delete_password failed")?;
         Err(keyring::Error::NoEntry)
     };
