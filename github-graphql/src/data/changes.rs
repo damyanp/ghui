@@ -248,13 +248,13 @@ impl Change {
             },
             ChangeData::Status(_) => fields
                 .status
-                .option_name(work_item.project_item.status.expect_loaded().as_ref()),
+                .option_name(work_item.project_item.status.as_ref()),
             ChangeData::Blocked(_) => fields
                 .blocked
                 .option_name(work_item.project_item.blocked.expect_loaded().as_ref()),
             ChangeData::Epic(_) => fields
                 .epic
-                .option_name(work_item.project_item.epic.expect_loaded().as_ref()),
+                .option_name(work_item.project_item.epic.as_ref()),
             ChangeData::SetParent(_) => match &work_item.data {
                 WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
                 _ => None,
@@ -319,9 +319,9 @@ impl WorkItems {
                         issue.issue_type = value.to_owned().into();
                     }
                 }
-                ChangeData::Status(value) => work_item.project_item.status = value.clone().into(),
+                ChangeData::Status(value) => work_item.project_item.status = value.clone(),
                 ChangeData::Blocked(value) => work_item.project_item.blocked = value.clone().into(),
-                ChangeData::Epic(value) => work_item.project_item.epic = value.clone().into(),
+                ChangeData::Epic(value) => work_item.project_item.epic = value.clone(),
                 ChangeData::SetParent(new_parent_id) => {
                     let child_id = &change.work_item_id;
 

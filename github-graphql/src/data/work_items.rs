@@ -106,7 +106,7 @@ impl WorkItems {
         for item in self.work_items.values() {
             // Closed items should have status set to Closed
             if *item.is_closed().expect_loaded()
-                && *item.project_item.status.expect_loaded() != closed_option_id
+                && item.project_item.status != closed_option_id
             {
                 changes.add(Change {
                     work_item_id: item.id.clone(),
@@ -115,7 +115,7 @@ impl WorkItems {
             }
 
             // Map project milestones to epics
-            if item.project_item.epic.expect_loaded().is_none() {
+            if item.project_item.epic.is_none() {
                 let project_milestone = item.project_item.project_milestone.expect_loaded();
 
                 let new_epic = match fields
@@ -166,9 +166,9 @@ impl WorkItems {
             epic: &Option<FieldOptionId>,
         ) {
             if let Some(item) = items.get(id) {
-                let this_item_epic = item.project_item.epic.expect_loaded();
+                let this_item_epic = &item.project_item.epic;
 
-                if epic.is_some() && item.project_item.epic.expect_loaded() != epic {
+                if epic.is_some() && item.project_item.epic != *epic {
                     if this_item_epic.is_some() {
                         println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
                             item.describe(),

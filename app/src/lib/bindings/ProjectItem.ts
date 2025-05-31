@@ -6,11 +6,11 @@ import type { ProjectItemId } from "./ProjectItemId";
 export type ProjectItem = {
   id: ProjectItemId;
   updatedAt: string;
-  status: DelayLoad<FieldOptionId | null>;
+  status: FieldOptionId | null;
   iteration: DelayLoad<FieldOptionId | null>;
   blocked: DelayLoad<FieldOptionId | null>;
   kind: DelayLoad<FieldOptionId | null>;
-  epic: DelayLoad<FieldOptionId | null>;
+  epic: FieldOptionId | null;
   workstream: DelayLoad<FieldOptionId | null>;
   projectMilestone: DelayLoad<FieldOptionId | null>;
 };

@@ -289,19 +289,19 @@
   {@render renderCustomField(item, "status")}
 {/snippet}
 {#snippet renderIteration(item: WorkItem)}
-  {@render renderCustomField(item, "iteration")}
+  {@render renderDelayLoadCustomField(item, "iteration")}
 {/snippet}
 {#snippet renderBlocked(item: WorkItem)}
-  {@render renderCustomField(item, "blocked")}
+  {@render renderDelayLoadCustomField(item, "blocked")}
 {/snippet}
 {#snippet renderKind(item: WorkItem)}
-  {@render renderCustomField(item, "kind")}
+  {@render renderDelayLoadCustomField(item, "kind")}
 {/snippet}
 {#snippet renderEpic(item: WorkItem)}
   {@render renderCustomField(item, "epic")}
 {/snippet}
 
-{#snippet renderCustomField(item: WorkItem, field: keyof ProjectItem)}
+{#snippet renderDelayLoadCustomField(item: WorkItem, field: keyof ProjectItem)}
   {#snippet render(value: FieldOptionId | null)}
     {context.getFieldOption(field as keyof Fields, value)}
   {/snippet}
@@ -309,4 +309,8 @@
     item.projectItem[field] as DelayLoad<FieldOptionId | null>,
     render
   )}
+{/snippet}
+
+{#snippet renderCustomField(item: WorkItem, field: keyof ProjectItem)}
+  {context.getFieldOption(field as keyof Fields, item.projectItem[field] as FieldOptionId)}
 {/snippet}

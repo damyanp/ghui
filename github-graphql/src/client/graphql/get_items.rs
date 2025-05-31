@@ -86,17 +86,17 @@ fn project_item(item: &ItemOnProjectV2Item) -> ProjectItem {
         id: ProjectItemId(item.id.clone()),
         updated_at: item.updated_at.clone(),
         status: field(&item.status),
-        iteration: field(&item.iteration),
-        blocked: field(&item.blocked),
-        kind: field(&item.kind),
+        iteration: field(&item.iteration).into(),
+        blocked: field(&item.blocked).into(),
+        kind: field(&item.kind).into(),
         epic: field(&item.epic),
-        workstream: field(&item.workstream),
-        project_milestone: field(&item.project_milestone),
+        workstream: field(&item.workstream).into(),
+        project_milestone: field(&item.project_milestone).into(),
     }
 }
 
-fn field(field: &Option<CustomField>) -> DelayLoad<Option<FieldOptionId>> {
-    DelayLoad::Loaded(field.as_ref().and_then(|f| match f {
+fn field(field: &Option<CustomField>) -> Option<FieldOptionId> {
+    field.as_ref().and_then(|f| match f {
         CustomField::ProjectV2ItemFieldIterationValue(v) => {
             Some(FieldOptionId(v.iteration_id.clone()))
         }
@@ -104,7 +104,7 @@ fn field(field: &Option<CustomField>) -> DelayLoad<Option<FieldOptionId>> {
             v.option_id.as_ref().map(|id| FieldOptionId(id.clone()))
         }
         _ => None,
-    }))
+    })
 }
 
 impl From<IssueState> for DelayLoad<data::IssueState> {

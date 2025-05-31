@@ -10,6 +10,9 @@ query MinimalProjectItems($after: String) {
           epic: fieldValueByName(name: "Epic") {
             ...CustomField
           }
+          status: fieldValueByName(name: "Status") {
+            ...CustomField
+          }
           content {
             __typename
             ... on DraftIssue {

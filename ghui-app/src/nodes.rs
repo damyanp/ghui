@@ -58,7 +58,7 @@ impl<'a> NodeBuilder<'a> {
         let group = |id| {
             self.work_items
                 .get(id)
-                .and_then(|item| item.project_item.epic.flatten())
+                .and_then(|item| item.project_item.epic.as_ref())
         };
 
         let mut group_item: Vec<_> = items.iter().map(|id| (group(id), *id)).collect();

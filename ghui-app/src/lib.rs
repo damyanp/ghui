@@ -3,7 +3,7 @@ use dirs::home_dir;
 use github_graphql::{
     client::graphql::{custom_fields_query::get_fields, get_items::get_items},
     data::{
-        Change, Changes, DelayLoad, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId,
+        Change, Changes, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId,
         WorkItems,
     },
 };
@@ -34,11 +34,9 @@ pub struct Filters {
 impl Filters {
     fn should_include(&self, fields: &Fields, work_item: &WorkItem) -> bool {
         if self.hide_closed {
-            if let DelayLoad::Loaded(status) = &work_item.project_item.status {
-                // TODO: looking up the option_name each time is wasteful
-                if fields.status.option_name(status.as_ref()) == Some("Closed") {
-                    return false;
-                }
+            // TODO: looking up the option_name each time is wasteful
+            if fields.status.option_name(work_item.project_item.status.as_ref()) == Some("Closed") {
+                return false;
             }
         }
         true

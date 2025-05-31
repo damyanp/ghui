@@ -89,11 +89,11 @@ impl WorkItems {
         let mut work_items = WorkItems::default();
 
         for item in items {
-            let status = get_field_option_id(&item.status).into();
+            let status = get_field_option_id(&item.status);
             let iteration = get_field_option_id(&item.iteration).into();
             let blocked = get_field_option_id(&item.blocked).into();
             let kind = get_field_option_id(&item.kind).into();
-            let epic = get_field_option_id(&item.epic).into();
+            let epic = get_field_option_id(&item.epic);
             let workstream = get_field_option_id(&item.workstream).into();
             let project_milestone = get_field_option_id(&item.project_milestone).into();
 
@@ -215,8 +215,8 @@ pub fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> 
 mod tests {
     use super::*;
 
-    fn single_select_value(value: &str) -> DelayLoad<Option<FieldOptionId>> {
-        Some(FieldOptionId(value.to_owned())).into()
+    fn single_select_value(value: &str) -> Option<FieldOptionId> {
+        Some(FieldOptionId(value.to_owned()))
     }
 
     #[test]
@@ -312,9 +312,9 @@ mod tests {
             project_item: ProjectItem {
                 id: ProjectItemId("PVTI_lADOAQWwKc4ABQXFzgRi8S4".into()),
                 updated_at: "2024-08-05T21:47:26Z".into(),
-                status: None.into(),
+                status: None,
                 kind: None.into(),
-                workstream: single_select_value("Language"),
+                workstream: single_select_value("Language").into(),
                 project_milestone: None.into(),
                 ..ProjectItem::default_loaded()
             },
@@ -347,8 +347,8 @@ mod tests {
                 updated_at: "2025-03-27T21:01:45Z".into(),
                 status: single_select_value("Closed"),
                 kind: None.into(),
-                workstream: single_select_value("Root Signatures"),
-                project_milestone: single_select_value("(old)3: Compute Shaders (1)"),
+                workstream: single_select_value("Root Signatures").into(),
+                project_milestone: single_select_value("(old)3: Compute Shaders (1)").into(),
                 ..ProjectItem::default_loaded()
             },
         };

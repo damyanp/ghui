@@ -5,7 +5,7 @@ use super::{
 use crate::{
     client::transport::Client,
     data::{
-        DelayLoad, FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem,
+        FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem,
         WorkItemData, WorkItemId,
     },
     Result,
@@ -128,23 +128,20 @@ impl From<&short::Node> for ProjectItem {
         ProjectItem {
             id: ProjectItemId(node.id.clone()),
             updated_at: node.updated_at.clone(),
-            epic: get_loaded_single_select_custom_field(node.epic.as_ref()),
+            epic: get_single_select_custom_field(node.epic.as_ref()),
+            status: get_single_select_custom_field(node.status.as_ref()),
             ..Default::default()
         }
     }
 }
 
-fn get_loaded_single_select_custom_field(
-    value: Option<&CustomField>,
-) -> DelayLoad<Option<FieldOptionId>> {
-    value
-        .and_then(|value| match value {
-            CustomField::ProjectV2ItemFieldSingleSelectValue(v) => {
-                v.option_id.as_ref().map(|id| FieldOptionId(id.clone()))
-            }
-            _ => None,
-        })
-        .into()
+fn get_single_select_custom_field(value: Option<&CustomField>) -> Option<FieldOptionId> {
+    value.and_then(|value| match value {
+        CustomField::ProjectV2ItemFieldSingleSelectValue(v) => {
+            v.option_id.as_ref().map(|id| FieldOptionId(id.clone()))
+        }
+        _ => None,
+    })
 }
 
 impl From<&short::Issue> for Issue {

@@ -113,7 +113,7 @@ impl TestDataWorkItemBuilder<'_> {
 
     pub fn status(mut self, name: &str) -> Self {
         let id = self.data.fields.status.option_id(Some(name)).cloned();
-        self.item.project_item.status = id.into();
+        self.item.project_item.status = id;
         self
     }
 
@@ -131,7 +131,7 @@ impl TestDataWorkItemBuilder<'_> {
     pub fn epic(mut self, name: &str) -> Self {
         let id = self.data.fields.epic.option_id(Some(name)).cloned();
         assert!(id.is_some());
-        self.item.project_item.epic = id.into();
+        self.item.project_item.epic = id;
         self
     }
 }

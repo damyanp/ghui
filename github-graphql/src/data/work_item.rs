@@ -127,22 +127,22 @@ type FieldValue = DelayLoad<Option<FieldOptionId>>;
 pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,
-    pub status: FieldValue,
+    pub status: Option<FieldOptionId>,
     pub iteration: FieldValue,
     pub blocked: FieldValue,
     pub kind: FieldValue,
-    pub epic: FieldValue,
+    pub epic: Option<FieldOptionId>,
     pub workstream: FieldValue,
     pub project_milestone: FieldValue,
 }
 impl ProjectItem {
     pub fn default_loaded() -> ProjectItem {
         ProjectItem {
-            status: None.into(),
+            status: None,
             iteration: None.into(),
             blocked: None.into(),
             kind: None.into(),
-            epic: None.into(),
+            epic: None,
             workstream: None.into(),
             project_milestone: None.into(),
             ..Default::default()
