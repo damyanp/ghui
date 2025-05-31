@@ -5,6 +5,7 @@
   import TreeTableContextMenu, {
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
+  import { flash } from "$lib/Flash.svelte";
 
   type Row<T> = {
     level: number;
@@ -265,6 +266,7 @@
             ondragleave={dragLeaveHandler}
             ondragover={dragOverHandler}
             ondrop={dropHandler}
+            use:flash
           >
             {#key row}
               {#if row.isGroup}
