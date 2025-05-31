@@ -6,6 +6,7 @@
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
   import { flash } from "$lib/Flash.svelte";
+  import { onFirstVisible } from "$lib/OnVirstVisible";
 
   type Row<T> = {
     level: number;
@@ -31,6 +32,7 @@
     renderGroup: Snippet<[GROUP]>;
     getContextMenuItems: (row: Row<T>) => MenuItem[];
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
+    onRowFirstVisible?: (rowId: string) => void;
   };
 
   let {
@@ -248,6 +250,7 @@
       {@const modified = row.isModified}
       {@const modifiedDescendent = !modified && row.modifiedDescendent}
       {@const unmodified = !(modified || modifiedDescendent)}
+      {@const onRowFirstVisible = props.onRowFirstVisible}
       <TreeTableContextMenu items={props.getContextMenuItems(row)}>
         {#snippet trigger({ props }: { props: any })}
           {@const menuOpen = props["data-state"] === "open"}
@@ -266,7 +269,8 @@
             ondragleave={dragLeaveHandler}
             ondragover={dragOverHandler}
             ondrop={dropHandler}
-            use:flash
+            {@attach flash}
+            {@attach onFirstVisible(row.id, onRowFirstVisible)}
           >
             {#if row.isGroup}
               {@render groupRow(row)}

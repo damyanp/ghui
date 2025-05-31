@@ -208,6 +208,10 @@
     if (change) await context.addChange(change);
   }
 
+  function onRowFirstVisible(rowId: string) {
+    context.updateWorkItem(rowId);
+  }
+
   let expanded = $state([]);
 </script>
 
@@ -220,6 +224,7 @@
   {renderGroup}
   {getContextMenuItems}
   {onRowDragDrop}
+  {onRowFirstVisible}
 />
 
 {#snippet renderGroup(name: string | undefined)}
@@ -271,7 +276,7 @@
 
 {#snippet renderState(item: WorkItem)}
   {#if item.data.type === "issue" || item.data.type === "pullRequest"}
-    {#snippet render(state: IssueState|PullRequestState)}
+    {#snippet render(state: IssueState | PullRequestState)}
       {state.toString()}
     {/snippet}
     {@render renderDelayLoad(item.data.state, render)}

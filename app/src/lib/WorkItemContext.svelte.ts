@@ -50,6 +50,10 @@ export class WorkItemContext {
     this.loadProgress = 0;
   }
 
+  public async updateWorkItem(workItemId: WorkItemId) {
+    throw new Error("Method not implemented.");
+  }
+
   public async convertTrackedIssuesToSubIssue(id: WorkItemId) {
     await invoke("convert_tracked_to_sub_issues", {
       id,
@@ -74,16 +78,17 @@ export class WorkItemContext {
     );
   }
 
-  public getFieldOption(fieldName: keyof Fields, id: FieldOptionId | null): string|undefined {
-    if (!id)
-      return undefined;
-    
-    const field = this.data.fields[fieldName];
-    
-    if (typeof field === "string")
-      return undefined;
+  public getFieldOption(
+    fieldName: keyof Fields,
+    id: FieldOptionId | null
+  ): string | undefined {
+    if (!id) return undefined;
 
-    return field.options.find(o => o.id === id)?.value;
+    const field = this.data.fields[fieldName];
+
+    if (typeof field === "string") return undefined;
+
+    return field.options.find((o) => o.id === id)?.value;
   }
 
   // #region Managing Changes
@@ -141,7 +146,7 @@ function make_blank_fields(): Fields {
       id: "",
       name: "",
       field_type: "SingleSelect",
-      options: []
+      options: [],
     };
   }
   return {
@@ -151,7 +156,6 @@ function make_blank_fields(): Fields {
     epic: blank(),
     iteration: blank(),
     kind: blank(),
-    project_milestone: blank()
+    project_milestone: blank(),
   };
 }
-
