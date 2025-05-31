@@ -1,14 +1,15 @@
 use crate::TauriCommandResult;
 use ghui_app::{DataState, DataUpdate, Filters, ItemToUpdate};
 use github_graphql::data::Changes;
-use tauri::{async_runtime::Mutex, ipc::Channel, State};
+use tauri::{ipc::Channel, State};
 
 #[tauri::command]
 pub async fn watch_data(
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
     channel: Channel<DataUpdate>,
 ) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
+
 
     data_state.watcher = Box::new(move |d| {
         let _ = channel.send(d);
@@ -19,7 +20,7 @@ pub async fn watch_data(
 }
 
 #[tauri::command]
-pub async fn force_refresh_data(data_state: State<'_, Mutex<DataState>>) -> TauriCommandResult<()> {
+pub async fn force_refresh_data(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.refresh(true).await?;
     Ok(())
@@ -27,17 +28,17 @@ pub async fn force_refresh_data(data_state: State<'_, Mutex<DataState>>) -> Taur
 
 #[tauri::command]
 pub async fn update_items(
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
     items: Vec<ItemToUpdate>,
 ) -> TauriCommandResult<()> {
-    let mut data_state = data_state.lock().await;
+    let data_state = data_state.lock().await;
     todo!();
     // data_state.request_update_items(items);
     Ok(())
 }
 
 #[tauri::command]
-pub async fn delete_changes(data_state: State<'_, Mutex<DataState>>) -> TauriCommandResult<()> {
+pub async fn delete_changes(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
     data_state.changes = Changes::default();
     Ok(())
@@ -45,7 +46,7 @@ pub async fn delete_changes(data_state: State<'_, Mutex<DataState>>) -> TauriCom
 
 #[tauri::command]
 pub async fn set_preview_changes(
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
     preview: bool,
 ) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;
@@ -55,7 +56,7 @@ pub async fn set_preview_changes(
 
 #[tauri::command]
 pub async fn save_changes(
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
     progress: Channel<(usize, usize)>,
 ) -> TauriCommandResult<()> {
     let report_progress = |c, t| {
@@ -68,7 +69,7 @@ pub async fn save_changes(
 
 #[tauri::command]
 pub async fn set_filters(
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
     filters: Filters,
 ) -> TauriCommandResult<()> {
     let mut data_state = data_state.lock().await;

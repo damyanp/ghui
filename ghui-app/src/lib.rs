@@ -9,6 +9,7 @@ use std::{
     collections::HashMap,
     fs,
     io::{BufReader, BufWriter},
+    ops::Deref,
     path::PathBuf,
 };
 use tokio::sync::Mutex;
@@ -75,7 +76,18 @@ pub struct ItemToUpdate {
 
 type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
-pub struct DataState {
+#[derive(Default)]
+pub struct DataState(pub Mutex<AppState>);
+
+impl Deref for DataState {
+    type Target = Mutex<AppState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct AppState {
     pub pat: PATState,
     pub watcher: SendDataUpdate,
     pub fields: Option<Fields>,
@@ -85,13 +97,13 @@ pub struct DataState {
     pub preview_changes: bool,
 }
 
-impl Default for DataState {
+impl Default for AppState {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DataState {
+impl AppState {
     pub fn new() -> Self {
         Self {
             pat: PATState::default(),

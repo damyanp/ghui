@@ -6,7 +6,7 @@ use github_graphql::client::{
     transport::GithubClient,
 };
 use serde::Serialize;
-use tauri::{async_runtime::Mutex, AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Clone, Serialize)]
 #[serde(
@@ -47,7 +47,7 @@ async fn update_pat_status(app: &AppHandle, password: &keyring::Result<String>) 
 #[tauri::command]
 pub async fn check_pat_status(
     app: AppHandle,
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
 ) -> TauriCommandResult<()> {
     let data_state = data_state.lock().await;
     let password = data_state.pat.get_password();
@@ -57,7 +57,7 @@ pub async fn check_pat_status(
 #[tauri::command]
 pub async fn set_pat(
     app: AppHandle,
-    data_state: State<'_, Mutex<DataState>>,
+    data_state: State<'_, DataState>,
     pat: String,
 ) -> TauriCommandResult<()> {
     let data_state = data_state.lock().await;

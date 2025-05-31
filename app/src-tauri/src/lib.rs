@@ -1,5 +1,5 @@
 use ghui_app::DataState;
-use tauri::{async_runtime::Mutex, Manager};
+use tauri::Manager;
 
 mod actions;
 mod data;
@@ -28,7 +28,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
-            app.manage(Mutex::new(DataState::new()));
+            app.manage(DataState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
