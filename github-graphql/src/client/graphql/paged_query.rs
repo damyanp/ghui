@@ -22,6 +22,7 @@ pub async fn get_all_items<Query>(
 ) -> Result<Vec<Query::ItemType>>
 where
     Query: GraphQLQuery + PagedQuery<Query>,
+    <Query as GraphQLQuery>::Variables: Sync,
 {
     let mut request_body = Query::build_query(variables);
     let mut all_items: Vec<Query::ItemType> = Vec::new();

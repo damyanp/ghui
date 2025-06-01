@@ -42,4 +42,6 @@ pub use viewer_info::{get_viewer_info, ViewerInfo};
 mod get_resource_id_query;
 pub use get_resource_id_query::get_resource_id;
 
+pub mod get_project_item_ids;
+
 pub mod paged_query;

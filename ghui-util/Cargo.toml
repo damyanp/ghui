@@ -19,3 +19,4 @@ keyring = { version = "3", features = [
 ] }
 thiserror = "2.0.12"
 anyhow = "1.0.98"
+tokio-stream = "0.1.17"

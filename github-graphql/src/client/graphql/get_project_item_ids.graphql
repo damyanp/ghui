@@ -1,0 +1,16 @@
+query ProjectItemIds($after: String) {
+    organization(login: "llvm") {
+        projectV2(number: 4) {
+            items(first: 100, after: $after) {
+                totalCount
+                nodes {
+                    id
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
+            }
+        }
+    }
+}

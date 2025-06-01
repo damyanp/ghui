@@ -1,16 +1,18 @@
+use std::future::Future;
+
 use crate::Result;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-pub trait Client {
-    #[allow(async_fn_in_trait)]
-    async fn request<Q, R>(&self, request: &Q) -> Result<R>
+pub trait Client: Send + 'static {
+    fn request<Q, R>(&self, request: &Q) -> impl Future<Output = Result<R>> + Send
     where
-        Q: Serialize,
+        Q: Serialize + Sync,
         R: DeserializeOwned;
 }
 
+#[derive(Clone)]
 pub struct GithubClient {
     client: reqwest::Client,
 }
@@ -39,7 +41,7 @@ impl GithubClient {
 impl Client for GithubClient {
     async fn request<Q, R>(&self, request: &Q) -> Result<R>
     where
-        Q: Serialize,
+        Q: Serialize + Sync,
         R: DeserializeOwned,
     {
         Ok(self

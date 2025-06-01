@@ -14,6 +14,9 @@ pub enum Error {
     #[error("Unexpected data: {0}")]
     UnexpectedData(String),
 
+    #[error("Unknown error: {0}")]
+    Unknown(String),
+
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
 }
