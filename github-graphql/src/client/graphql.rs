@@ -30,9 +30,6 @@ pub use custom_fields_query::{
 
 pub mod get_issue_types;
 
-pub mod project_items;
-pub use project_items::ProjectItems;
-
 pub mod get_all_items;
 pub mod get_items;
 pub mod minimal_project_items;

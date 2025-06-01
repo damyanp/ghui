@@ -1,10 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{
-        get_all_items2, get_viewer_info, minimal_project_items::get_minimal_project_items,
-        paged_query::get_all_items, project_items,
-    },
+    graphql::{get_all_items2, get_viewer_info, minimal_project_items::get_minimal_project_items},
     transport::GithubClient,
 };
 use std::env;
@@ -22,7 +19,6 @@ struct Args {
 enum Commands {
     GetAllItems,
     GetHierarchy,
-    GetAllItems2,
     Viewer,
     Hygiene(hygiene::Options),
     AddItems(add_items::Options),
@@ -39,33 +35,10 @@ async fn main() -> Result {
     match arg.command {
         Commands::GetAllItems => run_get_all_items().await,
         Commands::GetHierarchy => run_get_hierarchy().await,
-        Commands::GetAllItems2 => run_get_all_items2().await,
         Commands::Viewer => run_get_viewer().await,
         Commands::Hygiene(options) => hygiene::run(options).await,
         Commands::AddItems(options) => add_items::run(options).await,
     }
-}
-
-async fn run_get_all_items() -> Result {
-    let client = client();
-
-    let variables = project_items::project_items::Variables {
-        page_size: 100,
-        after: None,
-    };
-
-    let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-
-    let all_items =
-        get_all_items::<project_items::ProjectItems>(&client, variables, &report_progress).await?;
-
-    let json_data = serde_json::to_string_pretty(&all_items)?;
-    let mut file = File::create("all_items.json")?;
-    file.write_all(json_data.as_bytes())?;
-
-    println!("Retrieved {} items", all_items.len());
-
-    Ok(())
 }
 
 async fn run_get_hierarchy() -> Result {
@@ -82,13 +55,13 @@ async fn run_get_hierarchy() -> Result {
     Ok(())
 }
 
-async fn run_get_all_items2() -> Result {
+async fn run_get_all_items() -> Result {
     let client = client();
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
     let all_items = get_all_items2(&client, &report_progress).await?;
     let json_data = serde_json::to_string_pretty(&all_items)?;
-    let mut file = File::create("all_items2.json")?;
+    let mut file = File::create("all_items.json")?;
     file.write_all(json_data.as_bytes())?;
 
     println!("Retrieved {} items", all_items.len());

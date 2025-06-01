@@ -1,4 +1,3 @@
-use super::project_items::{build_issue_id_vector, HasContentId};
 use super::{DateTime, URI};
 use crate::client::transport::Client;
 use crate::data::{
@@ -125,6 +124,19 @@ impl From<PullRequestState> for DelayLoad<data::PullRequestState> {
             PullRequestState::MERGED => data::PullRequestState::MERGED,
             PullRequestState::Other(s) => data::PullRequestState::Other(s), // fallback for unknown states
         })
+    }
+}
+
+trait HasContentId {
+    fn id(&self) -> WorkItemId;
+}
+
+fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<WorkItemId> {
+    if let Some(nodes) = nodes {
+        let nodes = nodes.iter().filter_map(|i| i.as_ref());
+        nodes.map(|n| n.id()).collect()
+    } else {
+        Vec::default()
     }
 }
 

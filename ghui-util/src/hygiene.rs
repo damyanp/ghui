@@ -1,5 +1,8 @@
 use github_graphql::{
-    client::{graphql::custom_fields_query::get_fields, transport::GithubClient},
+    client::{
+        graphql::{custom_fields_query::get_fields, get_all_items2},
+        transport::GithubClient,
+    },
     data::{self, Change, SaveMode},
 };
 
@@ -26,14 +29,17 @@ pub async fn run(options: Options) -> Result {
 
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    Ok(data::WorkItems::from_client(client, &report_progress).await?)
+    Ok(data::WorkItems::from_iter(
+        get_all_items2(client, &report_progress).await?.into_iter(),
+    ))
 }
 
 pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {
     let items = match mode {
         RunHygieneMode::TestData => {
             let mut file = std::fs::File::open("all_items.json")?;
-            data::WorkItems::from_graphql(serde_json::from_reader(&mut file)?)?
+            let work_items: Vec<data::WorkItem> = serde_json::from_reader(&mut file)?;
+            data::WorkItems::from_iter(work_items.into_iter())
         }
         _ => get_items(client).await?,
     };
