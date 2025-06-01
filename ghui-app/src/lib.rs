@@ -13,7 +13,7 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, task::{JoinHandle, JoinSet}};
 use ts_rs::TS;
 
 mod nodes;
@@ -221,14 +221,18 @@ impl AppState {
         Ok(work_items)
     }
 
-    pub fn get_project_ids(&self, work_item_ids: &[ItemToUpdate]) -> Vec<ProjectItemId> {
+    pub fn get_project_ids_to_update(&self, work_item_ids: &[ItemToUpdate]) -> Vec<ProjectItemId> {
         if let Some(work_items) = &self.work_items {
             work_item_ids
                 .iter()
                 .filter_map(|item| {
-                    work_items
-                        .get(&item.work_item_id)
-                        .map(|work_item| work_item.project_item.id.clone())
+                    work_items.get(&item.work_item_id).and_then(|work_item| {
+                        if item.force || !work_item.is_loaded() {
+                            Some(work_item.project_item.id.clone())
+                        } else {
+                            None
+                        }
+                    })
                 })
                 .collect()
         } else {
@@ -292,30 +296,19 @@ impl AppState {
 
     pub async fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) -> Result<()> {
         if let Some(work_items) = self.work_items.as_ref() {
-            self.add_changes(work_items.convert_tracked_to_sub_issues(&id)).await?;
+            self.add_changes(work_items.convert_tracked_to_sub_issues(&id))
+                .await?;
         }
         Ok(())
-    }
-
-    pub async fn sanitize(&mut self) -> Result<usize> {
-        if let Some(work_items) = self.work_items.as_ref() {
-            if let Some(fields) = self.fields.as_ref() {
-                let changes = work_items.sanitize(fields);
-                let num_changes = changes.len();
-                self.add_changes(changes).await?;
-                return Ok(num_changes);
-            }
-        }
-        Ok(0)
     }
 }
 
 impl DataState {
-    pub fn request_update_items(&self, items: Vec<ItemToUpdate>) {
+    pub fn request_update_items(&self, items: Vec<ItemToUpdate>) -> JoinHandle<()> {
         let app_state = Arc::clone(&self.0);
         tokio::spawn(async move {
             let state = app_state.lock().await;
-            let project_item_ids = state.get_project_ids(items.as_slice());
+            let project_item_ids = state.get_project_ids_to_update(items.as_slice());
             let client = match state.pat.new_github_client() {
                 Ok(client) => client,
                 Err(e) => {
@@ -324,6 +317,10 @@ impl DataState {
                 }
             };
             drop(state);
+
+            if project_item_ids.len() == 0 {
+                return;
+            }
 
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
@@ -341,7 +338,55 @@ impl DataState {
                     (watcher)(DataUpdate::WorkItem(Box::new(item)));
                 }
             }
-        });
+
+            // TODO: save the updated work items!
+        })
+    }
+
+    pub async fn sanitize(&self) -> Result<usize> {
+        self.load_all_work_items(false).await?;
+
+        let mut app_state = self.lock().await;
+        if let Some(work_items) = app_state.work_items.as_ref() {
+            if let Some(fields) = app_state.fields.as_ref() {
+                let changes = work_items.sanitize(fields);
+                let num_changes = changes.len();
+                app_state.add_changes(changes).await?;
+                return Ok(num_changes);
+            }
+        }
+        Ok(0)
+    }
+
+    pub async fn load_all_work_items(&self, force: bool) -> Result<()> {
+        let app_state = self.lock().await;
+        if let Some(work_items) = &app_state.work_items {
+            let unloaded: Vec<_> = work_items
+                .work_items
+                .values()
+                .filter(|w| !w.is_loaded())
+                .map(|w| w.id.clone())
+                .collect();
+            drop(app_state);
+
+            println!("Loading {} items....", unloaded.len());
+
+            let join_handles = JoinSet::from_iter(unloaded.chunks(50).map(|chunk| {
+                self.request_update_items(
+                    chunk
+                        .iter()
+                        .map(|id| ItemToUpdate {
+                            work_item_id: id.clone(),
+                            force,
+                        })
+                        .collect(),
+                )
+            }));
+
+            join_handles.join_all().await;
+            println!("Done");
+        }
+        Ok(())
     }
 }
 

@@ -14,7 +14,7 @@ pub async fn convert_tracked_to_sub_issues(
 
 #[tauri::command]
 pub async fn sanitize(data_state: State<'_, DataState>) -> TauriCommandResult<usize> {
-    Ok(data_state.lock().await.sanitize().await?)
+    Ok(data_state.sanitize().await?)
 }
 
 #[tauri::command]

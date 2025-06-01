@@ -24,6 +24,13 @@ impl<T> DelayLoad<T> {
             DelayLoad::Loaded(v) => v,
         }
     }
+
+    pub fn is_loaded(&self) -> bool {
+        match self {
+            DelayLoad::NotLoaded => false,
+            DelayLoad::Loaded(_) => true,
+        }
+    }
 }
 
 impl<T> DelayLoad<Option<T>> {

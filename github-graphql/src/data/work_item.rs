@@ -54,6 +54,17 @@ impl WorkItem {
         }
         None
     }
+
+    pub fn is_loaded(&self) -> bool {
+        match self.data {
+            WorkItemData::Issue(Issue {
+                state: DelayLoad::NotLoaded,
+                ..
+            }) => return false,
+            _ => (),
+        }
+        self.project_item.is_loaded()
+    }
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
@@ -147,6 +158,14 @@ impl ProjectItem {
             project_milestone: None.into(),
             ..Default::default()
         }
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.iteration.is_loaded()
+            && self.blocked.is_loaded()
+            && self.kind.is_loaded()
+            && self.workstream.is_loaded()
+            && self.project_milestone.is_loaded()
     }
 }
 
