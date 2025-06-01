@@ -14,11 +14,11 @@
   "license": "MIT",
   "dependencies": {
     "@floating-ui/dom": "^1.7.0",
-    "@lucide/svelte": "^0.501.0",
+    "@lucide/svelte": "0.x",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-window-state": "^2.2.2",
-    "bits-ui": "^1.7.0"
+    "bits-ui": "^2.0.0"
   },
   "devDependencies": {
     "@skeletonlabs/skeleton": "^3.1.2",
@@ -32,7 +32,7 @@
     "svelte": "^5.29.0",
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "typescript": "5.x",
+    "vite": "6.x"
   }
 }
