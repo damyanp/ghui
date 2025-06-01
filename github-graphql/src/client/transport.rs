@@ -1,9 +1,8 @@
-use std::future::Future;
-
 use crate::Result;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::future::Future;
 
 pub trait Client: Send + 'static {
     fn request<Q, R>(&self, request: &Q) -> impl Future<Output = Result<R>> + Send
@@ -44,13 +43,14 @@ impl Client for GithubClient {
         Q: Serialize + Sync,
         R: DeserializeOwned,
     {
-        Ok(self
+        let result = self
             .client
             .post("https://api.github.com/graphql")
             .json(request)
             .send()
             .await?
             .json()
-            .await?)
+            .await?;
+        Ok(result)
     }
 }

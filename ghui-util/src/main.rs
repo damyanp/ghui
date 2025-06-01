@@ -2,16 +2,14 @@ use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
     graphql::{
-        get_project_item_ids::get_project_item_ids, get_viewer_info,
-        minimal_project_items::get_minimal_project_items, paged_query::get_all_items,
-        project_items,
+        get_all_items2, get_viewer_info, minimal_project_items::get_minimal_project_items,
+        paged_query::get_all_items, project_items,
     },
     transport::GithubClient,
 };
 use std::env;
 use std::fs::File;
 use std::io::Write;
-use tokio_stream::StreamExt;
 
 #[derive(Parser, Debug)]
 #[command(name = "ghui-util")]
@@ -86,16 +84,14 @@ async fn run_get_hierarchy() -> Result {
 
 async fn run_get_all_items2() -> Result {
     let client = client();
+    let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
-    let mut stream = get_project_item_ids(&client);
-    let mut so_far = 0;
+    let all_items = get_all_items2(&client, &report_progress).await?;
+    let json_data = serde_json::to_string_pretty(&all_items)?;
+    let mut file = File::create("all_items2.json")?;
+    file.write_all(json_data.as_bytes())?;
 
-    while let Some(v) = stream.next().await {
-        let v = v?;
-        so_far += v.ids.len();
-
-        println!("Got {} issues out of {}", so_far, v.total_items);
-    }
+    println!("Retrieved {} items", all_items.len());
 
     Ok(())
 }
