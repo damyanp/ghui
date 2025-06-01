@@ -13,7 +13,10 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
-use tokio::{sync::Mutex, task::{JoinHandle, JoinSet}};
+use tokio::{
+    sync::Mutex,
+    task::{JoinHandle, JoinSet},
+};
 use ts_rs::TS;
 
 mod nodes;
@@ -318,7 +321,7 @@ impl DataState {
             };
             drop(state);
 
-            if project_item_ids.len() == 0 {
+            if project_item_ids.is_empty() {
                 return;
             }
 

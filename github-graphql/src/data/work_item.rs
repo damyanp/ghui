@@ -56,12 +56,12 @@ impl WorkItem {
     }
 
     pub fn is_loaded(&self) -> bool {
-        match self.data {
-            WorkItemData::Issue(Issue {
-                state: DelayLoad::NotLoaded,
-                ..
-            }) => return false,
-            _ => (),
+        if let WorkItemData::Issue(Issue {
+            state: DelayLoad::NotLoaded,
+            ..
+        }) = self.data
+        {
+            return false;
         }
         self.project_item.is_loaded()
     }

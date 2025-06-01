@@ -8,7 +8,11 @@ pub async fn convert_tracked_to_sub_issues(
     data_state: State<'_, DataState>,
     id: WorkItemId,
 ) -> TauriCommandResult<()> {
-    data_state.lock().await.convert_tracked_to_sub_issues(id).await?;
+    data_state
+        .lock()
+        .await
+        .convert_tracked_to_sub_issues(id)
+        .await?;
     Ok(())
 }
 
