@@ -11,6 +11,9 @@ macro_rules! gql {
     };
 }
 
+#[allow(clippy::upper_case_acronyms)]
+type URI = String;
+
 type DateTime = String;
 
 pub mod mutators;
@@ -38,8 +41,5 @@ pub use viewer_info::{get_viewer_info, ViewerInfo};
 
 mod get_resource_id_query;
 pub use get_resource_id_query::get_resource_id;
-
-#[allow(clippy::upper_case_acronyms)]
-type URI = String;
 
 pub mod paged_query;
