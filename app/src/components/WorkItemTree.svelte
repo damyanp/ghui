@@ -36,7 +36,7 @@
         }
         default: {
           // All other types just set a field to a value
-          return `Set ${change.data.type} to '${change.data.value}'`;
+          return `Set ${change.data.type} to '${context.getFieldOption(change.data.type as keyof Fields, change.data.value)}'`;
         }
       }
     }
@@ -312,5 +312,8 @@
 {/snippet}
 
 {#snippet renderCustomField(item: WorkItem, field: keyof ProjectItem)}
-  {context.getFieldOption(field as keyof Fields, item.projectItem[field] as FieldOptionId)}
+  {context.getFieldOption(
+    field as keyof Fields,
+    item.projectItem[field] as FieldOptionId
+  )}
 {/snippet}
