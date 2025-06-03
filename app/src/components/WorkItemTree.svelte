@@ -44,6 +44,12 @@
     if (node.data.type === "workItem") {
       let item = context.data.workItems[node.id];
       if (item) {
+        items.push({
+          type: "action",
+          title: "Refresh",
+          action: () => context.itemUpdateBatcher.add(node.id, true),
+        });
+
         if (
           item.data.type === "issue" &&
           item.data.trackedIssues.loadState === "loaded" &&
