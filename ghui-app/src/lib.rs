@@ -280,12 +280,16 @@ impl AppState {
         work_items.apply_changes(&self.changes)
     }
 
-    pub async fn save_changes(&mut self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
+    async fn save_changes(
+        &mut self,
+        report_progress: &impl Fn(usize, usize),
+    ) -> Result<Vec<WorkItemId>> {
         let client = self.pat.new_github_client()?;
 
         let fields = self.refresh_fields(false).await?;
 
-        self.changes
+        Ok(self
+            .changes
             .save(
                 &client,
                 &fields,
@@ -293,9 +297,7 @@ impl AppState {
                 SaveMode::Commit,
                 &|_, a, b| report_progress(a, b),
             )
-            .await?;
-
-        self.refresh(false).await
+            .await?)
     }
 
     pub async fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) -> Result<()> {
@@ -345,6 +347,25 @@ impl DataState {
 
             // TODO: save the updated work items!
         })
+    }
+
+    pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
+        let items = self.lock().await.save_changes(report_progress).await?;
+
+        if !items.is_empty() {
+            self.request_update_items(
+                items
+                    .into_iter()
+                    .map(|id| ItemToUpdate {
+                        work_item_id: id,
+                        force: true,
+                    })
+                    .collect(),
+            )
+            .await?;
+        }
+
+        self.lock().await.refresh(false).await
     }
 
     pub async fn sanitize(&self) -> Result<usize> {

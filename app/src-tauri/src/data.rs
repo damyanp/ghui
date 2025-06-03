@@ -57,7 +57,6 @@ pub async fn save_changes(
         progress.send((c, t)).unwrap();
     };
 
-    let mut data_state = data_state.lock().await;
     Ok(data_state.save_changes(&report_progress).await?)
 }
 

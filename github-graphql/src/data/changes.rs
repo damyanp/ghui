@@ -10,7 +10,7 @@ use crate::client::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map, HashMap},
+    collections::{hash_map, HashMap, HashSet},
     mem::{take, Discriminant},
 };
 use ts_rs::TS;
@@ -57,8 +57,9 @@ impl Changes {
         work_items: &WorkItems,
         mode: SaveMode,
         report_progress: &impl Fn(&Change, usize, usize),
-    ) -> Result {
+    ) -> Result<Vec<WorkItemId>> {
         let data = take(&mut self.data);
+        let mut changed_work_items = HashSet::new();
 
         let change_count = data.len();
 
@@ -74,10 +75,12 @@ impl Changes {
             if result.is_err() {
                 println!("WARNING: save for {:?} failed {result:?}", change.key());
                 self.data.insert(key, change);
+            } else {
+                changed_work_items.insert(change.work_item_id);
             }
         }
 
-        Ok(())
+        Ok(changed_work_items.into_iter().collect())
     }
 }
 
