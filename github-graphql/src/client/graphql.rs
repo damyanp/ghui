@@ -33,7 +33,7 @@ pub mod get_issue_types;
 pub mod get_all_items;
 pub mod get_items;
 pub mod minimal_project_items;
-pub use get_all_items::get_all_items2;
+pub use get_all_items::get_all_items;
 
 mod viewer_info;
 pub use viewer_info::{get_viewer_info, ViewerInfo};

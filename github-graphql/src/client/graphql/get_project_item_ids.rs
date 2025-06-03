@@ -48,7 +48,7 @@ impl Stream for ProjectItemIdsPagesStream {
     }
 }
 
-pub fn get_project_item_ids(client: &(impl Client + Clone)) -> ProjectItemIdsPagesStream {
+pub fn get_project_item_ids(client: &impl Client) -> ProjectItemIdsPagesStream {
     let first_page = tokio::spawn(get_page(client.clone(), None));
 
     ProjectItemIdsPagesStream {

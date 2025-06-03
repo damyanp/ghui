@@ -1,6 +1,6 @@
 use github_graphql::{
     client::{
-        graphql::{custom_fields_query::get_fields, get_all_items2},
+        graphql::{custom_fields_query::get_fields, get_all_items},
         transport::GithubClient,
     },
     data::{self, Change, SaveMode},
@@ -30,7 +30,7 @@ pub async fn run(options: Options) -> Result {
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
     Ok(data::WorkItems::from_iter(
-        get_all_items2(client, &report_progress).await?.into_iter(),
+        get_all_items(client, &report_progress).await?.into_iter(),
     ))
 }
 

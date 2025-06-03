@@ -7,8 +7,8 @@ use crate::{
     Result,
 };
 
-pub async fn get_all_items2(
-    client: &(impl Client + Clone + Sync + 'static),
+pub async fn get_all_items(
+    client: &impl Client,
     report_progress: &impl Fn(usize, usize),
 ) -> Result<Vec<WorkItem>> {
     let mut stream = get_project_item_ids(client);

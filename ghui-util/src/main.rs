@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{get_all_items2, get_viewer_info, minimal_project_items::get_minimal_project_items},
+    graphql::{get_all_items, get_viewer_info, minimal_project_items::get_minimal_project_items},
     transport::GithubClient,
 };
 use std::env;
@@ -59,7 +59,7 @@ async fn run_get_all_items() -> Result {
     let client = client();
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
 
-    let all_items = get_all_items2(&client, &report_progress).await?;
+    let all_items = get_all_items(&client, &report_progress).await?;
     let json_data = serde_json::to_string_pretty(&all_items)?;
     let mut file = File::create("all_items.json")?;
     file.write_all(json_data.as_bytes())?;

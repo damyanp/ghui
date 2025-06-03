@@ -1,7 +1,7 @@
 use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::{
-    client::graphql::{custom_fields_query::get_fields, get_all_items2, get_items::get_items},
+    client::graphql::{custom_fields_query::get_fields, get_all_items, get_items::get_items},
     data::{Change, Changes, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId, WorkItems},
 };
 use serde::{Deserialize, Serialize};
@@ -212,7 +212,7 @@ impl AppState {
         report_progress(0, 1);
 
         let work_items =
-            WorkItems::from_iter(get_all_items2(&client, &report_progress).await?.into_iter());
+            WorkItems::from_iter(get_all_items(&client, &report_progress).await?.into_iter());
 
         let save_result = save_workitems_to_appdata(&work_items);
         if let Err(error) = save_result {

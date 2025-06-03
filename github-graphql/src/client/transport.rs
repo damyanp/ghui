@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::future::Future;
 
-pub trait Client: Send + 'static {
+pub trait Client: Clone + Send + Sync + 'static {
     fn request<Q, R>(&self, request: &Q) -> impl Future<Output = Result<R>> + Send
     where
         Q: Serialize + Sync,
@@ -40,7 +40,7 @@ impl GithubClient {
 impl Client for GithubClient {
     async fn request<Q, R>(&self, request: &Q) -> Result<R>
     where
-        Q: Serialize + Sync,
+        Q: Serialize,
         R: DeserializeOwned,
     {
         let result = self
