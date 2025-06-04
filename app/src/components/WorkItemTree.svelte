@@ -138,6 +138,18 @@
       render: renderEpic,
     },
     {
+      name: "Assigned To",
+      width: "2fr",
+      render: renderTextCell((i) => {
+        if (i.data.type === "issue" || i.data.type === "pullRequest") {
+          return i.data.assignees && i.data.assignees.length > 0
+            ? i.data.assignees.join(", ")
+            : "";
+        }
+        return "";
+      }),
+    },
+    {
       name: "#Tracked",
       width: "1fr",
       render: renderTextCell((i) => {

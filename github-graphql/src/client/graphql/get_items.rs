@@ -64,6 +64,13 @@ fn work_item(item: ItemOnProjectV2Item) -> Option<WorkItem> {
                 state: d.issue_state.into(),
                 sub_issues: build_issue_id_vector(d.sub_issues.nodes),
                 tracked_issues: build_issue_id_vector(d.tracked_issues.nodes).into(),
+                assignees: d
+                    .assignees
+                    .nodes
+                    .unwrap_or_else(|| Vec::new())
+                    .into_iter()
+                    .flat_map(|node| node.map(|node| node.login))
+                    .collect(),
             }),
         },
         ItemOnProjectV2ItemContent::PullRequest(d) => WorkItem {
@@ -75,6 +82,13 @@ fn work_item(item: ItemOnProjectV2Item) -> Option<WorkItem> {
             repo_name_with_owner: d.repository.name_with_owner.into(),
             data: WorkItemData::PullRequest(PullRequest {
                 state: d.pull_request_state.into(),
+                assignees: d
+                    .assignees
+                    .nodes
+                    .unwrap_or_else(|| Vec::new())
+                    .into_iter()
+                    .flat_map(|node| node.map(|node| node.login))
+                    .collect(),
             }),
         },
     })

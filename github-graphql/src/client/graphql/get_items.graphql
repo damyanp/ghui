@@ -64,6 +64,11 @@ fragment Item on Node {
         issueType {
           name
         }
+        assignees(first: 10) {
+          nodes {
+            login
+          }
+        }
       }
 
       ... on PullRequest {
@@ -75,6 +80,11 @@ fragment Item on Node {
         title
         updatedAt
         pullRequestState: state
+        assignees(first: 10) {
+          nodes {
+            login
+          }
+        }
       }
     }
   }

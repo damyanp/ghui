@@ -9,4 +9,5 @@ export type Issue = {
   state: DelayLoad<IssueState>;
   subIssues: Array<WorkItemId>;
   trackedIssues: DelayLoad<Array<WorkItemId>>;
+  assignees: Array<string>;
 };

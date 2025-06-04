@@ -2,4 +2,7 @@
 import type { DelayLoad } from "./DelayLoad";
 import type { PullRequestState } from "./PullRequestState";
 
-export type PullRequest = { state: DelayLoad<PullRequestState> };
+export type PullRequest = {
+  state: DelayLoad<PullRequestState>;
+  assignees: Array<string>;
+};

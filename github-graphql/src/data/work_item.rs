@@ -94,6 +94,7 @@ pub struct Issue {
     pub state: DelayLoad<IssueState>,
     pub sub_issues: Vec<WorkItemId>,
     pub tracked_issues: DelayLoad<Vec<WorkItemId>>,
+    pub assignees: Vec<String>,
 }
 impl Issue {
     pub fn default_loaded() -> Issue {
@@ -119,6 +120,7 @@ pub enum IssueState {
 #[serde(rename_all = "camelCase")]
 pub struct PullRequest {
     pub state: DelayLoad<PullRequestState>,
+    pub assignees: Vec<String>,
 }
 
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
