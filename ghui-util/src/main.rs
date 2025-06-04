@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use github_graphql::client::{
-    graphql::{get_all_items, get_viewer_info, minimal_project_items::get_minimal_project_items},
+    graphql::{get_all_items, get_viewer_info},
     transport::GithubClient,
 };
 use std::env;
@@ -18,7 +18,6 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Commands {
     GetAllItems,
-    GetHierarchy,
     Viewer,
     Hygiene(hygiene::Options),
     AddItems(add_items::Options),
@@ -34,25 +33,10 @@ async fn main() -> Result {
 
     match arg.command {
         Commands::GetAllItems => run_get_all_items().await,
-        Commands::GetHierarchy => run_get_hierarchy().await,
         Commands::Viewer => run_get_viewer().await,
         Commands::Hygiene(options) => hygiene::run(options).await,
         Commands::AddItems(options) => add_items::run(options).await,
     }
-}
-
-async fn run_get_hierarchy() -> Result {
-    let client = client();
-    let report_progress = |c, t| println!("Retrieved {c} of {t} items");
-    let hierarchy = get_minimal_project_items(&client, &report_progress).await?;
-
-    let json_data = serde_json::to_string_pretty(&hierarchy)?;
-    let mut file = File::create("hiearchy.json")?;
-    file.write_all(json_data.as_bytes())?;
-
-    println!("Retrieved {} items", hierarchy.len());
-
-    Ok(())
 }
 
 async fn run_get_all_items() -> Result {

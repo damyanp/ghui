@@ -32,7 +32,6 @@ pub mod get_issue_types;
 
 pub mod get_all_items;
 pub mod get_items;
-pub mod minimal_project_items;
 pub use get_all_items::get_all_items;
 
 mod viewer_info;
@@ -42,5 +41,3 @@ mod get_resource_id_query;
 pub use get_resource_id_query::get_resource_id;
 
 pub mod get_project_item_ids;
-
-pub mod paged_query;
