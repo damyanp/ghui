@@ -5,6 +5,7 @@ use crate::data::{
     WorkItemData, WorkItemId,
 };
 use crate::{Error, Result};
+use futures::future::try_join_all;
 use graphql_client::{GraphQLQuery, Response};
 
 gql!(GetItems, "src/client/graphql/get_items.graphql");
@@ -24,24 +25,41 @@ pub async fn get_items(
         Err(Error::GraphQlResponseErrors(errors))?;
     }
 
-    Ok(response
+    assert!(response.data.is_some());
+
+    let nodes = response
         .data
-        .map(|d| {
-            d.nodes.into_iter().filter_map(|item| {
-                item.and_then(|item| match item {
-                    Item::ProjectV2Item(item) => work_item(item),
-                    _ => panic!("Unexpected node returned"),
-                })
+        .map(|d| d.nodes)
+        .into_iter()
+        .flatten()
+        .flatten();
+
+    // Most work items could be fetched synchronously, but in some cases we'll
+    // need to get pages of tracked / sub issues.
+    let get_work_items = nodes.filter_map(|item| {
+        if let Item::ProjectV2Item(item) = item {
+            let project_item = project_item(&item);
+            item.content.map(|content| {
+                let client = client.clone();
+                tokio::spawn(work_item(client, project_item, content))
             })
-        })
-        .ok_or(Error::GraphQlResponseUnexpected("Missing data".to_owned()))?
-        .collect())
+        } else {
+            None
+        }
+    });
+
+    let results = try_join_all(get_work_items).await?;
+    let result: Result<Vec<_>> = results.into_iter().collect();
+
+    result
 }
 
-fn work_item(item: ItemOnProjectV2Item) -> Option<WorkItem> {
-    let project_item = project_item(&item);
-
-    item.content.map(|item| match item {
+async fn work_item(
+    client: impl Client,
+    project_item: ProjectItem,
+    content: ItemOnProjectV2ItemContent,
+) -> Result<WorkItem> {
+    Ok(match content {
         ItemOnProjectV2ItemContent::DraftIssue(d) => WorkItem {
             project_item,
             id: WorkItemId(d.id),
@@ -53,7 +71,7 @@ fn work_item(item: ItemOnProjectV2Item) -> Option<WorkItem> {
         },
         ItemOnProjectV2ItemContent::Issue(d) => WorkItem {
             project_item,
-            id: WorkItemId(d.id),
+            id: WorkItemId(d.id.clone()),
             title: d.title,
             updated_at: d.updated_at,
             resource_path: d.resource_path.into(),
@@ -62,12 +80,25 @@ fn work_item(item: ItemOnProjectV2Item) -> Option<WorkItem> {
                 parent_id: d.parent.map(|parent| WorkItemId(parent.id)),
                 issue_type: d.issue_type.map(|t| t.name).into(),
                 state: d.issue_state.into(),
-                sub_issues: build_issue_id_vector(d.sub_issues.nodes),
-                tracked_issues: build_issue_id_vector(d.tracked_issues.nodes).into(),
+                sub_issues: get_issue_vector(
+                    &client,
+                    &d.id,
+                    d.sub_issues,
+                    IssueVectorType::SubIssues,
+                )
+                .await?,
+                tracked_issues: get_issue_vector(
+                    &client,
+                    &d.id,
+                    d.tracked_issues,
+                    IssueVectorType::TrackedIssues,
+                )
+                .await?
+                .into(),
                 assignees: d
                     .assignees
                     .nodes
-                    .unwrap_or_else(|| Vec::new())
+                    .unwrap_or_else(Vec::new)
                     .into_iter()
                     .flat_map(|node| node.map(|node| node.login))
                     .collect(),
@@ -85,7 +116,7 @@ fn work_item(item: ItemOnProjectV2Item) -> Option<WorkItem> {
                 assignees: d
                     .assignees
                     .nodes
-                    .unwrap_or_else(|| Vec::new())
+                    .unwrap_or_else(Vec::new)
                     .into_iter()
                     .flat_map(|node| node.map(|node| node.login))
                     .collect(),
@@ -141,27 +172,175 @@ impl From<PullRequestState> for DelayLoad<data::PullRequestState> {
     }
 }
 
-trait HasContentId {
-    fn id(&self) -> WorkItemId;
+#[derive(PartialEq, Debug)]
+enum IssueVectorType {
+    SubIssues,
+    TrackedIssues,
 }
 
-fn build_issue_id_vector<T: HasContentId>(nodes: Option<Vec<Option<T>>>) -> Vec<WorkItemId> {
-    if let Some(nodes) = nodes {
-        let nodes = nodes.iter().filter_map(|i| i.as_ref());
-        nodes.map(|n| n.id()).collect()
+async fn get_issue_vector(
+    client: &impl Client,
+    issue_id: &str,
+    issues: Issues,
+    issue_vector_type: IssueVectorType,
+) -> Result<Vec<WorkItemId>> {
+    let work_items = issues
+        .nodes
+        .map(|nodes| nodes.into_iter().flatten().map(|node| WorkItemId(node.id)))
+        .into_iter()
+        .flatten();
+
+    if issues.page_info.has_next_page {
+        let client = client.clone();
+        let issue_id = issue_id.to_owned();
+        let remaining_work_items = tokio::spawn(sub_tracked_issues::get_sub_tracked_issues(
+            client,
+            issue_id,
+            issues.page_info.end_cursor.unwrap(),
+            issue_vector_type == IssueVectorType::SubIssues,
+        ))
+        .await??;
+
+        Ok(work_items.chain(remaining_work_items.into_iter()).collect())
     } else {
-        Vec::default()
+        Ok(work_items.collect())
     }
 }
 
-impl HasContentId for ItemOnProjectV2ItemContentOnIssueSubIssuesNodes {
-    fn id(&self) -> WorkItemId {
-        WorkItemId(self.id.clone())
-    }
-}
+mod sub_tracked_issues {
+    use graphql_client::{GraphQLQuery, Response};
 
-impl HasContentId for ItemOnProjectV2ItemContentOnIssueTrackedIssuesNodes {
-    fn id(&self) -> WorkItemId {
-        WorkItemId(self.id.clone())
+    gql!(
+        GetSubIssues,
+        "src/client/graphql/get_sub_tracked_issues.graphql"
+    );
+
+    gql!(
+        GetTrackedIssues,
+        "src/client/graphql/get_sub_tracked_issues.graphql"
+    );
+
+    use crate::{client::transport::Client, data::WorkItemId, Error, Result};
+
+    pub async fn get_sub_tracked_issues(
+        client: impl Client,
+        issue_id: String,
+        after: String,
+        is_sub_issues: bool,
+    ) -> Result<Vec<WorkItemId>> {
+        if is_sub_issues {
+            get_sub_issues(client, issue_id, after).await
+        } else {
+            get_tracked_issues(client, issue_id, after).await
+        }
+    }
+
+    async fn get_sub_issues(
+        client: impl Client,
+        issue_id: String,
+        after: String,
+    ) -> Result<Vec<WorkItemId>> {
+        use get_sub_issues::*;
+
+        let mut work_items = Vec::new();
+        let mut variables = Variables {
+            id: issue_id.clone(),
+            after,
+        };
+
+        loop {
+            let body = GetSubIssues::build_query(variables.clone());
+            let response: Response<ResponseData> = client.request(&body).await?;
+
+            if let Some(errors) = response.errors {
+                return Err(Error::GraphQlResponseErrors(errors));
+            }
+            assert!(response.data.is_some());
+            let data = response.data.unwrap();
+            let node = data
+                .node
+                .ok_or(Error::GraphQlResponseUnexpected("Missing data".into()))?;
+
+            let GetSubIssuesNode::Issue(issue) = node else {
+                return Err(Error::GraphQlResponseUnexpected(
+                    "Got something that wasn't a node".into(),
+                ));
+            };
+
+            work_items.extend(
+                issue
+                    .sub_issues
+                    .nodes
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .map(|node| WorkItemId(node.id)),
+            );
+
+            if !issue.sub_issues.page_info.has_next_page {
+                return Ok(work_items);
+            }
+
+            variables.after =
+                issue
+                    .sub_issues
+                    .page_info
+                    .end_cursor
+                    .ok_or(Error::GraphQlResponseUnexpected(
+                        "has_next_page, but end_cursor is none".into(),
+                    ))?;
+        }
+    }
+
+    async fn get_tracked_issues(
+        client: impl Client,
+        issue_id: String,
+        after: String,
+    ) -> Result<Vec<WorkItemId>> {
+        use get_tracked_issues::*;
+
+        let mut work_items = Vec::new();
+        let mut variables = Variables {
+            id: issue_id.clone(),
+            after,
+        };
+
+        loop {
+            let body = GetTrackedIssues::build_query(variables.clone());
+            let response: Response<ResponseData> = client.request(&body).await?;
+
+            if let Some(errors) = response.errors {
+                return Err(Error::GraphQlResponseErrors(errors));
+            }
+            assert!(response.data.is_some());
+            let data = response.data.unwrap();
+            let node = data
+                .node
+                .ok_or(Error::GraphQlResponseUnexpected("Missing data".into()))?;
+
+            let GetTrackedIssuesNode::Issue(issue) = node else {
+                return Err(Error::GraphQlResponseUnexpected(
+                    "Got something that wasn't a node".into(),
+                ));
+            };
+
+            work_items.extend(
+                issue
+                    .tracked_issues
+                    .nodes
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .map(|node| WorkItemId(node.id)),
+            );
+
+            if !issue.tracked_issues.page_info.has_next_page {
+                return Ok(work_items);
+            }
+
+            variables.after = issue.tracked_issues.page_info.end_cursor.ok_or(
+                Error::GraphQlResponseUnexpected("has_next_page, but end_cursor is none".into()),
+            )?;
+        }
     }
 }

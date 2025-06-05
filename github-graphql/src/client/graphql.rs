@@ -6,7 +6,7 @@ macro_rules! gql {
         #[graphql(schema_path = "src/schema.docs.graphql",                    
                   query_path = $query_file,
                   response_derives = "Debug, Serialize, Eq, PartialEq",
-                  variables_derives = "Debug")]
+                  variables_derives = "Debug, Clone")]
         pub(crate) struct $name;
     };
 }

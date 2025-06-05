@@ -51,15 +51,11 @@ fragment Item on Node {
         updatedAt
         title
         issueState: state
-        subIssues(first: 100) {
-          nodes {
-            id
-          }
+        subIssues(first: 50) {
+          ...Issues
         }
-        trackedIssues(first: 100) {
-          nodes {
-            id
-          }
+        trackedIssues(first: 50) {
+          ...Issues
         }
         issueType {
           name
@@ -97,5 +93,15 @@ fragment CustomField on ProjectV2ItemFieldValue {
   }
   ... on ProjectV2ItemFieldIterationValue {
     iterationId
+  }
+}
+
+fragment Issues on IssueConnection {  
+  nodes {
+    id
+  }
+  pageInfo {
+    hasNextPage
+    endCursor
   }
 }

@@ -1,0 +1,31 @@
+query GetSubIssues($id: ID!, $after: String!) {
+  node(id: $id) {
+    __typename
+    ... on Issue {
+      subIssues(first: 100, after: $after) {
+        ...Issues
+      }
+    }
+  }
+}
+
+query GetTrackedIssues($id: ID!, $after: String!) {
+  node(id: $id) {
+    __typename
+    ... on Issue {
+      trackedIssues(first: 100, after: $after) {
+        ...Issues
+      }
+    }
+  }
+}
+
+fragment Issues on IssueConnection {
+  nodes {
+    id
+  }
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+}

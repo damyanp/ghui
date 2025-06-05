@@ -19,4 +19,7 @@ pub enum Error {
 
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    JoinError(#[from] tokio::task::JoinError),
 }

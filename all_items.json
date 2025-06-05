@@ -2521,7 +2521,16 @@
         "loadState": "loaded",
         "value": "OPEN"
       },
-      "subIssues": [],
+      "subIssues": [
+        "I_kwDOBITxeM6ei7fR",
+        "I_kwDOBITxeM6ecvlg",
+        "I_kwDOBITxeM6eYrHA",
+        "I_kwDOBITxeM6bkbru",
+        "I_kwDOBITxeM6jhsq9",
+        "I_kwDOBITxeM6ecz-8",
+        "I_kwDOBITxeM6eYS-a",
+        "I_kwDOBITxeM6Z6A2k"
+      ],
       "trackedIssues": {
         "loadState": "loaded",
         "value": [
@@ -16539,7 +16548,66 @@
           "I_kwDOBITxeM6Pw4qZ",
           "I_kwDOBITxeM6Pw4sX",
           "I_kwDOBITxeM6Pw4uk",
-          "I_kwDOBITxeM6Pw4w4"
+          "I_kwDOBITxeM6Pw4w4",
+          "I_kwDOBITxeM6Pw4zE",
+          "I_kwDOBITxeM6Pw41k",
+          "I_kwDOBITxeM6Pw430",
+          "I_kwDOBITxeM6Pw46M",
+          "I_kwDOBITxeM6Pw48V",
+          "I_kwDOBITxeM6Pw4-y",
+          "I_kwDOBITxeM6Pw5f1",
+          "I_kwDOBITxeM6Pw5hy",
+          "I_kwDOBITxeM6Pw5kE",
+          "I_kwDOBITxeM6Pw5ml",
+          "I_kwDOBITxeM6Pw5pG",
+          "I_kwDOBITxeM6Pw5rM",
+          "I_kwDOBITxeM6Pw5tl",
+          "I_kwDOBITxeM6Pw5v7",
+          "I_kwDOBITxeM6Pw5ym",
+          "I_kwDOBITxeM6Pw50s",
+          "I_kwDOBITxeM6Pw52-",
+          "I_kwDOBITxeM6Pw55N",
+          "I_kwDOBITxeM6Pw57s",
+          "I_kwDOBITxeM6Pw5-U",
+          "I_kwDOBITxeM6Pw6AM",
+          "I_kwDOBITxeM6Pw6CQ",
+          "I_kwDOBITxeM6Pw6Ff",
+          "I_kwDOBITxeM6Pw6pT",
+          "I_kwDOBITxeM6Pw6r6",
+          "I_kwDOBITxeM6Pw6uM",
+          "I_kwDOBITxeM6Pw6wO",
+          "I_kwDOBITxeM6Pw6yc",
+          "I_kwDOBITxeM6Pw60t",
+          "I_kwDOBITxeM6Pw63L",
+          "I_kwDOBITxeM6Pw65v",
+          "I_kwDOBITxeM6Pw68P",
+          "I_kwDOBITxeM6Pw6-b",
+          "I_kwDOBITxeM6Pw7CK",
+          "I_kwDOBITxeM6Pw7E0",
+          "I_kwDOBITxeM6Pw7G4",
+          "I_kwDOBITxeM6Pw7JN",
+          "I_kwDOBITxeM6Pw7Lv",
+          "I_kwDOBITxeM6Pw7N4",
+          "I_kwDOBITxeM6Pw7QF",
+          "I_kwDOBITxeM6Pw7SA",
+          "I_kwDOBITxeM6Pw7UR",
+          "I_kwDOBITxeM6Pw7Wd",
+          "I_kwDOBITxeM6Pw7Y0",
+          "I_kwDOBITxeM6Pw7bD",
+          "I_kwDOBITxeM6Pw7dj",
+          "I_kwDOBITxeM6Pw7f2",
+          "I_kwDOBITxeM6Pw7jG",
+          "I_kwDOBITxeM6Pw7mg",
+          "I_kwDOBITxeM6Pw7py",
+          "I_kwDOBITxeM6Pw7sf",
+          "I_kwDOBITxeM6Pw7vE",
+          "I_kwDOBITxeM6Pw7xZ",
+          "I_kwDOBITxeM6Pw7zw",
+          "I_kwDOBITxeM6Pw72D",
+          "I_kwDOBITxeM6Pw74l",
+          "I_kwDOBITxeM6WyDK9",
+          "I_kwDOBITxeM6onIWu",
+          "I_kwDOBITxeM6onIYQ"
         ]
       },
       "assignees": []
@@ -20385,7 +20453,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -20958,7 +21026,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -21379,6 +21447,59 @@
     }
   },
   {
+    "id": "I_kwDOBITxeM6cuNUJ",
+    "title": "[DirectX] Implement Shader Flags Analysis for LowPrecisionPresent",
+    "updatedAt": "2025-03-04T17:38:00Z",
+    "resourcePath": "/llvm/llvm-project/issues/114561",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM6bkbru",
+      "issueType": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "CLOSED"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Icohedron"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgUbS10",
+      "updatedAt": "2025-06-05T00:17:07Z",
+      "status": "6a15bfd1",
+      "iteration": {
+        "loadState": "loaded",
+        "value": "f798209b"
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": "a4cb8bbc"
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": "9586c976"
+      }
+    }
+  },
+  {
     "id": "I_kwDOBITxeM6cuO3T",
     "title": "[DirectX] Implement Shader Flags Analysis for Int64Ops",
     "updatedAt": "2025-03-18T17:11:02Z",
@@ -21731,7 +21852,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -22316,7 +22437,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -22530,7 +22651,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -22593,7 +22714,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -22950,7 +23071,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -23875,7 +23996,8 @@
         "I_kwDOBITxeM6iWRZ4",
         "I_kwDOBITxeM6iWgM6",
         "I_kwDOBITxeM6pd63e",
-        "I_kwDOBITxeM60wQek"
+        "I_kwDOBITxeM60wQek",
+        "I_kwDOBITxeM655Oku"
       ],
       "trackedIssues": {
         "loadState": "loaded",
@@ -24313,7 +24435,7 @@
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
       "type": "issue",
-      "parentId": null,
+      "parentId": "I_kwDOMbLzis6VOWsO",
       "issueType": {
         "loadState": "loaded",
         "value": null
@@ -25029,59 +25151,6 @@
       "projectMilestone": {
         "loadState": "loaded",
         "value": "3ba91c36"
-      }
-    }
-  },
-  {
-    "id": "I_kwDOBITxeM6l__1m",
-    "title": "[HLSL] RWBuffer resource variable has external linkage",
-    "updatedAt": "2025-03-05T19:07:55Z",
-    "resourcePath": "/llvm/llvm-project/issues/122767",
-    "repoNameWithOwner": "llvm/llvm-project",
-    "data": {
-      "type": "issue",
-      "parentId": null,
-      "issueType": {
-        "loadState": "loaded",
-        "value": "Feature"
-      },
-      "state": {
-        "loadState": "loaded",
-        "value": "CLOSED"
-      },
-      "subIssues": [],
-      "trackedIssues": {
-        "loadState": "loaded",
-        "value": []
-      },
-      "assignees": [
-        "s-perron"
-      ]
-    },
-    "projectItem": {
-      "id": "PVTI_lADOAQWwKc4ABQXFzgWToGM",
-      "updatedAt": "2025-03-05T19:07:56Z",
-      "status": "6a15bfd1",
-      "iteration": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "blocked": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "kind": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "epic": null,
-      "workstream": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "projectMilestone": {
-        "loadState": "loaded",
-        "value": null
       }
     }
   },
@@ -26241,6 +26310,59 @@
     }
   },
   {
+    "id": "I_kwDOMbLzis65pMcO",
+    "title": "Prototype using explicit padding for cbuffers",
+    "updatedAt": "2025-06-03T16:06:11Z",
+    "resourcePath": "/llvm/wg-hlsl/issues/285",
+    "repoNameWithOwner": "llvm/wg-hlsl",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOMbLzis60Yisu",
+      "issueType": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "bogner"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbGE90",
+      "updatedAt": "2025-06-04T15:32:12Z",
+      "status": "47fc9ee4",
+      "iteration": {
+        "loadState": "loaded",
+        "value": "22b21572"
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "epic": "ad1defbf",
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
     "id": "PR_kwDOBITxeM6IqeJ5",
     "title": "[HLSL] Make memory representation of boolean vectors in HLSL, vectors of i32. Add support for boolean swizzling.",
     "updatedAt": "2025-03-11T20:59:28Z",
@@ -26505,59 +26627,6 @@
       "projectMilestone": {
         "loadState": "loaded",
         "value": null
-      }
-    }
-  },
-  {
-    "id": "I_kwDOBITxeM6nPDoS",
-    "title": "[SPIRV] Investigate usage of `report_fatal_error` in `SPIRVInstructionSelector`",
-    "updatedAt": "2025-03-05T23:07:39Z",
-    "resourcePath": "/llvm/llvm-project/issues/124045",
-    "repoNameWithOwner": "llvm/llvm-project",
-    "data": {
-      "type": "issue",
-      "parentId": null,
-      "issueType": {
-        "loadState": "loaded",
-        "value": "Bug"
-      },
-      "state": {
-        "loadState": "loaded",
-        "value": "CLOSED"
-      },
-      "subIssues": [],
-      "trackedIssues": {
-        "loadState": "loaded",
-        "value": []
-      },
-      "assignees": [
-        "Icohedron"
-      ]
-    },
-    "projectItem": {
-      "id": "PVTI_lADOAQWwKc4ABQXFzgWo-vk",
-      "updatedAt": "2025-03-05T23:07:41Z",
-      "status": "6a15bfd1",
-      "iteration": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "blocked": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "kind": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "epic": null,
-      "workstream": {
-        "loadState": "loaded",
-        "value": "55c59cc4"
-      },
-      "projectMilestone": {
-        "loadState": "loaded",
-        "value": "004ed830"
       }
     }
   },
@@ -33392,7 +33461,7 @@
   {
     "id": "I_kwDOBITxeM6phK99",
     "title": "[HLSL] Add Root Descriptor element support to dxcontainer generation",
-    "updatedAt": "2025-02-13T18:53:45Z",
+    "updatedAt": "2025-06-04T18:22:24Z",
     "resourcePath": "/llvm/llvm-project/issues/126638",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -33404,7 +33473,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -33417,8 +33486,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgXNMLg",
-      "updatedAt": "2025-05-20T17:20:17Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-04T18:22:25Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": "1ecc24c4"
@@ -38380,57 +38449,6 @@
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgX4c1s",
       "updatedAt": "2025-03-17T17:02:22Z",
-      "status": "6a15bfd1",
-      "iteration": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "blocked": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "kind": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "epic": null,
-      "workstream": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "projectMilestone": {
-        "loadState": "loaded",
-        "value": null
-      }
-    }
-  },
-  {
-    "id": "I_kwDOBITxeM6saaAF",
-    "title": "[HLSL] hlsl_intrinsics.h needs to be reorganized",
-    "updatedAt": "2025-03-05T05:31:29Z",
-    "resourcePath": "/llvm/llvm-project/issues/129616",
-    "repoNameWithOwner": "llvm/llvm-project",
-    "data": {
-      "type": "issue",
-      "parentId": null,
-      "issueType": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "state": {
-        "loadState": "loaded",
-        "value": "CLOSED"
-      },
-      "subIssues": [],
-      "trackedIssues": {
-        "loadState": "loaded",
-        "value": []
-      },
-      "assignees": []
-    },
-    "projectItem": {
-      "id": "PVTI_lADOAQWwKc4ABQXFzgX5B1Y",
-      "updatedAt": "2025-03-05T05:31:30Z",
       "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
@@ -50066,7 +50084,7 @@
   {
     "id": "I_kwDOMbLzis6ybqYL",
     "title": "[Deliverable] Implement Intrinsic tests in offload test suite",
-    "updatedAt": "2025-05-28T18:55:46Z",
+    "updatedAt": "2025-06-04T20:08:39Z",
     "resourcePath": "/llvm/wg-hlsl/issues/221",
     "repoNameWithOwner": "llvm/wg-hlsl",
     "data": {
@@ -50240,7 +50258,7 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZXm_I",
-      "updatedAt": "2025-05-28T18:55:48Z",
+      "updatedAt": "2025-06-04T20:08:42Z",
       "status": null,
       "iteration": {
         "loadState": "loaded",
@@ -50756,49 +50774,6 @@
       "blocked": {
         "loadState": "loaded",
         "value": null
-      },
-      "kind": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "epic": null,
-      "workstream": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "projectMilestone": {
-        "loadState": "loaded",
-        "value": null
-      }
-    }
-  },
-  {
-    "id": "PR_kwDOMbLzis6KxhQb",
-    "title": "Add a proposal for how to explicitly specify struct layouts",
-    "updatedAt": "2025-05-07T12:56:00Z",
-    "resourcePath": "/llvm/wg-hlsl/pull/171",
-    "repoNameWithOwner": "llvm/wg-hlsl",
-    "data": {
-      "type": "pullRequest",
-      "state": {
-        "loadState": "loaded",
-        "value": "OPEN"
-      },
-      "assignees": [
-        "bogner"
-      ]
-    },
-    "projectItem": {
-      "id": "PVTI_lADOAQWwKc4ABQXFzgXN2OI",
-      "updatedAt": "2025-04-28T16:31:03Z",
-      "status": "47fc9ee4",
-      "iteration": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "blocked": {
-        "loadState": "loaded",
-        "value": "80f1a2b1"
       },
       "kind": {
         "loadState": "loaded",
@@ -55324,7 +55299,7 @@
   {
     "id": "I_kwDOBITxeM6zqtAE",
     "title": "[HLSL][SPIRV] Implement vk::ext_builtin_input",
-    "updatedAt": "2025-04-29T13:57:22Z",
+    "updatedAt": "2025-06-04T13:24:24Z",
     "resourcePath": "/llvm/llvm-project/issues/136920",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -55336,7 +55311,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -55349,8 +55324,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZqb7E",
-      "updatedAt": "2025-04-29T13:57:23Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-04T13:24:25Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": null
@@ -64467,7 +64442,7 @@
   {
     "id": "I_kwDOK1nZ5c605HIt",
     "title": "Add test for sign",
-    "updatedAt": "2025-06-03T16:36:44Z",
+    "updatedAt": "2025-06-05T03:11:02Z",
     "resourcePath": "/llvm/offload-test-suite/issues/112",
     "repoNameWithOwner": "llvm/offload-test-suite",
     "data": {
@@ -64486,19 +64461,21 @@
         "loadState": "loaded",
         "value": []
       },
-      "assignees": []
+      "assignees": [
+        "spall"
+      ]
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a0E",
-      "updatedAt": "2025-06-03T17:17:06Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-05T03:11:03Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -65032,7 +65009,7 @@
   {
     "id": "I_kwDOK1nZ5c605HKP",
     "title": "Add test for dot4add_i8packed",
-    "updatedAt": "2025-05-08T17:38:17Z",
+    "updatedAt": "2025-06-04T15:30:38Z",
     "resourcePath": "/llvm/offload-test-suite/issues/123",
     "repoNameWithOwner": "llvm/offload-test-suite",
     "data": {
@@ -65044,7 +65021,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -65057,8 +65034,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a1c",
-      "updatedAt": "2025-05-16T17:44:39Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-04T15:30:40Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": null
@@ -65518,15 +65495,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a24",
-      "updatedAt": "2025-06-02T15:39:34Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T15:26:18Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -65903,7 +65880,7 @@
   {
     "id": "I_kwDOK1nZ5c605HM4",
     "title": "Add test for countbits",
-    "updatedAt": "2025-05-22T17:48:32Z",
+    "updatedAt": "2025-06-04T20:08:38Z",
     "resourcePath": "/llvm/offload-test-suite/issues/140",
     "repoNameWithOwner": "llvm/offload-test-suite",
     "data": {
@@ -65915,7 +65892,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -65928,8 +65905,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a4I",
-      "updatedAt": "2025-05-22T17:50:22Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-04T20:08:40Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": "1ecc24c4"
@@ -66364,7 +66341,7 @@
   {
     "id": "I_kwDOK1nZ5c605HOC",
     "title": "Add test for dot4add_u8packed",
-    "updatedAt": "2025-05-08T17:38:23Z",
+    "updatedAt": "2025-06-04T15:31:01Z",
     "resourcePath": "/llvm/offload-test-suite/issues/149",
     "repoNameWithOwner": "llvm/offload-test-suite",
     "data": {
@@ -66376,7 +66353,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -66389,8 +66366,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a5Q",
-      "updatedAt": "2025-05-16T17:44:41Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-04T15:31:04Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": null
@@ -66646,15 +66623,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a6U",
-      "updatedAt": "2025-06-03T16:32:29Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T15:26:32Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -67109,15 +67086,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a7g",
-      "updatedAt": "2025-06-03T16:54:19Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T15:26:49Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -67521,15 +67498,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a8o",
-      "updatedAt": "2025-06-03T16:48:34Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T15:27:01Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -67572,15 +67549,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a8w",
-      "updatedAt": "2025-06-03T16:43:22Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T15:27:11Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -67725,15 +67702,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgZ8a9M",
-      "updatedAt": "2025-06-03T16:17:52Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T15:27:23Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -69244,15 +69221,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgaIGd0",
-      "updatedAt": "2025-05-29T19:40:56Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-04T19:18:35Z",
+      "status": null,
       "iteration": {
         "loadState": "loaded",
         "value": "22b21572"
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "80f1a2b1"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -69378,7 +69355,7 @@
   {
     "id": "I_kwDOBITxeM61qRlc",
     "title": "[DirectX] [Scalarizer] Validator is erroring with Instructions must be of an allowed type.",
-    "updatedAt": "2025-05-12T17:11:15Z",
+    "updatedAt": "2025-06-05T01:28:45Z",
     "resourcePath": "/llvm/llvm-project/issues/139020",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -69390,7 +69367,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -69403,8 +69380,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgaII9g",
-      "updatedAt": "2025-05-12T19:26:43Z",
-      "status": "47fc9ee4",
+      "updatedAt": "2025-06-05T01:28:47Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": null
@@ -70916,7 +70893,7 @@
   {
     "id": "I_kwDOBITxeM62_buR",
     "title": "[DirectX] DXILBitcodeWriter is trying to encode unsupported TargetExtTyID",
-    "updatedAt": "2025-05-22T17:37:37Z",
+    "updatedAt": "2025-06-05T02:30:07Z",
     "resourcePath": "/llvm/llvm-project/issues/140321",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -70941,7 +70918,7 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgafZdo",
-      "updatedAt": "2025-05-22T17:37:38Z",
+      "updatedAt": "2025-06-05T02:30:08Z",
       "status": "d56a747d",
       "iteration": {
         "loadState": "loaded",
@@ -70963,6 +70940,49 @@
       "projectMilestone": {
         "loadState": "loaded",
         "value": "17f59798"
+      }
+    }
+  },
+  {
+    "id": "PR_kwDOMbLzis6KxhQb",
+    "title": "Add a proposal for how to explicitly specify struct layouts",
+    "updatedAt": "2025-05-07T12:56:00Z",
+    "resourcePath": "/llvm/wg-hlsl/pull/171",
+    "repoNameWithOwner": "llvm/wg-hlsl",
+    "data": {
+      "type": "pullRequest",
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "assignees": [
+        "bogner"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgXN2OI",
+      "updatedAt": "2025-06-04T15:31:49Z",
+      "status": "47fc9ee4",
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": "80f1a2b1"
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
       }
     }
   },
@@ -71020,7 +71040,7 @@
   {
     "id": "I_kwDOBITxeM63DdJS",
     "title": "[DirectX] Validation Failure: Explicit gep type does not match pointee type of pointer operand",
-    "updatedAt": "2025-06-02T19:35:07Z",
+    "updatedAt": "2025-06-04T19:31:18Z",
     "resourcePath": "/llvm/llvm-project/issues/140415",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -71032,7 +71052,7 @@
       },
       "state": {
         "loadState": "loaded",
-        "value": "OPEN"
+        "value": "CLOSED"
       },
       "subIssues": [],
       "trackedIssues": {
@@ -71045,8 +71065,8 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgagTCg",
-      "updatedAt": "2025-06-02T19:35:09Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T19:31:20Z",
+      "status": "6a15bfd1",
       "iteration": {
         "loadState": "loaded",
         "value": null
@@ -71124,7 +71144,7 @@
   {
     "id": "I_kwDOBITxeM63Dhnh",
     "title": "[DirectX] Validation error: Access to out-of-bounds memory is disallowed",
-    "updatedAt": "2025-06-02T19:35:13Z",
+    "updatedAt": "2025-06-05T01:58:45Z",
     "resourcePath": "/llvm/llvm-project/issues/140417",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -71138,19 +71158,22 @@
         "loadState": "loaded",
         "value": "OPEN"
       },
-      "subIssues": [],
+      "subIssues": [
+        "I_kwDOBITxeM655X3m"
+      ],
       "trackedIssues": {
         "loadState": "loaded",
         "value": []
       },
       "assignees": [
+        "farzonl",
         "Icohedron"
       ]
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgagT_A",
-      "updatedAt": "2025-06-02T19:35:15Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-05T01:58:46Z",
+      "status": null,
       "iteration": {
         "loadState": "loaded",
         "value": null
@@ -73364,15 +73387,15 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgbDJNE",
-      "updatedAt": "2025-06-03T01:50:20Z",
-      "status": "d56a747d",
+      "updatedAt": "2025-06-04T17:23:52Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
@@ -73600,62 +73623,9 @@
     }
   },
   {
-    "id": "I_kwDOMbLzis65pMcO",
-    "title": "Prototype using explicit padding for cbuffers",
-    "updatedAt": "2025-06-03T16:06:11Z",
-    "resourcePath": "/llvm/wg-hlsl/issues/285",
-    "repoNameWithOwner": "llvm/wg-hlsl",
-    "data": {
-      "type": "issue",
-      "parentId": "I_kwDOMbLzis60Yisu",
-      "issueType": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "state": {
-        "loadState": "loaded",
-        "value": "OPEN"
-      },
-      "subIssues": [],
-      "trackedIssues": {
-        "loadState": "loaded",
-        "value": []
-      },
-      "assignees": [
-        "bogner"
-      ]
-    },
-    "projectItem": {
-      "id": "PVTI_lADOAQWwKc4ABQXFzgbGE90",
-      "updatedAt": "2025-06-03T17:27:08Z",
-      "status": "47fc9ee4",
-      "iteration": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "blocked": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "kind": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "epic": "ad1defbf",
-      "workstream": {
-        "loadState": "loaded",
-        "value": null
-      },
-      "projectMilestone": {
-        "loadState": "loaded",
-        "value": null
-      }
-    }
-  },
-  {
     "id": "I_kwDOBIRuvs65q_9X",
     "title": "[SM6.9] compiler crash with Load with status",
-    "updatedAt": "2025-06-03T19:10:23Z",
+    "updatedAt": "2025-06-04T17:46:40Z",
     "resourcePath": "/microsoft/DirectXShaderCompiler/issues/7508",
     "repoNameWithOwner": "microsoft/DirectXShaderCompiler",
     "data": {
@@ -73680,21 +73650,21 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgbGfqE",
-      "updatedAt": "2025-06-03T19:10:44Z",
-      "status": null,
+      "updatedAt": "2025-06-05T00:17:07Z",
+      "status": "d56a747d",
       "iteration": {
         "loadState": "loaded",
-        "value": null
+        "value": "22b21572"
       },
       "blocked": {
         "loadState": "loaded",
-        "value": null
+        "value": "00f5b073"
       },
       "kind": {
         "loadState": "loaded",
         "value": null
       },
-      "epic": null,
+      "epic": "7b7e149f",
       "workstream": {
         "loadState": "loaded",
         "value": "ae45a9eb"
@@ -73708,7 +73678,7 @@
   {
     "id": "I_kwDOBITxeM65sRFV",
     "title": "[HLSL][SPIRV] Clang should run spirv-val if available",
-    "updatedAt": "2025-06-03T20:43:59Z",
+    "updatedAt": "2025-06-04T17:31:48Z",
     "resourcePath": "/llvm/llvm-project/issues/142669",
     "repoNameWithOwner": "llvm/llvm-project",
     "data": {
@@ -73731,21 +73701,21 @@
     },
     "projectItem": {
       "id": "PVTI_lADOAQWwKc4ABQXFzgbGr54",
-      "updatedAt": "2025-06-03T20:44:09Z",
-      "status": null,
+      "updatedAt": "2025-06-04T17:31:49Z",
+      "status": "c35a9b00",
       "iteration": {
         "loadState": "loaded",
         "value": null
       },
       "blocked": {
         "loadState": "loaded",
-        "value": "00f5b073"
+        "value": null
       },
       "kind": {
         "loadState": "loaded",
         "value": null
       },
-      "epic": null,
+      "epic": "ad1defbf",
       "workstream": {
         "loadState": "loaded",
         "value": null
@@ -73791,6 +73761,489 @@
       "blocked": {
         "loadState": "loaded",
         "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM653uoO",
+    "title": "[HLSL][SPIR-V] Implement missing features to port VulkanCTS reconvergences tests to the offload test suite",
+    "updatedAt": "2025-06-04T16:26:32Z",
+    "resourcePath": "/llvm/llvm-project/issues/142804",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": null,
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Feature"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [
+        "I_kwDOBITxeM653vTr",
+        "I_kwDOBITxeM653wun",
+        "I_kwDOBITxeM653xhd",
+        "I_kwDOBITxeM653xtn",
+        "I_kwDOBITxeM653x9P"
+      ],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Keenuts"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJCFQ",
+      "updatedAt": "2025-06-04T16:33:12Z",
+      "status": null,
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "a2a60b34"
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM653vTr",
+    "title": "[HLSL][SPIR-V] Implement WaveGetLaneCount()",
+    "updatedAt": "2025-06-04T16:26:41Z",
+    "resourcePath": "/llvm/llvm-project/issues/142805",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM653uoO",
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Feature"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Keenuts"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJCQI",
+      "updatedAt": "2025-06-04T16:33:18Z",
+      "status": null,
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "a2a60b34"
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM653wun",
+    "title": "[HLSL][SPIR-V] Implement `groupshared` lowering",
+    "updatedAt": "2025-06-04T16:26:54Z",
+    "resourcePath": "/llvm/llvm-project/issues/142806",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM653uoO",
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Feature"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Keenuts"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJCkU",
+      "updatedAt": "2025-06-04T16:33:23Z",
+      "status": null,
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "a2a60b34"
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM653xhd",
+    "title": "[HLSL][SPIR-V] Implement `InterlockedAdd`",
+    "updatedAt": "2025-06-04T16:27:02Z",
+    "resourcePath": "/llvm/llvm-project/issues/142807",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM653uoO",
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Feature"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Keenuts"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJCuc",
+      "updatedAt": "2025-06-04T16:33:29Z",
+      "status": null,
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "a2a60b34"
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM653xtn",
+    "title": "[HLSL][SPIR-V] Implement `InterlockedExchange`",
+    "updatedAt": "2025-06-04T16:27:10Z",
+    "resourcePath": "/llvm/llvm-project/issues/142808",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM653uoO",
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Feature"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Keenuts"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJCyY",
+      "updatedAt": "2025-06-04T16:33:34Z",
+      "status": null,
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "a2a60b34"
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM653x9P",
+    "title": "[HLSL][SPIR-V] Implement `InterlockedAnd`",
+    "updatedAt": "2025-06-05T01:27:17Z",
+    "resourcePath": "/llvm/llvm-project/issues/142809",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM653uoO",
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Feature"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "Keenuts"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJC1w",
+      "updatedAt": "2025-06-05T01:27:18Z",
+      "status": null,
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "a2a60b34"
+      },
+      "epic": null,
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM655Oku",
+    "title": "[HLSL] Move `Sema` work out of `Parser::ParseMicrosoftRootSignatureAttributeArgs`",
+    "updatedAt": "2025-06-04T18:52:05Z",
+    "resourcePath": "/llvm/llvm-project/issues/142834",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM6iOIYh",
+      "issueType": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "inbelic"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJVys",
+      "updatedAt": "2025-06-05T00:17:07Z",
+      "status": "d56a747d",
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "epic": "ad1defbf",
+      "workstream": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": null
+      }
+    }
+  },
+  {
+    "id": "I_kwDOBITxeM655X3m",
+    "title": "[DirectX] GEPs to multi-dimensional arrays are incorrectly flattened",
+    "updatedAt": "2025-06-05T01:58:27Z",
+    "resourcePath": "/llvm/llvm-project/issues/142836",
+    "repoNameWithOwner": "llvm/llvm-project",
+    "data": {
+      "type": "issue",
+      "parentId": "I_kwDOBITxeM63Dhnh",
+      "issueType": {
+        "loadState": "loaded",
+        "value": "Bug"
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "farzonl"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJXfo",
+      "updatedAt": "2025-06-05T02:15:28Z",
+      "status": "d56a747d",
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": "00f5b073"
+      },
+      "kind": {
+        "loadState": "loaded",
+        "value": "71900652"
+      },
+      "epic": "ad1defbf",
+      "workstream": {
+        "loadState": "loaded",
+        "value": "aef0aa79"
+      },
+      "projectMilestone": {
+        "loadState": "loaded",
+        "value": "17f59798"
+      }
+    }
+  },
+  {
+    "id": "I_kwDOK1nZ5c655kR_",
+    "title": "Need to specify EnabledFeatures when creating Vulkan Device",
+    "updatedAt": "2025-06-04T19:23:33Z",
+    "resourcePath": "/llvm/offload-test-suite/issues/220",
+    "repoNameWithOwner": "llvm/offload-test-suite",
+    "data": {
+      "type": "issue",
+      "parentId": null,
+      "issueType": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "state": {
+        "loadState": "loaded",
+        "value": "OPEN"
+      },
+      "subIssues": [],
+      "trackedIssues": {
+        "loadState": "loaded",
+        "value": []
+      },
+      "assignees": [
+        "spall"
+      ]
+    },
+    "projectItem": {
+      "id": "PVTI_lADOAQWwKc4ABQXFzgbJZCw",
+      "updatedAt": "2025-06-04T19:23:35Z",
+      "status": "47fc9ee4",
+      "iteration": {
+        "loadState": "loaded",
+        "value": null
+      },
+      "blocked": {
+        "loadState": "loaded",
+        "value": "00f5b073"
       },
       "kind": {
         "loadState": "loaded",
