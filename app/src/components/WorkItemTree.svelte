@@ -34,6 +34,16 @@
         case "addToProject": {
           return "Add to project";
         }
+        case "issueType": {
+          let item = context.data.workItems[change.workItemId];
+          if (item?.data.type === "issue") {
+            if (item.data.issueType.loadState === "loaded")
+              if (item.data.issueType.value)
+                return `Set issue type to ${item.data.issueType.value}`;
+              else return "Clear issue type";
+            else return "Error: issue type not loaded";
+          } else return "Error: issue type change for non-issue!";
+        }
         default: {
           // All other types just set a field to a value
           return `Set ${change.data.type} to '${context.getFieldOption(change.data.type as keyof Fields, change.data.value)}'`;
