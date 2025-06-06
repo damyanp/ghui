@@ -5,7 +5,6 @@
   import TreeTableContextMenu, {
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
-  import { flash } from "$lib/Flash.svelte";
   import { onFirstVisible } from "$lib/OnVirstVisible";
 
   type Row<T> = {
@@ -269,7 +268,6 @@
             ondragleave={dragLeaveHandler}
             ondragover={dragOverHandler}
             ondrop={dropHandler}
-            {@attach flash}
             {@attach onFirstVisible(row, onRowFirstVisible)}
           >
             {#if row.isGroup}
