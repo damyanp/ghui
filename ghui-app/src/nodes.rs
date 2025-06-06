@@ -55,14 +55,14 @@ impl<'a> NodeBuilder<'a> {
         let items = self.apply_filters(items);
 
         // For now, group by "Epic"
-        let group = |id| {
+        let fn_get_group = |id| {
             self.work_items
                 .get(id)
                 .and_then(|item| item.project_item.epic.as_ref())
         };
 
-        let mut group_item: Vec<_> = items.iter().map(|id| (group(id), *id)).collect();
-        group_item.sort_by_key(|a| a.0);
+        let mut group_item: Vec<_> = items.iter().map(|id| (fn_get_group(id), *id)).collect();
+        group_item.sort_by_key(|a| self.fields.epic.option_index(a.0));
 
         let has_multiple_groups =
             !(group_item.is_empty() || group_item.iter().all(|i| i.0 == group_item[0].0));

@@ -56,4 +56,15 @@ impl Field {
                 .map(|option| option.value.as_str())
         })
     }
+
+    pub fn option_index(&self, id: Option<&FieldOptionId>) -> usize {
+        id.and_then(|id| {
+            self.options
+                .iter()
+                .enumerate()
+                .find(|(_, option)| *id == (*option).id)
+                .map(|(index, _)| index)
+        })
+        .unwrap_or(usize::MAX)
+    }
 }
