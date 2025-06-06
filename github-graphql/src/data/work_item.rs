@@ -147,6 +147,7 @@ type FieldValue = DelayLoad<Option<FieldOptionId>>;
 #[difference(expose)]
 pub struct ProjectItem {
     pub id: ProjectItemId,
+    pub database_id: Option<String>,
     pub updated_at: String,
     pub status: Option<FieldOptionId>,
     pub iteration: FieldValue,

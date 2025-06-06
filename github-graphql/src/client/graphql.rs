@@ -15,6 +15,7 @@ macro_rules! gql {
 type URI = String;
 
 type DateTime = String;
+type BigInt = String;
 
 pub mod mutators;
 pub use mutators::{

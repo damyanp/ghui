@@ -233,6 +233,24 @@
   }
 
   let expanded = $state([]);
+
+  function linkHRef(item: WorkItem): string {
+    const databaseId = item.projectItem.databaseId;
+    const owner = item.repoNameWithOwner?.split("/")[0];
+    const repo = item.repoNameWithOwner?.split("/")[1];
+    const number = item.resourcePath?.split("/")[4];
+
+    if (
+      item.data.type !== "pullRequest" &&
+      databaseId &&
+      owner &&
+      repo &&
+      number
+    ) {
+      return `https://github.com/orgs/llvm/projects/4?pane=issue&itemId=${databaseId}&issue=${owner}%7C${repo}%7C${number}`;
+    }
+    return `https://github.com${item.resourcePath}`;
+  }
 </script>
 
 <TreeTable
@@ -261,7 +279,7 @@
     <a
       class="text-blue-400 underline whitespace-nowrap shrink-0"
       target="_blank"
-      href="http://github.com{item.resourcePath}"
+      href={linkHRef(item)}
     >
       {path?.at(-3)}#{path?.at(-1)}
     </a>

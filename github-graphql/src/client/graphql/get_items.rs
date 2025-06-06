@@ -1,4 +1,4 @@
-use super::{DateTime, URI};
+use super::{BigInt, DateTime, URI};
 use crate::client::transport::Client;
 use crate::data::{
     self, DelayLoad, FieldOptionId, Issue, ProjectItem, ProjectItemId, PullRequest, WorkItem,
@@ -128,6 +128,7 @@ async fn work_item(
 fn project_item(item: &ItemOnProjectV2Item) -> ProjectItem {
     ProjectItem {
         id: ProjectItemId(item.id.clone()),
+        database_id: item.full_database_id.clone(),
         updated_at: item.updated_at.clone(),
         status: field(&item.status),
         iteration: field(&item.iteration).into(),

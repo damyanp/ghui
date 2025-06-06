@@ -5,6 +5,7 @@ import type { ProjectItemId } from "./ProjectItemId";
 
 export type ProjectItem = {
   id: ProjectItemId;
+  databaseId: string | null;
   updatedAt: string;
   status: FieldOptionId | null;
   iteration: DelayLoad<FieldOptionId | null>;

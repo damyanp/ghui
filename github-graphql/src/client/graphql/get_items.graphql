@@ -8,6 +8,7 @@ fragment Item on Node {
   __typename
   ... on ProjectV2Item {
     id
+    fullDatabaseId
     updatedAt
     Status: fieldValueByName(name: "Status") {
       ...CustomField
