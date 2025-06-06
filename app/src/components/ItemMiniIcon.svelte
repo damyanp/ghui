@@ -33,20 +33,44 @@
   let icon = $derived(octicons[iconName]);
   let color = $derived.by(() => {
     switch (iconName) {
-        case "issue-draft": return "text-gray-500";
-        case "issue-opened": return "text-green-500";
-        case "issue-closed": return "text-purple-500";
-        case "git-pull-request": return "text-green-500";
-        case "git-pull-request-closed": return "text-gray-500";
-        case "git-merge": return "text-purple-500";
-        default:
-            return "text-gray-500";
+      case "issue-draft":
+        return "text-gray-500";
+      case "issue-opened":
+        return "text-green-500";
+      case "issue-closed":
+        return "text-purple-500";
+      case "git-pull-request":
+        return "text-green-500";
+      case "git-pull-request-closed":
+        return "text-gray-500";
+      case "git-merge":
+        return "text-purple-500";
+      default:
+        return "text-gray-500";
+    }
+  });
+  let tooltip = $derived.by(() => {
+    switch (iconName) {
+      case "issue-draft":
+        return "Draft issue";
+      case "issue-opened":
+        return "Open issue";
+      case "issue-closed":
+        return "Closed issue";
+      case "git-pull-request":
+        return "Open pull request";
+      case "git-pull-request-closed":
+        return "Closed pull request";
+      case "git-merge":
+        return "Merged pull request";
+      default:
+        return "???";
     }
   });
 </script>
 
 {#if icon}
-  <div class={`${color} inline`}>
+  <div class={`${color} inline`} title={tooltip}>
     {@html icon.toSVG()}
   </div>
 {/if}
