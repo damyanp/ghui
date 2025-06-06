@@ -1,17 +1,21 @@
 use serde::{Deserialize, Serialize};
+use structdiff::{Difference, StructDiff};
 use ts_rs::TS;
 
 use super::{DelayLoad, FieldOptionId};
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS, Difference)]
 #[serde(rename_all = "camelCase")]
+#[difference(expose)]
 pub struct WorkItem {
     pub id: WorkItemId,
     pub title: String,
     pub updated_at: String,
     pub resource_path: Option<String>,
     pub repo_name_with_owner: Option<String>,
+    #[difference(recurse)]
     pub data: WorkItemData,
+    #[difference(recurse)]
     pub project_item: ProjectItem,
 }
 
@@ -76,9 +80,10 @@ impl From<String> for WorkItemId {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS, Difference)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
+#[difference(expose)]
 pub enum WorkItemData {
     #[default]
     DraftIssue,
@@ -86,8 +91,9 @@ pub enum WorkItemData {
     PullRequest(PullRequest),
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize, TS, Difference)]
 #[serde(rename_all = "camelCase")]
+#[difference(expose)]
 pub struct Issue {
     pub parent_id: Option<WorkItemId>,
     pub issue_type: DelayLoad<Option<String>>,
@@ -107,7 +113,7 @@ impl Issue {
     }
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS, Difference)]
 #[serde(rename_all_fields = "camelCase")]
 pub enum IssueState {
     CLOSED,
@@ -116,14 +122,15 @@ pub enum IssueState {
     Other(String),
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS, Difference)]
 #[serde(rename_all = "camelCase")]
+#[difference(expose)]
 pub struct PullRequest {
     pub state: DelayLoad<PullRequestState>,
     pub assignees: Vec<String>,
 }
 
-#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
+#[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS, Difference)]
 #[serde(rename_all_fields = "camelCase")]
 pub enum PullRequestState {
     CLOSED,
@@ -135,8 +142,9 @@ pub enum PullRequestState {
 
 type FieldValue = DelayLoad<Option<FieldOptionId>>;
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS, Difference)]
 #[serde(rename_all = "camelCase")]
+#[difference(expose)]
 pub struct ProjectItem {
     pub id: ProjectItemId,
     pub updated_at: String,

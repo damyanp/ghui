@@ -2,7 +2,10 @@ use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::{
     client::graphql::{custom_fields_query::get_fields, get_all_items, get_items::get_items},
-    data::{Change, Changes, Fields, ProjectItemId, SaveMode, WorkItem, WorkItemId, WorkItems},
+    data::{
+        Change, Changes, Fields, ProjectItemId, SaveMode, UpdateType, WorkItem, WorkItemId,
+        WorkItems,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -339,9 +342,21 @@ impl DataState {
             let mut state = app_state.lock().await;
             let watcher = state.watcher.clone();
             if let Some(work_items) = &mut state.work_items {
-                for item in updated_work_items {
-                    work_items.update(item.clone());
-                    (watcher)(DataUpdate::WorkItem(Box::new(item)));
+                let mut update_type = UpdateType::NoUpdate;
+
+                for item in &updated_work_items {
+                    update_type = std::cmp::max(update_type, work_items.update(item.clone()));
+                }
+
+                if update_type == UpdateType::ChangesHierarchy {
+                    let r = state.refresh(false).await;
+                    if let Err(r) = r {
+                        eprintln!("Refresh failed: {r:?}");
+                    }
+                } else if update_type == UpdateType::SimpleChange {
+                    for item in updated_work_items {
+                        (watcher)(DataUpdate::WorkItem(Box::new(item)));
+                    }
                 }
             }
 
