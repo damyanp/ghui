@@ -12,6 +12,7 @@
   import { type IssueState } from "$lib/bindings/IssueState";
   import { type PullRequestState } from "$lib/bindings/PullRequestState";
   import { type Fields } from "$lib/bindings/Fields";
+  import ItemMiniIcon from "./ItemMiniIcon.svelte";
 
   let context = getWorkItemContext();
 
@@ -259,6 +260,7 @@
   {#if item}
     {@const path = item.resourcePath?.split("/")}
     <div class="overflow-hidden whitespace-nowrap overflow-ellipsis shrink-2">
+      <ItemMiniIcon workItemData={item.data} />
       {item.title}
     </div>
     <a
