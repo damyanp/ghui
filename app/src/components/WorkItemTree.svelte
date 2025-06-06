@@ -115,11 +115,6 @@
       }),
     },
     {
-      name: "State",
-      width: "1fr",
-      render: renderState,
-    },
-    {
       name: "Status",
       width: "1fr",
       render: renderStatus,
