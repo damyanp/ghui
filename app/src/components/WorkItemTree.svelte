@@ -68,7 +68,7 @@
           items.push({
             type: "action",
             title: `Convert ${item.data.trackedIssues.value.length} tracked issues to sub-issues`,
-            action: () => convertTrackedIssuesToSubIssue(item),
+            action: () => context.convertTrackedIssuesToSubIssue(item.id),
           });
         }
         if (context.data.changes.data) {
@@ -88,10 +88,6 @@
     }
     if (items.length === 0) return [{ type: "text", title: "No actions" }];
     else return items;
-  }
-
-  function convertTrackedIssuesToSubIssue(item: WorkItem) {
-    context.convertTrackedIssuesToSubIssue(item.id);
   }
 
   let rows = $derived.by(() => {
