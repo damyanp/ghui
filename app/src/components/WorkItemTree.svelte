@@ -255,6 +255,7 @@
   }
 </script>
 
+{#key context.data}
 <TreeTable
   {rows}
   bind:columns
@@ -266,6 +267,7 @@
   {onRowDragDrop}
   {onRowFirstVisible}
 />
+{/key}
 
 {#snippet renderGroup(name: string | undefined)}
   {name}
