@@ -122,6 +122,20 @@ impl Change {
                 self.save_field(client, work_items, &fields.project_id, &fields.epic, value)
                     .await
             }
+            ChangeData::Iteration(value) => {
+                self.save_field(
+                    client,
+                    work_items,
+                    &fields.project_id,
+                    &fields.iteration,
+                    value,
+                )
+                .await
+            }
+            ChangeData::Kind(value) => {
+                self.save_field(client, work_items, &fields.project_id, &fields.kind, value)
+                    .await
+            }
             ChangeData::SetParent(new_parent) => {
                 add_sub_issue(client, &new_parent.0, &self.work_item_id.0).await
             }
@@ -229,6 +243,8 @@ pub enum ChangeData {
     Status(Option<FieldOptionId>),
     Blocked(Option<FieldOptionId>),
     Epic(Option<FieldOptionId>),
+    Iteration(Option<FieldOptionId>),
+    Kind(Option<FieldOptionId>),
     SetParent(WorkItemId),
     AddToProject,
 }
@@ -258,6 +274,12 @@ impl Change {
             ChangeData::Epic(_) => fields
                 .epic
                 .option_name(work_item.project_item.epic.as_ref()),
+            ChangeData::Iteration(_) => fields
+                .iteration
+                .option_name(work_item.project_item.iteration.expect_loaded().as_ref()),
+            ChangeData::Kind(_) => fields
+                .iteration
+                .option_name(work_item.project_item.kind.expect_loaded().as_ref()),
             ChangeData::SetParent(_) => match &work_item.data {
                 WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
                 _ => None,
@@ -271,6 +293,8 @@ impl Change {
             ChangeData::Status(_) => "Status",
             ChangeData::Blocked(_) => "Blocked",
             ChangeData::Epic(_) => "Epic",
+            ChangeData::Iteration(_) => "Iteration",
+            ChangeData::Kind(_) => "Kind",
             ChangeData::SetParent(_) => "SetParent",
             ChangeData::AddToProject => "AddToProject",
         };
@@ -280,6 +304,8 @@ impl Change {
             ChangeData::Status(value) => fields.status.option_name(value.as_ref()),
             ChangeData::Blocked(value) => fields.blocked.option_name(value.as_ref()),
             ChangeData::Epic(value) => fields.epic.option_name(value.as_ref()),
+            ChangeData::Iteration(value) => fields.iteration.option_name(value.as_ref()),
+            ChangeData::Kind(value) => fields.kind.option_name(value.as_ref()),
             ChangeData::SetParent(value) => Some(value.0.as_str()),
             ChangeData::AddToProject => None,
         }
@@ -325,6 +351,10 @@ impl WorkItems {
                 ChangeData::Status(value) => work_item.project_item.status = value.clone(),
                 ChangeData::Blocked(value) => work_item.project_item.blocked = value.clone().into(),
                 ChangeData::Epic(value) => work_item.project_item.epic = value.clone(),
+                ChangeData::Iteration(value) => {
+                    work_item.project_item.iteration = value.clone().into()
+                }
+                ChangeData::Kind(value) => work_item.project_item.kind = value.clone().into(),
                 ChangeData::SetParent(new_parent_id) => {
                     let child_id = &change.work_item_id;
 

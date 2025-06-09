@@ -116,8 +116,29 @@ export class WorkItemContext {
     return field;
   }
 
-  public async setFieldValue(item: WorkItem, field: keyof Fields, value: FieldOptionId|undefined) {
-    await invoke("set_field_value", { field, value });
+  public async setFieldValue(
+    item: WorkItem,
+    field: keyof Fields,
+    value: FieldOptionId | undefined
+  ) {
+    switch (field) {
+      case "blocked":
+      case "iteration":
+      case "status":
+      case "epic":
+      case "kind":
+        await this.addChange({
+          workItemId: item.id,
+          data: {
+            type: field,
+            value: value || null,
+          },
+        });
+        break;
+
+      default:
+        throw new Error(`Change not implemented for ${field}`);
+    }
   }
 
   // #region Managing Changes

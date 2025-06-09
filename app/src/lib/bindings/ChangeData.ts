@@ -7,5 +7,7 @@ export type ChangeData =
   | { "type": "status"; "value": FieldOptionId | null }
   | { "type": "blocked"; "value": FieldOptionId | null }
   | { "type": "epic"; "value": FieldOptionId | null }
+  | { "type": "iteration"; "value": FieldOptionId | null }
+  | { "type": "kind"; "value": FieldOptionId | null }
   | { "type": "setParent"; "value": WorkItemId }
   | { "type": "addToProject" };
