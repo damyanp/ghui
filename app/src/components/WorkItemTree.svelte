@@ -102,9 +102,9 @@
   let columns = $state([
     { name: "Title", width: "5fr", render: renderTitle },
     {
-      name: "Type",
+      name: "Kind",
       width: "1fr",
-      render: renderType,
+      render: renderKind,
     },
     {
       name: "Status",
@@ -120,11 +120,6 @@
       name: "Blocked",
       width: "1fr",
       render: renderBlocked,
-    },
-    {
-      name: "Kind",
-      width: "1fr",
-      render: renderKind,
     },
     {
       name: "Epic",
@@ -155,6 +150,11 @@
           return i.data.trackedIssues.value.length.toString();
         else return null;
       }),
+    },
+    {
+      name: "Type",
+      width: "1fr",
+      render: renderType,
     },
     {
       name: "Updated",
