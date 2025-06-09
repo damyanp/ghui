@@ -329,6 +329,10 @@ impl WorkItems {
         };
 
         for change in changes {
+            if let ChangeData::AddToProject = &change.data {
+                continue;
+            }
+
             let work_item = self.get_mut(&change.work_item_id);
             if work_item.is_none() {
                 println!(
