@@ -107,16 +107,6 @@
       render: renderType,
     },
     {
-      name: "Updated",
-      width: "1fr",
-      render: renderTextCell((i) => {
-        const projectUpdate = i.projectItem.updatedAt;
-        const itemUpdate = i.updatedAt ?? projectUpdate;
-
-        return itemUpdate < projectUpdate ? projectUpdate : itemUpdate;
-      }),
-    },
-    {
       name: "Status",
       width: "1fr",
       render: renderStatus,
@@ -164,6 +154,16 @@
         )
           return i.data.trackedIssues.value.length.toString();
         else return null;
+      }),
+    },
+    {
+      name: "Updated",
+      width: "1fr",
+      render: renderTextCell((i) => {
+        const projectUpdate = i.projectItem.updatedAt;
+        const itemUpdate = i.updatedAt ?? projectUpdate;
+
+        return itemUpdate < projectUpdate ? projectUpdate : itemUpdate;
       }),
     },
   ]);
@@ -256,17 +256,17 @@
 </script>
 
 {#key context.data}
-<TreeTable
-  {rows}
-  bind:columns
-  bind:expanded
-  {getGroup}
-  {getItem}
-  {renderGroup}
-  {getContextMenuItems}
-  {onRowDragDrop}
-  {onRowFirstVisible}
-/>
+  <TreeTable
+    {rows}
+    bind:columns
+    bind:expanded
+    {getGroup}
+    {getItem}
+    {renderGroup}
+    {getContextMenuItems}
+    {onRowDragDrop}
+    {onRowFirstVisible}
+  />
 {/key}
 
 {#snippet renderGroup(name: string | undefined)}
@@ -349,9 +349,9 @@
     {@render renderSelectableField(item, field, value)}
   {/snippet}
   {@render renderDelayLoad(
-    item.projectItem[
-      field as keyof ProjectItem
-    ] as DelayLoad<FieldOptionId | undefined>,
+    item.projectItem[field as keyof ProjectItem] as DelayLoad<
+      FieldOptionId | undefined
+    >,
     render
   )}
 {/snippet}
