@@ -1,6 +1,6 @@
 use crate::data::{
-    FieldOptionId, Issue, IssueStructDiffEnumRef, ProjectItemStructDiffEnumRef, PullRequest,
-    PullRequestStructDiffEnumRef, WorkItemStructDiffEnumRef,
+    FieldOptionId, IssueStructDiffEnumRef, ProjectItemStructDiffEnumRef,
+    PullRequestStructDiffEnumRef, WorkItemDataStructDiffEnumRef,
 };
 
 use super::{Change, ChangeData, Changes, Fields, WorkItem, WorkItemData, WorkItemId};
@@ -43,14 +43,6 @@ impl WorkItems {
         let old_item = self.work_items.insert(item.id.clone(), item.clone());
 
         if let Some(old_item) = old_item {
-            // The StructDiff crate is used to diff these structs. It doesn't
-            // support enums well, so we need to do WorkItemData more manually.
-            if get_work_item_data_update_type(&old_item.data, &item.data)
-                == UpdateType::ChangesHierarchy
-            {
-                return UpdateType::ChangesHierarchy;
-            }
-
             get_work_item_update_type(&old_item, &item)
         } else {
             // Adding a new item changes the hiearchy
@@ -233,30 +225,25 @@ fn get_work_item_update_type(old: &WorkItem, new: &WorkItem) -> UpdateType {
     // For now, be very conservative - most changes will trigger a
     // hiearchy refresh.
     let diffs = old.diff_ref(new);
-    if diffs.is_empty() {
-        return UpdateType::NoUpdate;
-    }
-
     // Categorize all the diffs
-    let mut update_types = diffs.into_iter().map(|diff| {
-        use WorkItemStructDiffEnumRef::*;
 
-        match diff {
-            id(_) => UpdateType::SimpleChange,
-            title(_) => UpdateType::SimpleChange,
-            updated_at(_) => UpdateType::SimpleChange,
-            resource_path(_) => UpdateType::SimpleChange,
-            repo_name_with_owner(_) => UpdateType::ChangesHierarchy,
-            data(_) => UpdateType::SimpleChange, // see get_work_item_data_update_type
-            project_item(items) => get_project_item_update_type(items),
-        }
-    });
+    diffs
+        .into_iter()
+        .map(|diff| {
+            use super::WorkItemStructDiffEnumRef::*;
 
-    if update_types.any(|update_type| update_type == UpdateType::ChangesHierarchy) {
-        UpdateType::ChangesHierarchy
-    } else {
-        UpdateType::SimpleChange
-    }
+            match diff {
+                id(_) => UpdateType::SimpleChange,
+                title(_) => UpdateType::SimpleChange,
+                updated_at(_) => UpdateType::SimpleChange,
+                resource_path(_) => UpdateType::SimpleChange,
+                repo_name_with_owner(_) => UpdateType::ChangesHierarchy,
+                data(diffs) => get_work_item_data_update_type(&old.data, diffs),
+                project_item(items) => get_project_item_update_type(items),
+            }
+        })
+        .max()
+        .unwrap_or(UpdateType::NoUpdate)
 }
 
 fn get_project_item_update_type(items: Vec<ProjectItemStructDiffEnumRef<'_>>) -> UpdateType {
@@ -279,63 +266,77 @@ fn get_project_item_update_type(items: Vec<ProjectItemStructDiffEnumRef<'_>>) ->
     }
 }
 
-fn get_work_item_data_update_type(old: &WorkItemData, new: &WorkItemData) -> UpdateType {
-    // StructDiff (the Difference derive macro) doesn't handle enums well, so
-    // for work item data we have to be a bit more manual.
+fn get_work_item_data_update_type(
+    old_data: &WorkItemData,
+    diffs: Vec<WorkItemDataStructDiffEnumRef<'_>>,
+) -> UpdateType {
+    diffs
+        .into_iter()
+        .map(|diff| {
+            let WorkItemDataStructDiffEnumRef::Replace(new_data) = diff;
 
-    match old {
-        WorkItemData::DraftIssue => UpdateType::SimpleChange,
-        WorkItemData::Issue(old_issue) => {
-            if let WorkItemData::Issue(new_issue) = new {
-                get_issue_update_type(old_issue, new_issue)
-            } else {
+            if std::mem::discriminant(old_data) != std::mem::discriminant(new_data) {
+                // Work items shouldn't change type, but if they do it's a big
+                // chance!
                 UpdateType::ChangesHierarchy
-            }
-        }
-        WorkItemData::PullRequest(old_pull_request) => {
-            if let WorkItemData::PullRequest(new_pull_request) = new {
-                get_pull_request_update_type(old_pull_request, new_pull_request)
             } else {
-                UpdateType::ChangesHierarchy
+                match new_data {
+                    WorkItemData::DraftIssue => {
+                        if let WorkItemData::DraftIssue = &old_data {
+                            UpdateType::SimpleChange
+                        } else {
+                            UpdateType::ChangesHierarchy
+                        }
+                    }
+                    WorkItemData::Issue(new_issue) => {
+                        if let WorkItemData::Issue(old_issue) = &old_data {
+                            get_issue_update_type(old_issue.diff_ref(new_issue))
+                        } else {
+                            UpdateType::ChangesHierarchy
+                        }
+                    }
+                    WorkItemData::PullRequest(pull_request) => {
+                        if let WorkItemData::PullRequest(old_pull_request) = &old_data {
+                            get_pull_request_update_type(old_pull_request.diff_ref(pull_request))
+                        } else {
+                            UpdateType::ChangesHierarchy
+                        }
+                    }
+                }
             }
-        }
-    }
+        })
+        .max()
+        .unwrap_or(UpdateType::NoUpdate)
 }
 
-fn get_pull_request_update_type(old: &PullRequest, new: &PullRequest) -> UpdateType {
-    let diffs = old.diff_ref(new);
-    let mut update_types = diffs.into_iter().map(|diff| {
-        use PullRequestStructDiffEnumRef::*;
-        match diff {
-            state(_) => UpdateType::ChangesHierarchy,
-            assignees(_) => UpdateType::ChangesHierarchy,
-        }
-    });
-
-    if update_types.any(|update_type| update_type == UpdateType::ChangesHierarchy) {
-        UpdateType::ChangesHierarchy
-    } else {
-        UpdateType::SimpleChange
-    }
+fn get_pull_request_update_type(diffs: Vec<PullRequestStructDiffEnumRef<'_>>) -> UpdateType {
+    diffs
+        .into_iter()
+        .map(|diff| {
+            use PullRequestStructDiffEnumRef::*;
+            match diff {
+                state(_) => UpdateType::ChangesHierarchy,
+                assignees(_) => UpdateType::ChangesHierarchy,
+            }
+        })
+        .max()
+        .unwrap_or(UpdateType::NoUpdate)
 }
 
-fn get_issue_update_type(old: &Issue, new: &Issue) -> UpdateType {
-    let diffs = old.diff_ref(new);
-    let mut update_types = diffs.into_iter().map(|diff| {
-        use IssueStructDiffEnumRef::*;
-        match diff {
-            parent_id(_) => UpdateType::ChangesHierarchy,
-            issue_type(_) => UpdateType::ChangesHierarchy,
-            state(_) => UpdateType::ChangesHierarchy,
-            sub_issues(_) => UpdateType::ChangesHierarchy,
-            tracked_issues(_) => UpdateType::SimpleChange,
-            assignees(_) => UpdateType::ChangesHierarchy,
-        }
-    });
-
-    if update_types.any(|update_type| update_type == UpdateType::ChangesHierarchy) {
-        UpdateType::ChangesHierarchy
-    } else {
-        UpdateType::SimpleChange
-    }
+fn get_issue_update_type(diffs: Vec<IssueStructDiffEnumRef<'_>>) -> UpdateType {
+    diffs
+        .into_iter()
+        .map(|diff| {
+            use IssueStructDiffEnumRef::*;
+            match diff {
+                parent_id(_) => UpdateType::ChangesHierarchy,
+                issue_type(_) => UpdateType::ChangesHierarchy,
+                state(_) => UpdateType::ChangesHierarchy,
+                sub_issues(_) => UpdateType::ChangesHierarchy,
+                tracked_issues(_) => UpdateType::SimpleChange,
+                assignees(_) => UpdateType::ChangesHierarchy,
+            }
+        })
+        .max()
+        .unwrap_or(UpdateType::NoUpdate)
 }
