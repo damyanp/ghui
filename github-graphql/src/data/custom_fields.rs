@@ -62,7 +62,7 @@ impl Field {
             self.options
                 .iter()
                 .enumerate()
-                .find(|(_, option)| *id == (*option).id)
+                .find(|(_, option)| *id == option.id)
                 .map(|(index, _)| index)
         })
         .unwrap_or(usize::MAX)
