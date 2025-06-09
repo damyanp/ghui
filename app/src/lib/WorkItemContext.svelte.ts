@@ -39,7 +39,7 @@ export class WorkItemContext {
     this.updates_channel.onmessage = (data_update) =>
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
-  }  
+  }
 
   on_data_update(dataUpdate: DataUpdate) {
     switch (dataUpdate.type) {
@@ -107,6 +107,17 @@ export class WorkItemContext {
     if (typeof field === "string") return undefined;
 
     return field.options.find((o) => o.id === id)?.value;
+  }
+
+  public getField(fieldName: keyof Fields): Field {
+    const field = this.data.fields[fieldName];
+    if (typeof field === "string")
+      throw new Error(`'${fieldName} doesn't refer to a custom field`);
+    return field;
+  }
+
+  public async setFieldValue(item: WorkItem, field: keyof Fields, value: FieldOptionId|undefined) {
+    await invoke("set_field_value", { field, value });
   }
 
   // #region Managing Changes

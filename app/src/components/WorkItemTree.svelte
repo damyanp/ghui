@@ -13,6 +13,8 @@
   import { type PullRequestState } from "$lib/bindings/PullRequestState";
   import { type Fields } from "$lib/bindings/Fields";
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
+  import TableFieldSelect from "./TableFieldSelect.svelte";
+  import { type Field } from "$lib/bindings/Field";
 
   let context = getWorkItemContext();
 
@@ -340,19 +342,34 @@
   {@render renderCustomField(item, "epic")}
 {/snippet}
 
-{#snippet renderDelayLoadCustomField(item: WorkItem, field: keyof ProjectItem)}
-  {#snippet render(value: FieldOptionId | null)}
-    {context.getFieldOption(field as keyof Fields, value)}
+{#snippet renderDelayLoadCustomField(item: WorkItem, field: keyof Fields)}
+  {#snippet render(value: FieldOptionId | undefined)}
+    {@render renderSelectableField(item, field, value)}
   {/snippet}
   {@render renderDelayLoad(
-    item.projectItem[field] as DelayLoad<FieldOptionId | null>,
+    item.projectItem[
+      field as keyof ProjectItem
+    ] as DelayLoad<FieldOptionId | undefined>,
     render
   )}
 {/snippet}
 
-{#snippet renderCustomField(item: WorkItem, field: keyof ProjectItem)}
-  {context.getFieldOption(
-    field as keyof Fields,
-    item.projectItem[field] as FieldOptionId
+{#snippet renderCustomField(item: WorkItem, field: keyof Fields)}
+  {@render renderSelectableField(
+    item,
+    field,
+    item.projectItem[field as keyof ProjectItem] as FieldOptionId | undefined
   )}
+{/snippet}
+
+{#snippet renderSelectableField(
+  item: WorkItem,
+  field: keyof Fields,
+  value: FieldOptionId | undefined
+)}
+  <TableFieldSelect
+    field={context.getField(field)}
+    defaultValue={value}
+    onValueChange={(newValue) => context.setFieldValue(item, field, newValue)}
+  />
 {/snippet}
