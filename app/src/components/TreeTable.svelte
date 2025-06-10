@@ -262,11 +262,11 @@
           <div
             {...props}
             class={[
-              "grid-cols-subgrid grid overflow-hidden whitespace-nowrap border border-surface-200-800",
+              "grid-cols-subgrid grid overflow-hidden whitespace-nowrap border border-surface-200-800 cursor-default",
               menuOpen ? "outline-2 bg-primary-500" : getRowClass(row),
             ]}
             style={`padding-left: ${1 * row.level}rem; grid-column: ${gridColumn};`}
-            draggable="true"
+            draggable={!row.isGroup}
             data-row-id={row.id}
             ondragstart={dragStartHandler}
             ondragend={dragEndHandler}
