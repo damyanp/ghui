@@ -36,10 +36,6 @@
 
     {#snippet children()}
       <SanitizeButton />
-      <AppBarSwitch
-        label="Hide Closed"
-        bind:checked={context.hideClosed}
-      />
     {/snippet}
 
     {#snippet trail()}

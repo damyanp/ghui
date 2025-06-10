@@ -131,7 +131,7 @@ impl<'a> NodeBuilder<'a> {
                     }
                 }
             }
-            self.filters.should_include(self.fields, work_item)
+            self.filters.should_include(work_item)
         } else {
             false
         }
@@ -281,7 +281,10 @@ mod nodebuilder_tests {
             .add();
 
         let work_items = data.work_items;
-        let filters = Filters { hide_closed: true };
+        let filters = Filters {
+            status: vec![Some(FieldOptionId("id(Closed)".into()))],
+            ..Filters::default()
+        };
         let original_work_items = HashMap::new();
         let mut builder =
             NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);

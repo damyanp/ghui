@@ -9,6 +9,7 @@ import type { FieldOptionId } from "./bindings/FieldOptionId";
 import { type DataUpdate } from "./bindings/DataUpdate";
 import { ItemUpdateBatcher } from "./ItemUpdater";
 import type { WorkItem } from "./bindings/WorkItem";
+import type { Filters } from "./bindings/Filters";
 
 const key = Symbol("WorkItemContext");
 
@@ -26,7 +27,7 @@ export class WorkItemContext {
     fields: make_blank_fields(),
     workItems: {},
     nodes: [],
-    filters: { hideClosed: true },
+    filters: { status: [], blocked: [], epic: [], iteration: [], kind: [] },
     originalWorkItems: {},
     changes: { data: {} },
   });
@@ -86,16 +87,6 @@ export class WorkItemContext {
     await invoke("sanitize");
   }
 
-  public get hideClosed() {
-    return this.data.filters.hideClosed;
-  }
-
-  public set hideClosed(value: boolean) {
-    console.log(`set hideClosed: ${value}`);
-    this.data.filters.hideClosed = value;
-    invoke("set_filters", { filters: this.data.filters });
-  }
-
   public getFieldOption(
     fieldName: keyof Fields,
     id: FieldOptionId | null
@@ -114,6 +105,18 @@ export class WorkItemContext {
     if (typeof field === "string")
       throw new Error(`'${fieldName} doesn't refer to a custom field`);
     return field;
+  }
+
+  public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {
+    return this.data.filters[fieldName as keyof Filters];
+  }
+
+  public setFilter(
+    fieldName: keyof Fields,
+    filter: Array<FieldOptionId | null>
+  ): void {
+    this.data.filters[fieldName as keyof Filters] = filter;
+    invoke("set_filters", { filters: this.data.filters });
   }
 
   public async setFieldValue(

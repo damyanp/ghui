@@ -34,10 +34,10 @@ impl<T> DelayLoad<T> {
 }
 
 impl<T> DelayLoad<Option<T>> {
-    pub fn flatten(&self) -> Option<&T> {
+    pub fn flatten(&self) -> &Option<T> {
         match self {
-            DelayLoad::NotLoaded => None,
-            DelayLoad::Loaded(v) => v.as_ref(),
+            DelayLoad::NotLoaded => &None,
+            DelayLoad::Loaded(v) => v,
         }
     }
 }

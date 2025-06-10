@@ -15,6 +15,7 @@
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
   import TableFieldSelect from "./TableFieldSelect.svelte";
   import { type Field } from "$lib/bindings/Field";
+  import TableColumnHeader from "./TableCustomFieldColumnHeader.svelte";
 
   let context = getWorkItemContext();
 
@@ -102,29 +103,34 @@
   let columns = $state([
     { name: "Title", width: "5fr", render: renderTitle },
     {
-      name: "Kind",
+      name: "kind",
       width: "1fr",
       render: renderKind,
+      renderHeader: renderCustomFieldHeader,
     },
     {
-      name: "Status",
+      name: "status",
       width: "1fr",
       render: renderStatus,
+      renderHeader: renderCustomFieldHeader,
     },
     {
-      name: "Iteration",
+      name: "iteration",
       width: "1fr",
       render: renderIteration,
+      renderHeader: renderCustomFieldHeader,
     },
     {
-      name: "Blocked",
+      name: "blocked",
       width: "1fr",
       render: renderBlocked,
+      renderHeader: renderCustomFieldHeader,
     },
     {
-      name: "Epic",
+      name: "epic",
       width: "1fr",
       render: renderEpic,
+      renderHeader: renderCustomFieldHeader,
     },
     {
       name: "Assigned To",
@@ -268,6 +274,15 @@
     {onRowFirstVisible}
   />
 {/key}
+
+{#snippet renderCustomFieldHeader(name: string)}
+  {@const fieldName = name as keyof Fields}
+  <TableColumnHeader
+    field={context.getField(fieldName)}
+    filter={context.getFilter(fieldName)}
+    onFilterChange={(filter) => context.setFilter(fieldName, filter)}
+  />
+{/snippet}
 
 {#snippet renderGroup(name: string | undefined)}
   {name}

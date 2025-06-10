@@ -6,6 +6,7 @@
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
   import { onFirstVisible } from "$lib/OnVirstVisible";
+  import TableColumnHeader from "./TableCustomFieldColumnHeader.svelte";
 
   type Row<T> = {
     level: number;
@@ -20,6 +21,7 @@
     name: string;
     width: string;
     render: Snippet<[ITEM]>;
+    renderHeader?: Snippet<[string]>;
   };
 
   type Props = {
@@ -225,7 +227,11 @@
           id="column-index-{index}"
           class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
         >
-          <div class="overflow-hidden text-ellipsis">{column.name}</div>
+          {#if column.renderHeader}
+            {@render column.renderHeader(column.name)}
+          {:else}
+            {column.name}
+          {/if}
           <div
             class="overflow-visible z-10 my-1 border-r border-r-surface-800-200"
           >

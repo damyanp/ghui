@@ -3,8 +3,8 @@ use dirs::home_dir;
 use github_graphql::{
     client::graphql::{custom_fields_query::get_fields, get_all_items, get_items::get_items},
     data::{
-        Change, Changes, Fields, ProjectItemId, SaveMode, UpdateType, WorkItem, WorkItemId,
-        WorkItems,
+        Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, UpdateType, WorkItem,
+        WorkItemId, WorkItems,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -31,22 +31,22 @@ pub use pat::PATState;
 #[derive(Default, Serialize, Deserialize, TS, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Filters {
-    hide_closed: bool,
+    status: Vec<Option<FieldOptionId>>,
+    blocked: Vec<Option<FieldOptionId>>,
+    epic: Vec<Option<FieldOptionId>>,
+    iteration: Vec<Option<FieldOptionId>>,
+    kind: Vec<Option<FieldOptionId>>,
 }
 
 impl Filters {
-    fn should_include(&self, fields: &Fields, work_item: &WorkItem) -> bool {
-        if self.hide_closed {
-            // TODO: looking up the option_name each time is wasteful
-            if fields
-                .status
-                .option_name(work_item.project_item.status.as_ref())
-                == Some("Closed")
-            {
-                return false;
-            }
-        }
-        true
+    fn should_include(&self, work_item: &WorkItem) -> bool {
+        let p = &work_item.project_item;
+
+        !(self.status.contains(&p.status)
+            || self.blocked.contains(p.blocked.flatten())
+            || self.epic.contains(&p.epic)
+            || self.iteration.contains(p.iteration.flatten())
+            || self.kind.contains(p.kind.flatten()))
     }
 }
 
