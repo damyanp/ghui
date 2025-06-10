@@ -219,7 +219,7 @@
           workItemId: draggedRowId,
           data: {
             type: "epic",
-            value: targetNode.data.name,
+            value: targetNode.data.fieldOptionId,
           },
         };
       } else {

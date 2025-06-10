@@ -19,7 +19,11 @@ pub struct Node {
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum NodeData {
     WorkItem,
-    Group { name: String },
+    #[serde(rename_all = "camelCase")]
+    Group {
+        name: String,
+        field_option_id: Option<FieldOptionId>,
+    },
 }
 
 pub(crate) struct NodeBuilder<'a> {
@@ -91,7 +95,10 @@ impl<'a> NodeBuilder<'a> {
                     self.nodes.push(Node {
                         level,
                         id,
-                        data: NodeData::Group { name },
+                        data: NodeData::Group {
+                            name,
+                            field_option_id: key.cloned(),
+                        },
                         has_children: true,
                         is_modified: false,
                     });
@@ -203,10 +210,10 @@ mod nodebuilder_tests {
         println!("{:?}", work_items.work_items.values());
         println!("{nodes:?}");
         assert_eq!(nodes.len(), 4);
-        assert!(matches!(nodes[0].data, NodeData::Group { ref name } if name == "EpicA"));
+        assert!(matches!(nodes[0].data, NodeData::Group { ref name, .. } if name == "EpicA"));
         assert!(matches!(nodes[1].data, NodeData::WorkItem));
         assert_eq!(nodes[1].id, id1.0);
-        assert!(matches!(nodes[2].data, NodeData::Group { ref name } if name == "EpicB"));
+        assert!(matches!(nodes[2].data, NodeData::Group { ref name, .. } if name == "EpicB"));
         assert!(matches!(nodes[3].data, NodeData::WorkItem));
         assert_eq!(nodes[3].id, id2.0);
     }
