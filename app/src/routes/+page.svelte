@@ -12,12 +12,28 @@
   } from "$lib/WorkItemContext.svelte";
   import SanitizeButton from "../components/SanitizeButton.svelte";
   import AppBarSwitch from "../components/AppBarSwitch.svelte";
+  import {
+    ChartGantt,
+    ChartGanttIcon,
+    ListTree,
+    ListTreeIcon,
+  } from "@lucide/svelte";
+  import AppBarButton from "../components/AppBarButton.svelte";
+  import ExecutionTracker from "../components/ExecutionTracker.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
 
   async function onRefreshClicked(): Promise<void> {
     await context.refresh();
   }
+
+  type Mode = "items" | "xtracker";
+  let mode = $state<Mode>("items");
+
+  const itemsIconClass = $derived(mode === "items" ? "bg-primary-500" : "");
+  const xtrackerIconClass = $derived(
+    mode === "xtracker" ? "bg-primary-500" : "",
+  );
 </script>
 
 <div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
@@ -36,6 +52,22 @@
 
     {#snippet children()}
       <SanitizeButton />
+      <AppBarButton
+        text="Items"
+        icon={ListTree}
+        iconClass={itemsIconClass}
+        onclick={() => {
+          mode = "items";
+        }}
+      />
+      <AppBarButton
+        text="X-tracker"
+        icon={ChartGantt}
+        iconClass={xtrackerIconClass}
+        onclick={() => {
+          mode = "xtracker";
+        }}
+      />
     {/snippet}
 
     {#snippet trail()}
@@ -44,5 +76,11 @@
     {/snippet}
   </AppBar>
 
-  <WorkItemTree />
+  {#if mode === "items"}
+    <WorkItemTree />
+  {:else if mode === "xtracker"}
+    <ExecutionTracker />
+  {:else}
+    <h1>Unknown mode {mode}</h1>
+  {/if}
 </div>
