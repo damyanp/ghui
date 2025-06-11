@@ -10,7 +10,6 @@
     | { type: "notSet" | "checking" | "broken" };
 
   let patState = $state<PatStatus>({ type: "checking" });
-  $inspect(patState);
 
   let isOpen = $state(false);
 
