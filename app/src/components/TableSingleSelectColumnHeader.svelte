@@ -93,9 +93,10 @@
           <Switch
             checked={value.checked}
             onCheckedChange={({ checked }) =>
-              onCheckedChange(value.id, checked)}
-          />
+              onCheckedChange(value.id, checked)}>
+          
           {value.value}
+          </Switch>
           
         </div>
       {/each}
