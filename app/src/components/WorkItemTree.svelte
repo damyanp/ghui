@@ -133,8 +133,8 @@
       renderHeader: renderCustomFieldHeader,
     },
     {
-      name: "Assigned To",
-      width: "2fr",
+      name: "Assigned",
+      width: "1fr",
       render: renderTextCell((i) => {
         if (i.data.type === "issue" || i.data.type === "pullRequest") {
           return i.data.assignees && i.data.assignees.length > 0
