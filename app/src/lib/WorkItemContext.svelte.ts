@@ -107,7 +107,7 @@ export class WorkItemContext {
       case "blocked":
       case "epic":
       case "kind":
-      case "project_milestone":
+      case "projectMilestone":
       case "status":
         return this.data.fields[fieldName];
 
@@ -217,12 +217,12 @@ function make_blank_fields(): Fields {
   }
 
   return {
-    project_id: "",
+    projectId: "",
     status: blank(),
     blocked: blank(),
     epic: blank(),
     iteration: blank(),
     kind: blank(),
-    project_milestone: blank(),
+    projectMilestone: blank(),
   };
 }

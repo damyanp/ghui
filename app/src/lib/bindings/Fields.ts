@@ -4,11 +4,11 @@ import type { Iteration } from "./Iteration";
 import type { SingleSelect } from "./SingleSelect";
 
 export type Fields = {
-  project_id: string;
+  projectId: string;
   status: Field<SingleSelect>;
   blocked: Field<SingleSelect>;
   epic: Field<SingleSelect>;
   iteration: Field<Iteration>;
-  project_milestone: Field<SingleSelect>;
+  projectMilestone: Field<SingleSelect>;
   kind: Field<SingleSelect>;
 };

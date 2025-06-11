@@ -32,6 +32,7 @@ pub struct Iteration {
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Fields {
     pub project_id: String,
     pub status: Field<SingleSelect>,
