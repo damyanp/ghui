@@ -10,6 +10,8 @@ import { type DataUpdate } from "./bindings/DataUpdate";
 import { ItemUpdateBatcher } from "./ItemUpdater";
 import type { WorkItem } from "./bindings/WorkItem";
 import type { Filters } from "./bindings/Filters";
+import type { SingleSelect } from "./bindings/SingleSelect";
+import type { Iteration } from "./bindings/Iteration";
 
 const key = Symbol("WorkItemContext");
 
@@ -100,11 +102,28 @@ export class WorkItemContext {
     return field.options.find((o) => o.id === id)?.value;
   }
 
-  public getField(fieldName: keyof Fields): Field {
-    const field = this.data.fields[fieldName];
-    if (typeof field === "string")
-      throw new Error(`'${fieldName} doesn't refer to a custom field`);
-    return field;
+  public getSingleSelectField(fieldName: keyof Fields): Field<SingleSelect> {
+    switch (fieldName) {
+      case "blocked":
+      case "epic":
+      case "kind":
+      case "project_milestone":
+      case "status":
+        return this.data.fields[fieldName];
+
+      default:
+        throw new Error(`${fieldName} is not a single select field`);
+    }
+  }
+
+  public getIterationField(fieldName: keyof Fields): Field<Iteration> {
+    switch (fieldName) {
+      case "iteration":
+        return this.data.fields[fieldName];
+
+      default:
+        throw new Error(`${fieldName} is not an iteration field`);
+    }
   }
 
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {
@@ -189,14 +208,14 @@ export function makeProgressChannel(
 }
 
 function make_blank_fields(): Fields {
-  function blank(): Field {
+  function blank<T>(): Field<T> {
     return {
       id: "",
       name: "",
-      field_type: "SingleSelect",
       options: [],
     };
   }
+
   return {
     project_id: "",
     status: blank(),

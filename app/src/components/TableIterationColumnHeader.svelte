@@ -1,20 +1,24 @@
 <script lang="ts">
   import type { Field } from "$lib/bindings/Field";
+  import type { FieldOption } from "$lib/bindings/FieldOption";
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
-  import { FileDiff } from "@lucide/svelte";
+  import type { Iteration } from "$lib/bindings/Iteration";
   import * as octicons from "@primer/octicons";
   import { Popover, Switch } from "@skeletonlabs/skeleton-svelte";
   import type { OpenChangeDetails } from "@zag-js/select";
 
   type Props = {
-    field: Field;
+    field: Field<Iteration>;
     filter: Array<FieldOptionId | null>;
     onFilterChange: (filter: Array<FieldOptionId | null>) => void;
   };
 
   const props: Props = $props();
   let filter = $state(props.filter);
-  let options = [{ id: null, value: "-" }, ...props.field.options];
+  let options: FieldOption<Iteration>[] = [
+    { id: "", value: "-", data: { startDate: "", duration: BigInt(0) } },
+    ...props.field.options,
+  ];
 
   let filterChanged = $state(false);
 
@@ -44,12 +48,12 @@
   }
 
   function onAllClicked() {
-    filter = []
+    filter = [];
     filterChanged = true;
   }
 
   function onNoneClicked() {
-    filter = Array.from(options.map(o => o.id));
+    filter = Array.from(options.map((o) => o.id));
     filterChanged = true;
   }
 
@@ -75,19 +79,23 @@
   {#snippet trigger()}
     <div class="hover:bg-surface-200-800 m-0.5 px-1 rounded">
       {#if filter.length === 0}
-      {@html octicons["kebab-horizontal"].toSVG()}
+        {@html octicons["kebab-horizontal"].toSVG()}
       {:else}
-      {@html octicons["filter"].toSVG()}
+        {@html octicons["filter"].toSVG()}
       {/if}
     </div>
   {/snippet}
 
   {#snippet content()}
     <div class="grid grid-cols-2">
-      <button class="btn preset-tonal m-2 btn-sm" onclick={onAllClicked}>All</button>
-      <button class="btn preset-tonal m-2 btn-sm" onclick={onNoneClicked}>None</button>
+      <button class="btn preset-tonal m-2 btn-sm" onclick={onAllClicked}
+        >All</button
+      >
+      <button class="btn preset-tonal m-2 btn-sm" onclick={onNoneClicked}
+        >None</button
+      >
     </div>
-    <div class="grid grid-cols-1">
+    <div class="grid grid-cols-1 max-h-[50vh] overflow-y-auto">
       {#each values as value}
         <div>
           <Switch
@@ -96,6 +104,7 @@
               onCheckedChange(value.id, checked)}
           />
           {value.value}
+          <small>{value.data.startDate} - {value.data.duration}</small>
         </div>
       {/each}
     </div>

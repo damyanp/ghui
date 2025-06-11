@@ -1,5 +1,6 @@
 use crate::{
-    data::{Field, FieldId, FieldOption, FieldOptionId, FieldType, Fields},
+    client::{graphql::Date, transport::Client},
+    data::{Field, FieldId, FieldOption, FieldOptionId, Fields, Iteration, SingleSelect},
     Error, Result,
 };
 use graphql_client::{GraphQLQuery, Response};
@@ -8,9 +9,9 @@ gql!(
     CustomFieldsQuery,
     "src/client/graphql/custom_fields_query.graphql"
 );
-pub use custom_fields_query::*;
-
-use crate::client::transport::Client;
+use custom_fields_query::{
+    CustomFieldsQueryOrganizationProjectV2, FieldConfigOnProjectV2IterationField,
+};
 
 pub async fn get_custom_fields(
     client: &impl Client,
@@ -32,10 +33,10 @@ pub async fn get_custom_fields(
         ))
 }
 
-impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field {
+impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field<SingleSelect> {
     type Error = Error;
 
-    fn try_from(config: Option<custom_fields_query::FieldConfig>) -> Result<Field> {
+    fn try_from(config: Option<custom_fields_query::FieldConfig>) -> Result<Self> {
         use custom_fields_query::FieldConfig;
 
         let config =
@@ -45,35 +46,76 @@ impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field {
             FieldConfig::ProjectV2Field => Err(Error::GraphQlResponseUnexpected(
                 "ProjectV2Field".to_string(),
             )),
-            FieldConfig::ProjectV2IterationField(field) => Ok(Field {
-                id: FieldId(field.id),
-                name: field.name,
-                field_type: FieldType::Iteration,
-                options: field
-                    .configuration
-                    .iterations
-                    .into_iter()
-                    .map(|i| FieldOption {
-                        id: FieldOptionId(i.id),
-                        value: i.title,
-                    })
-                    .collect(),
-            }),
+            FieldConfig::ProjectV2IterationField(_) => Err(Error::GraphQlResponseUnexpected(
+                "Got iteration field when expecting SingleSelect".to_string(),
+            )),
             FieldConfig::ProjectV2SingleSelectField(field) => Ok(Field {
                 id: FieldId(field.id),
                 name: field.name,
-                field_type: FieldType::SingleSelect,
                 options: field
                     .options
                     .into_iter()
                     .map(|i| FieldOption {
                         id: FieldOptionId(i.id),
                         value: i.name,
+                        data: SingleSelect,
                     })
                     .collect(),
             }),
         }
     }
+}
+
+impl TryFrom<Option<custom_fields_query::FieldConfig>> for Field<Iteration> {
+    type Error = Error;
+
+    fn try_from(config: Option<custom_fields_query::FieldConfig>) -> Result<Self> {
+        use custom_fields_query::FieldConfig;
+
+        let config =
+            config.ok_or_else(|| Error::GraphQlResponseUnexpected("Field missing!".to_string()))?;
+
+        match config {
+            FieldConfig::ProjectV2Field => Err(Error::GraphQlResponseUnexpected(
+                "ProjectV2Field".to_string(),
+            )),
+            FieldConfig::ProjectV2IterationField(field) => {
+                let options = to_iteration_field_options(&field);
+                Ok(Field {
+                    id: FieldId(field.id),
+                    name: field.name,
+                    options,
+                })
+            }
+            FieldConfig::ProjectV2SingleSelectField(_) => Err(Error::GraphQlResponseUnexpected(
+                "Got single select field when expecting iteration".to_string(),
+            )),
+        }
+    }
+}
+
+fn to_iteration_field_options(
+    field: &FieldConfigOnProjectV2IterationField,
+) -> Vec<FieldOption<Iteration>> {
+    let iterations = field.configuration.iterations.iter();
+    let completed_iterations = field.configuration.completed_iterations.iter();
+
+    let iterations = iterations.chain(completed_iterations);
+
+    let mut options: Vec<_> = iterations
+        .map(|i| FieldOption {
+            id: FieldOptionId(i.id.clone()),
+            value: i.title.clone(),
+            data: Iteration {
+                start_date: i.start_date.clone(),
+                duration: i.duration,
+            },
+        })
+        .collect();
+
+    options.sort_by(|a, b| a.value.as_str().cmp(b.value.as_str()));
+
+    options
 }
 
 pub async fn get_fields(client: &impl Client) -> Result<Fields> {

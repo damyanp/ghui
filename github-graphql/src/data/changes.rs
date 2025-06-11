@@ -147,12 +147,12 @@ impl Change {
         }
     }
 
-    async fn save_field(
+    async fn save_field<T>(
         &self,
         client: &impl Client,
         work_items: &WorkItems,
         project_id: &str,
-        field: &Field,
+        field: &Field<T>,
         value: &Option<FieldOptionId>,
     ) -> Result<()> {
         if let Some(project_item_id) = work_items

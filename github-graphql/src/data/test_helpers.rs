@@ -159,17 +159,36 @@ impl WorkItem {
     }
 }
 
-impl Field {
-    pub fn test(name: &str, field_type: FieldType, options: &[&str]) -> Self {
+pub trait FieldOptionTestData {
+    fn generate() -> Self;
+}
+
+impl FieldOptionTestData for SingleSelect {
+    fn generate() -> Self {
+        SingleSelect
+    }
+}
+
+impl FieldOptionTestData for Iteration {
+    fn generate() -> Self {
+        Iteration {
+            start_date: "2025-01-01".to_owned(),
+            duration: 1,
+        }
+    }
+}
+
+impl<T: FieldOptionTestData> Field<T> {
+    pub fn test(name: &str, options: &[&str]) -> Self {
         Field {
             id: FieldId(format!("id{name}")),
             name: name.to_owned(),
-            field_type,
             options: options
                 .iter()
                 .map(|name| FieldOption {
                     id: FieldOptionId(format!("id({name})")),
                     value: name.to_string(),
+                    data: T::generate(),
                 })
                 .collect(),
         }
@@ -178,15 +197,12 @@ impl Field {
 
 impl Fields {
     pub fn test() -> Self {
-        use FieldType::*;
-
         Fields {
             project_id: "project_id".to_owned(),
-            status: Field::test("status", SingleSelect, &["Active", "Open", "Closed"]),
-            blocked: Field::test("blocked", SingleSelect, &["PR"]),
+            status: Field::test("status", &["Active", "Open", "Closed"]),
+            blocked: Field::test("blocked", &["PR"]),
             epic: Field::test(
                 "epic",
-                SingleSelect,
                 &[
                     "DML Demo",
                     "MiniEngine Demo",
@@ -197,10 +213,9 @@ impl Fields {
                     "EpicB",
                 ],
             ),
-            iteration: Field::test("iteration", Iteration, &["S1", "S2"]),
+            iteration: Field::test("iteration", &["S1", "S2"]),
             project_milestone: Field::test(
                 "Project Milestone",
-                SingleSelect,
                 &[
                     "3: ML preview requirements",
                     "4: ML preview planning",
@@ -211,7 +226,7 @@ impl Fields {
                     "Another Project Milestone",
                 ],
             ),
-            kind: Field::test("Kind", SingleSelect, &["Bug", "Task"]),
+            kind: Field::test("Kind", &["Bug", "Task"]),
         }
     }
 }

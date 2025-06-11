@@ -6,7 +6,7 @@
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
   import { onFirstVisible } from "$lib/OnVirstVisible";
-  import TableColumnHeader from "./TableCustomFieldColumnHeader.svelte";
+  import TableColumnHeader from "./TableSingleSelectColumnHeader.svelte";
 
   type Row<T> = {
     level: number;

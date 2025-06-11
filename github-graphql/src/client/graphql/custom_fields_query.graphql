@@ -37,11 +37,20 @@ fragment FieldConfig on ProjectV2FieldConfiguration {
   ... on ProjectV2IterationField {
     id
     name
-    configuration {
+    configuration {      
       iterations {
-        title
-        id
+        ...Iteration
+      }
+      completedIterations {
+        ...Iteration
       }
     }
   }
+}
+
+fragment Iteration on ProjectV2IterationFieldIteration {
+  id
+  duration
+  startDate
+  title
 }

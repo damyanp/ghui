@@ -8,37 +8,41 @@ pub struct FieldId(pub String);
 pub struct FieldOptionId(pub String);
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
-pub struct Field {
+pub struct Field<T> {
     pub id: FieldId,
     pub name: String,
-    pub field_type: FieldType,
-    pub options: Vec<FieldOption>,
+    pub options: Vec<FieldOption<T>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
-pub struct FieldOption {
+pub struct FieldOption<T> {
     pub id: FieldOptionId,
     pub value: String,
+    pub data: T,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
-pub enum FieldType {
-    SingleSelect,
-    Iteration,
+pub struct SingleSelect;
+
+#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Iteration {
+    pub start_date: String,
+    pub duration: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
 pub struct Fields {
     pub project_id: String,
-    pub status: Field,
-    pub blocked: Field,
-    pub epic: Field,
-    pub iteration: Field,
-    pub project_milestone: Field,
-    pub kind: Field,
+    pub status: Field<SingleSelect>,
+    pub blocked: Field<SingleSelect>,
+    pub epic: Field<SingleSelect>,
+    pub iteration: Field<Iteration>,
+    pub project_milestone: Field<SingleSelect>,
+    pub kind: Field<SingleSelect>,
 }
 
-impl Field {
+impl<T> Field<T> {
     pub fn option_id(&self, name: Option<&str>) -> Option<&FieldOptionId> {
         name.and_then(|name| {
             self.options

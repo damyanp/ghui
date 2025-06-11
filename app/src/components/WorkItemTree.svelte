@@ -15,7 +15,8 @@
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
   import TableFieldSelect from "./TableFieldSelect.svelte";
   import { type Field } from "$lib/bindings/Field";
-  import TableColumnHeader from "./TableCustomFieldColumnHeader.svelte";
+  import TableSingleSelectColumnHeader from "./TableSingleSelectColumnHeader.svelte";
+  import TableIterationColumnHeader from "./TableIterationColumnHeader.svelte";
 
   let context = getWorkItemContext();
 
@@ -106,31 +107,31 @@
       name: "kind",
       width: "1fr",
       render: renderKind,
-      renderHeader: renderCustomFieldHeader,
+      renderHeader: renderSingleSelectFieldHeader,
     },
     {
       name: "status",
       width: "1fr",
       render: renderStatus,
-      renderHeader: renderCustomFieldHeader,
+      renderHeader: renderSingleSelectFieldHeader,
     },
     {
       name: "iteration",
       width: "1fr",
       render: renderIteration,
-      renderHeader: renderCustomFieldHeader,
-    },
+      renderHeader: renderIterationFieldHeader,
+    },    
     {
       name: "blocked",
       width: "1fr",
       render: renderBlocked,
-      renderHeader: renderCustomFieldHeader,
+      renderHeader: renderSingleSelectFieldHeader,
     },
     {
       name: "epic",
       width: "1fr",
       render: renderEpic,
-      renderHeader: renderCustomFieldHeader,
+      renderHeader: renderSingleSelectFieldHeader,
     },
     {
       name: "Assigned",
@@ -275,10 +276,19 @@
   />
 {/key}
 
-{#snippet renderCustomFieldHeader(name: string)}
+{#snippet renderSingleSelectFieldHeader(name: string)}
   {@const fieldName = name as keyof Fields}
-  <TableColumnHeader
-    field={context.getField(fieldName)}
+  <TableSingleSelectColumnHeader
+    field={context.getSingleSelectField(fieldName)}
+    filter={context.getFilter(fieldName)}
+    onFilterChange={(filter) => context.setFilter(fieldName, filter)}
+  />
+{/snippet}
+
+{#snippet renderIterationFieldHeader(name: string)}
+  {@const fieldName = name as keyof Fields}
+  <TableIterationColumnHeader
+    field={context.getIterationField(fieldName)}
     filter={context.getFilter(fieldName)}
     onFilterChange={(filter) => context.setFilter(fieldName, filter)}
   />
@@ -385,7 +395,7 @@
   value: FieldOptionId | undefined
 )}
   <TableFieldSelect
-    field={context.getField(field)}
+    field={context.getSingleSelectField(field)}
     defaultValue={value}
     onValueChange={(newValue) => context.setFieldValue(item, field, newValue)}
   />

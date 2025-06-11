@@ -15,6 +15,7 @@ macro_rules! gql {
 type URI = String;
 
 type DateTime = String;
+type Date = String;
 type BigInt = String;
 
 pub mod mutators;
@@ -24,10 +25,7 @@ pub use mutators::{
 };
 
 pub mod custom_fields_query;
-pub use custom_fields_query::{
-    get_custom_fields, FieldConfig, FieldConfigOnProjectV2IterationField,
-    FieldConfigOnProjectV2SingleSelectField,
-};
+pub use custom_fields_query::get_custom_fields;
 
 pub mod get_issue_types;
 

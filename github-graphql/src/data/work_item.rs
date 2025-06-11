@@ -180,13 +180,6 @@ impl ProjectItem {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Debug, Serialize, Deserialize, Clone, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct IterationFieldValue {
-    pub iteration_id: String,
-    pub title: String,
-}
-
 #[derive(Default, PartialEq, Debug, Eq, Hash, Clone, Serialize, Deserialize, TS)]
 pub struct ProjectItemId(pub String);
 
