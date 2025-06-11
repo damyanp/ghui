@@ -120,7 +120,7 @@
       width: "1fr",
       render: renderIteration,
       renderHeader: renderIterationFieldHeader,
-    },    
+    },
     {
       name: "blocked",
       width: "1fr",
@@ -287,11 +287,7 @@
 
 {#snippet renderIterationFieldHeader(name: string)}
   {@const fieldName = name as keyof Fields}
-  <TableIterationColumnHeader
-    field={context.getIterationField(fieldName)}
-    filter={context.getFilter(fieldName)}
-    onFilterChange={(filter) => context.setFilter(fieldName, filter)}
-  />
+  <TableIterationColumnHeader {fieldName} />
 {/snippet}
 
 {#snippet renderGroup(name: string | undefined)}
@@ -354,7 +350,7 @@
 {/snippet}
 
 {#snippet renderStatus(item: WorkItem)}
-  {@render renderCustomField(item, "status")}
+  {@render renderLoadedCustomField(item, "status")}
 {/snippet}
 {#snippet renderIteration(item: WorkItem)}
   {@render renderDelayLoadCustomField(item, "iteration")}
@@ -366,12 +362,12 @@
   {@render renderDelayLoadCustomField(item, "kind")}
 {/snippet}
 {#snippet renderEpic(item: WorkItem)}
-  {@render renderCustomField(item, "epic")}
+  {@render renderLoadedCustomField(item, "epic")}
 {/snippet}
 
 {#snippet renderDelayLoadCustomField(item: WorkItem, field: keyof Fields)}
   {#snippet render(value: FieldOptionId | undefined)}
-    {@render renderSelectableField(item, field, value)}
+    {@render renderCustomField(item, field, value)}
   {/snippet}
   {@render renderDelayLoad(
     item.projectItem[field as keyof ProjectItem] as DelayLoad<
@@ -381,22 +377,30 @@
   )}
 {/snippet}
 
-{#snippet renderCustomField(item: WorkItem, field: keyof Fields)}
-  {@render renderSelectableField(
+{#snippet renderLoadedCustomField(item: WorkItem, field: keyof Fields)}
+  {@render renderCustomField(
     item,
     field,
     item.projectItem[field as keyof ProjectItem] as FieldOptionId | undefined
   )}
 {/snippet}
 
-{#snippet renderSelectableField(
+{#snippet renderCustomField(
   item: WorkItem,
   field: keyof Fields,
   value: FieldOptionId | undefined
 )}
-  <TableFieldSelect
-    field={context.getSingleSelectField(field)}
-    defaultValue={value}
-    onValueChange={(newValue) => context.setFieldValue(item, field, newValue)}
-  />
+  {#if field === "iteration"}
+    <TableFieldSelect
+      field={context.getIterationField(field)}
+      defaultValue={value}
+      onValueChange={(newValue) => context.setFieldValue(item, field, newValue)}
+    />
+  {:else}
+    <TableFieldSelect
+      field={context.getSingleSelectField(field)}
+      defaultValue={value}
+      onValueChange={(newValue) => context.setFieldValue(item, field, newValue)}
+    />
+  {/if}
 {/snippet}

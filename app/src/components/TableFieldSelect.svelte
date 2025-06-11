@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="T">
   import type { Field } from "$lib/bindings/Field";
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { FieldOption } from "$lib/bindings/FieldOption";
@@ -6,7 +6,7 @@
   import { portal, useMachine, normalizeProps } from "@zag-js/svelte";
 
   type Props = {
-    field: Field;
+    field: Field<T>;
     defaultValue: FieldOptionId|undefined;
     onValueChange: (value: FieldOptionId | undefined) => void;
   };
@@ -34,7 +34,7 @@
   });
   const api = $derived(select.connect(service, normalizeProps));
 
-  function onValueChange(details: select.ValueChangeDetails<FieldOption>) {
+  function onValueChange(details: select.ValueChangeDetails<FieldOption<T>>) {
     const items = details.items;
 
     if (items.length === 0) {

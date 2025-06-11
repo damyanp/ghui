@@ -12,6 +12,7 @@ import type { WorkItem } from "./bindings/WorkItem";
 import type { Filters } from "./bindings/Filters";
 import type { SingleSelect } from "./bindings/SingleSelect";
 import type { Iteration } from "./bindings/Iteration";
+import type { ProjectItem } from "./bindings/ProjectItem";
 
 const key = Symbol("WorkItemContext");
 
@@ -120,6 +121,23 @@ export class WorkItemContext {
     switch (fieldName) {
       case "iteration":
         return this.data.fields[fieldName];
+
+      default:
+        throw new Error(`${fieldName} is not an iteration field`);
+    }
+  }
+
+  public getIterationFieldValue(
+    fieldName: keyof Fields,
+    workItem: WorkItem
+  ): FieldOptionId | null {
+    switch (fieldName as keyof ProjectItem) {
+      case "iteration":
+        const field = workItem.projectItem.iteration;
+        if (field.loadState === "loaded") {
+          return field.value;
+        }
+        return null;
 
       default:
         throw new Error(`${fieldName} is not an iteration field`);
