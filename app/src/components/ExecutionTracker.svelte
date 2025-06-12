@@ -74,7 +74,7 @@
     return dayjs(date).unix() * scale;
   }
 
-  function getFillStyle(state: BarState): string {
+  function getBarFillStyle(state: BarState): string {
     switch (state) {
       case "atRisk":
         return "background-color: #f7c7ac;";
@@ -121,35 +121,61 @@
 
     return dates;
   });
+
+  function getEpicFillStyle(index: number) {
+    if (index % 2 == 0) {
+      return "background-color: #202020;";
+    } else {
+      return "background-color: #203030;";
+    }
+  }
 </script>
 
 <div>
   <div
     class="grid gap-1 overflow-y-auto"
-    style={`grid-template-rows: repeat(${totalRows + 2}, 2em); grid-template-columns: repeat(3, max-content) 1fr`}
+    style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
   >
+    <!-- <div
+      class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-5 row-start-1 grid"
+      style={`grid-row: 1 / span ${totalRows + 1};`}
+    >
+      "
+      {#each data.epics as epic, epicIndex}
+        <div
+          class="w-full col-start-1 col-end-5 z-0"
+          style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
+        >
+          {epic.name}&nbsp;
+        </div>
+      {/each}
+    </div> -->
+
     <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-50 border-r"
+      class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
       style={`grid-row: 1 / span ${totalRows + 2};`}
     >
-      <div class="font-bold p-1">Product Epic</div>
-      <div class="font-bold p-1">Target Date</div>
-      <div class="font-bold p-1">Engineering Scenarios</div>
+      <div class="font-bold p-1 bg-teal-800">Product Epic</div>
+      <div class="font-bold p-1 bg-teal-800">Target Date</div>
+      <div class="font-bold p-1 bg-teal-800">Engineering Scenarios</div>
 
-      {#each data.epics as epic}
+      {#each data.epics as epic, epicIndex}
         <div
           class="col-start-1 p-1"
-          style={`grid-row: span ${getEpicRowSpan(epic)}`}
+          style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
         >
           {epic.name}
         </div>
-        <div class="p-1" style={`grid-row: span ${getEpicRowSpan(epic)}`}>
+        <div
+          class="p-1"
+          style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
+        >
           {epic.targetDate}
         </div>
         {#each epic.scenarios as scenario}
           <div
             class="p-1 col-start-3"
-            style={`grid-row: span ${scenario.rows.length}`}
+            style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)}`}
           >
             {scenario.name}
           </div>
@@ -163,19 +189,21 @@
     >
       <div
         class="col-start-1 relative"
-        style={`grid-row: 1 / span ${totalRows + 2};`}
+        style={`grid-row: 1 / span ${totalRows + 1};`}
       >
         {#each dates as date}
           <div
-            class="absolute border-l border-surface-400-600 h-full"
-            style={`left: ${date.value}px; grid-row: 2 / span ${totalRows};`}
+            class="absolute border-l border-surface-400-600 h-full z-10 py-5"
+            style={`left: ${date.value}px;`}
           >
             &nbsp;
           </div>
         {/each}
       </div>
 
-      <div class="row-start-1 col-start-1 relative text-white bg-surface-50-950">
+      <div
+        class="row-start-1 col-start-1 relative text-white  bg-teal-800 z-0"
+      >
         {#each dates as date}
           <div
             class="absolute"
@@ -185,31 +213,40 @@
           </div>
         {/each}
       </div>
-
     </div>
 
     <div
       class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
       style={`grid-row: 2 / span ${totalRows + 2};`}
     >
-      {#each data.epics as epic}
+      {#each data.epics as epic, epicIndex}
         {#each epic.scenarios as scenario}
           {#each scenario.rows as row}
-            <div class="col-start-1 p-1 text-xs relative text-black">
-              {#each row.bars as bar}
-                {@const start = convertDate(bar.start) - minX}
-                {@const width = convertDate(bar.end) - convertDate(bar.start)}
-                <div
-                  class="absolute h-full overflow-ellipsis overflow-clip ztext-nowrap content-center text-center rounded-r-full"
-                  style={`left: ${start}px; max-width: ${width}px; width: ${width}px; ${getFillStyle(bar.state)};`}
-                >
-                  {#if bar.label}
-                    {bar.label}
-                  {:else}
-                    &nbsp;
-                  {/if}
-                </div>
-              {/each}
+            <div
+              class="col-start-1 text-xs relative text-black"
+              style={`${getEpicFillStyle(epicIndex)}; width: ${maxX-minX}px`}
+            >
+              <div class=" ">
+                {#each row.bars as bar}
+                  {@const start = convertDate(bar.start) - minX}
+                  {@const width = convertDate(bar.end) - convertDate(bar.start)}
+                  <div
+                    class="absolute content-center text-center h-full z-10"
+                    style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
+                  >
+                    <div
+                      class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl"
+                      style={`${getBarFillStyle(bar.state)};`}
+                    >
+                      {#if bar.label}
+                        {bar.label}
+                      {:else}
+                        &nbsp;
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
             </div>
           {/each}
         {/each}
@@ -221,7 +258,7 @@
 <style lang="postcss">
   @reference "../app.css";
 
-  div {
+  /* div {
     text-wrap: nowrap;
-  }
+  } */
 </style>
