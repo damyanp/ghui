@@ -135,6 +135,7 @@
   class="grid gap-1 overflow-y-auto"
   style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
 >
+  <!-- The first three, frozen, columns -->
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
     style={`grid-row: 1 / span ${totalRows + 2};`}
@@ -167,10 +168,12 @@
     {/each}
   </div>
 
+  <!-- The date strip in row 1, the vertical lines for dates, and the line for today -->
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
     style={`grid-row: 1 / span ${totalRows + 2};`}
   >
+    <!-- Vertical lines -->
     <div
       class="col-start-1 relative"
       style={`grid-row: 1 / span ${totalRows + 1};`}
@@ -192,6 +195,7 @@
       </div>
     </div>
 
+    <!-- Row 1's date labels -->
     <div class="row-start-1 col-start-1 relative text-white bg-teal-800 z-0">
       {#each dates as date}
         <div
@@ -204,6 +208,8 @@
     </div>
   </div>
 
+  <!-- Background fill for each scenario - color comes from the epic, height
+       determined by number of rows in scenario -->
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
     style={`grid-row: 2 / span ${totalRows + 2};`}
@@ -219,6 +225,7 @@
     {/each}
   </div>
 
+  <!-- The bars themselves -->
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
     style={`grid-row: 2 / span ${totalRows + 2};`}
