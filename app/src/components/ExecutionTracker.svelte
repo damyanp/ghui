@@ -1,6 +1,9 @@
 <script lang="ts" module>
+  import dayjs from "dayjs";
+
   export type Data = {
     epics: Epic[];
+    startDate: Date;
   };
 
   export type Date = string;
@@ -39,7 +42,7 @@
 <script lang="ts">
   let { data }: { data: Data } = $props();
 
-  let scale = $state(0.0000001);
+  let scale = $state(0.0001);
 
   const [minDate, maxDate] = $derived.by(() => {
     let minDate = Number.MAX_VALUE;
@@ -50,12 +53,12 @@
         for (const row of scenario.rows) {
           for (const bar of row.bars) {
             if (bar.start) {
-              minDate = Math.min(minDate, convertDate(bar.start));
-              maxDate = Math.max(maxDate, convertDate(bar.start));
+              minDate = Math.min(minDate, dayjs(bar.start).unix());
+              maxDate = Math.max(maxDate, dayjs(bar.start).unix());
             }
             if (bar.end) {
-              minDate = Math.min(minDate, convertDate(bar.end));
-              maxDate = Math.max(maxDate, convertDate(bar.end));
+              minDate = Math.min(minDate, dayjs(bar.end).unix());
+              maxDate = Math.max(maxDate, dayjs(bar.end).unix());
             }
           }
         }
@@ -65,9 +68,10 @@
     return [minDate, maxDate];
   });
 
+  const [minX, maxX] = $derived([minDate * scale, maxDate * scale]);
+
   function convertDate(date: string): number {
-    const d = Date.parse(date);
-    return d.valueOf() * scale;
+    return dayjs(date).unix() * scale;
   }
 
   function getFillStyle(state: BarState): string {
@@ -77,7 +81,7 @@
       case "completed":
         return "background-color: #c0e6f5;";
       case "noDates":
-        return "background-color: #d9d9d9; background-size: 8px 8px; background-image: radial-gradient(black 1px, transparent 0);";
+        return "background-color: #d9d9d9; background-size: 4px 4px; background-image: linear-gradient(45deg, #9d9d9d 2px, transparent 0);";
       case "notStarted":
         return "background-color: #d9d9d9;";
       case "offTrack":
@@ -99,7 +103,24 @@
     }, 0)
   );
 
-  const chartWidth = $derived(maxDate - minDate);
+  const chartWidth = $derived(maxX - minX);
+
+  const dates = $derived.by(() => {
+    let dates = [];
+
+    let date = dayjs(data.startDate);
+    let endDate = dayjs.unix(maxDate).add(1, "day");
+
+    while (date < endDate) {
+      dates.push({
+        value: date.unix() * scale - minX,
+        label: date.format("MM-DD"),
+      });
+      date = date.add(7, "day");
+    }
+
+    return dates;
+  });
 </script>
 
 <div>
@@ -137,23 +158,46 @@
     </div>
 
     <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid overflow-x-auto overflow-y-clip"
+      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
       style={`grid-row: 1 / span ${totalRows + 2};`}
     >
-      <div class="row-start-1 col-start-1 relative">
-        <div
-          class="absolute left-[100px] w-[100px] h-full bg-surface-500 text-center my-auto text-black text-xs"
-        >
-          Dates go here
-        </div>
+      <div
+        class="col-start-1 relative"
+        style={`grid-row: 1 / span ${totalRows + 2};`}
+      >
+        {#each dates as date}
+          <div
+            class="absolute border-l border-surface-400-600 h-full"
+            style={`left: ${date.value}px; grid-row: 2 / span ${totalRows};`}
+          >
+            &nbsp;
+          </div>
+        {/each}
       </div>
 
+      <div class="row-start-1 col-start-1 relative text-white bg-surface-50-950">
+        {#each dates as date}
+          <div
+            class="absolute"
+            style={`left: ${date.value}px; transform: translate(-50%,0)`}
+          >
+            {date.label}
+          </div>
+        {/each}
+      </div>
+
+    </div>
+
+    <div
+      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
+      style={`grid-row: 2 / span ${totalRows + 2};`}
+    >
       {#each data.epics as epic}
         {#each epic.scenarios as scenario}
           {#each scenario.rows as row}
             <div class="col-start-1 p-1 text-xs relative text-black">
               {#each row.bars as bar}
-                {@const start = convertDate(bar.start) - minDate}
+                {@const start = convertDate(bar.start) - minX}
                 {@const width = convertDate(bar.end) - convertDate(bar.start)}
                 <div
                   class="absolute h-full overflow-ellipsis overflow-clip ztext-nowrap content-center text-center rounded-r-full"

@@ -9,6 +9,7 @@
   } from "../../components/ExecutionTracker.svelte";
 
   const data: Data = {
+    startDate: "2025-01-12",
     epics: [
       {
         name: "Particle Life",
@@ -42,7 +43,7 @@
                 bars: [
                   {
                     state: "completed",
-                    start: "2025-04-19",
+                    start: "2025-04-20",
                     end: "2025-05-04",
                     label: "0 of 2 Bugs Resolved",
                   },
@@ -63,8 +64,8 @@
                 bars: [
                   {
                     state: "completed",
-                    start: "2025-05-03",
-                    end: "2025-05-16",
+                    start: "2025-03-02",
+                    end: "2025-03-16",
                     label: "Implementation",
                   },
                 ],
@@ -78,7 +79,7 @@
                 bars: [
                   {
                     state: "completed",
-                    start: "2025-03-17",
+                    start: "2025-03-16",
                     end: "2025-04-06",
                     label: "Implementation",
                   },
@@ -95,7 +96,7 @@
                   {
                     label: "Requirements/Test Cases",
                     state: "completed",
-                    start: "2025-03-17",
+                    start: "2025-03-16",
                     end: "2025-03-30",
                   },
                   {
@@ -122,7 +123,7 @@
                   {
                     label: "Requirements/Test Cases/Design",
                     state: "completed",
-                    start: "2025-03-17",
+                    start: "2025-03-16",
                     end: "2025-04-06",
                   },
                 ],
@@ -132,7 +133,7 @@
                   {
                     label: "Implementation by June 29th",
                     state: "onTrack",
-                    start: "2025-03-31",
+                    start: "2025-03-30",
                     end: "2025-06-29",
                   },
                 ],
@@ -147,7 +148,7 @@
                   {
                     label: "Requirements/Test Cases",
                     state: "completed",
-                    start: "2025-03-17",
+                    start: "2025-03-16",
                     end: "2025-03-30",
                   },
                   {
@@ -175,7 +176,7 @@
                   {
                     label: "Requirements/Planning",
                     state: "completed",
-                    start: "2025-03-24",
+                    start: "2025-03-23",
                     end: "2025-03-30",
                   },
                   {
@@ -197,7 +198,7 @@
                   {
                     label: "Scenario Planning",
                     state: "completed",
-                    start: "2025-04-07",
+                    start: "2025-04-06",
                     end: "2025-04-13",
                   },
                   {
@@ -235,7 +236,7 @@
                   {
                     label: "8 of 17 Bugs Resolved, 4 Active",
                     state: "onTrack",
-                    start: "2025-04-28",
+                    start: "2025-04-27",
                     end: "2025-06-01",
                   },
                 ],
@@ -259,7 +260,7 @@
                 bars: [
                   {
                     label: "Scenario Planning",
-                    start: "2025-04-28",
+                    start: "2025-04-27",
                     end: "2025-06-01",
                     state: "noDates",
                   },
@@ -275,7 +276,7 @@
                   {
                     label: "3 of 8 Bugs Resolved, 1 Active",
                     state: "onTrack",
-                    start: "2025-04-28",
+                    start: "2025-04-27",
                     end: "2025-06-01",
                   },
                 ],
@@ -288,8 +289,6 @@
   };
 </script>
 
-<div class="flex justify-center items-center h-[100vh]">
-  <div class="border min-w-[75vw] min-h-[75vh]">
-    <ExecutionTracker {data} />
-  </div>
+<div class="py-10 px-1">
+<ExecutionTracker {data} />
 </div>

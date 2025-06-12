@@ -21,7 +21,8 @@
     "@tauri-apps/plugin-window-state": "^2.2.2",
     "@zag-js/select": "^1.15.0",
     "@zag-js/svelte": "^1.15.0",
-    "bits-ui": "^2.0.0"
+    "bits-ui": "^2.0.0",
+    "dayjs": "^1.11.13"
   },
   "devDependencies": {
     "@skeletonlabs/skeleton": "^3.1.2",
