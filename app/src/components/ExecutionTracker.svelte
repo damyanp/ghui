@@ -257,11 +257,3 @@
     </div>
   </div>
 </div>
-
-<style lang="postcss">
-  @reference "../app.css";
-
-  /* div {
-    text-wrap: nowrap;
-  } */
-</style>
