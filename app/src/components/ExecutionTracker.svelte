@@ -12,8 +12,8 @@
   export type Bar = {
     state: BarState;
     label?: string;
-    start?: Date;
-    end?: Date;
+    start: Date;
+    end: Date;
   };
 
   export type Epic = {
@@ -37,30 +37,106 @@
 </script>
 
 <script lang="ts">
+  import { DateField } from "bits-ui";
+
   let { data }: { data: Data } = $props();
+
+  const [minDate, maxDate] = $derived.by(() => {
+    let minDate = Number.MAX_VALUE;
+    let maxDate = Number.MIN_VALUE;
+
+    for (const epic of data.epics) {
+      for (const scenario of epic.scenarios) {
+        for (const row of scenario.rows) {
+          for (const bar of row.bars) {
+            if (bar.start) {
+              minDate = Math.min(minDate, convertDate(bar.start));
+              maxDate = Math.max(maxDate, convertDate(bar.start));
+            }
+            if (bar.end) {
+              minDate = Math.min(minDate, convertDate(bar.end));
+              maxDate = Math.max(maxDate, convertDate(bar.end));
+            }
+          }
+        }
+      }
+    }
+
+    return [minDate, maxDate];
+  });
+
+  function convertDate(date: string): number {
+    const d = Date.parse(date);
+    return d.valueOf() / 100000000;
+  }
+
+  function getFill(state: BarState): string {
+    switch (state) {
+      case "atRisk":
+        return "#f7c7ac";
+      case "completed":
+        return "#c0e6f5";
+      case "noDates":
+        return "#d9d9d9";
+      case "notStarted":
+        return "#d9d9d9";
+      case "offTrack":
+        return "#ff7c80 ";
+      case "onTrack":
+        return "#c1f0c8";
+    }
+  }
 </script>
 
 <div class="overflow-x-auto">
   <div class="grid gap-1" style="grid-template-columns: auto auto auto 1fr ">
-    
     <div>Product Epic</div>
     <div>Target Date</div>
     <div>Engineering Scenarios</div>
-    <div>&nbsp;</div>
+    <div class="w-full">
+      <svg viewBox={`${minDate} 0 ${maxDate - minDate} 10`} height="2em" width="100%" preserveAspectRatio="none">
+        <circle cx={minDate} cy="5" r="5" fill="red" />
+        <circle
+          cx={minDate + (maxDate - minDate) / 2}
+          cy="5"
+          r="5"
+          fill="red"
+        />
+        <circle cx={maxDate} cy="5" r="5" fill="red" />
+      </svg>
+    </div>
 
     {#each data.epics as epic}
-      <div>{epic.name}</div>
+      <div style="">{epic.name}</div>
       <div>{epic.targetDate}</div>
       <div class="col-start-3 col-end-5 grid grid-cols-subgrid gap-1">
         {#each epic.scenarios as scenario}
           <div class="">{scenario.name}</div>
           <div class="col-start-5 col-end-6 grid-cols-subgrid w-full">
             {#each scenario.rows as row}
-            <div>
-                {#each row.bars as bar}
-                <div class="p-x-2 bg-amber-950 w-fit mx-2 inline">{bar.label}&nbsp;</div>
-                {/each}
-            </div>
+              <div>
+                <svg
+                  viewBox={`${minDate} 0 ${maxDate - minDate} 10`} height="2em" width="100%"
+                  preserveAspectRatio="none"
+                >
+                  {#each row.bars as bar}
+                    {@const start = convertDate(bar.start)}
+                    {@const end = convertDate(bar.end)}
+                    <rect
+                      fill={getFill(bar.state)}
+                      x={start}
+                      y="0"
+                      width={end - start}
+                      height="10"
+                    />
+                    {#if bar.label}
+                      <text fill="white" x={start} y="5" font-size="5"
+                        >{bar.label}</text
+                      >
+                    {/if}
+                  {/each}
+                </svg>
+              </div>
             {/each}
           </div>
         {/each}
@@ -70,5 +146,7 @@
 </div>
 
 <style lang="postcss">
-    @reference "../app.css";
+  @reference "../app.css";
+
+  div { border-width: 1px }
 </style>
