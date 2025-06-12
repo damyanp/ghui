@@ -201,9 +201,7 @@
         {/each}
       </div>
 
-      <div
-        class="row-start-1 col-start-1 relative text-white  bg-teal-800 z-0"
-      >
+      <div class="row-start-1 col-start-1 relative text-white bg-teal-800 z-0">
         {#each dates as date}
           <div
             class="absolute"
@@ -221,32 +219,41 @@
     >
       {#each data.epics as epic, epicIndex}
         {#each epic.scenarios as scenario}
+        <div style={`${getEpicFillStyle(epicIndex)} grid-row: span ${scenario.rows.length};`}>&nbsp;</div>
+        {/each}
+      {/each}
+    </div>
+
+    <div
+      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
+      style={`grid-row: 2 / span ${totalRows + 2};`}
+    >
+      {#each data.epics as epic, epicIndex}
+        {#each epic.scenarios as scenario}
           {#each scenario.rows as row}
             <div
               class="col-start-1 text-xs relative text-black"
-              style={`${getEpicFillStyle(epicIndex)}; width: ${maxX-minX}px`}
+              style={`width: ${maxX - minX}px`}
             >
-              <div class=" ">
-                {#each row.bars as bar}
-                  {@const start = convertDate(bar.start) - minX}
-                  {@const width = convertDate(bar.end) - convertDate(bar.start)}
+              {#each row.bars as bar}
+                {@const start = convertDate(bar.start) - minX}
+                {@const width = convertDate(bar.end) - convertDate(bar.start)}
+                <div
+                  class="absolute content-center text-center h-full z-10"
+                  style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
+                >
                   <div
-                    class="absolute content-center text-center h-full z-10"
-                    style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
+                    class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl"
+                    style={`${getBarFillStyle(bar.state)};`}
                   >
-                    <div
-                      class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl"
-                      style={`${getBarFillStyle(bar.state)};`}
-                    >
-                      {#if bar.label}
-                        {bar.label}
-                      {:else}
-                        &nbsp;
-                      {/if}
-                    </div>
+                    {#if bar.label}
+                      {bar.label}
+                    {:else}
+                      &nbsp;
+                    {/if}
                   </div>
-                {/each}
-              </div>
+                </div>
+              {/each}
             </div>
           {/each}
         {/each}
