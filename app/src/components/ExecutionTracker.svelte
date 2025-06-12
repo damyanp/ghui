@@ -131,129 +131,127 @@
   }
 </script>
 
-<div>
+<div
+  class="grid gap-1 overflow-y-auto"
+  style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
+>
   <div
-    class="grid gap-1 overflow-y-auto"
-    style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
+    class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
+    style={`grid-row: 1 / span ${totalRows + 2};`}
+  >
+    <div class="font-bold p-1 bg-teal-800">Product Epic</div>
+    <div class="font-bold p-1 bg-teal-800">Target Date</div>
+    <div class="font-bold p-1 bg-teal-800">Engineering Scenarios</div>
+
+    {#each data.epics as epic, epicIndex}
+      <div
+        class="col-start-1 p-1"
+        style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
+      >
+        {epic.name}
+      </div>
+      <div
+        class="p-1"
+        style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
+      >
+        {epic.targetDate}
+      </div>
+      {#each epic.scenarios as scenario}
+        <div
+          class="p-1 col-start-3"
+          style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)}`}
+        >
+          {scenario.name}
+        </div>
+      {/each}
+    {/each}
+  </div>
+
+  <div
+    class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
+    style={`grid-row: 1 / span ${totalRows + 2};`}
   >
     <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
-      style={`grid-row: 1 / span ${totalRows + 2};`}
+      class="col-start-1 relative"
+      style={`grid-row: 1 / span ${totalRows + 1};`}
     >
-      <div class="font-bold p-1 bg-teal-800">Product Epic</div>
-      <div class="font-bold p-1 bg-teal-800">Target Date</div>
-      <div class="font-bold p-1 bg-teal-800">Engineering Scenarios</div>
-
-      {#each data.epics as epic, epicIndex}
+      {#each dates as date}
         <div
-          class="col-start-1 p-1"
-          style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
-        >
-          {epic.name}
-        </div>
-        <div
-          class="p-1"
-          style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
-        >
-          {epic.targetDate}
-        </div>
-        {#each epic.scenarios as scenario}
-          <div
-            class="p-1 col-start-3"
-            style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)}`}
-          >
-            {scenario.name}
-          </div>
-        {/each}
-      {/each}
-    </div>
-
-    <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
-      style={`grid-row: 1 / span ${totalRows + 2};`}
-    >
-      <div
-        class="col-start-1 relative"
-        style={`grid-row: 1 / span ${totalRows + 1};`}
-      >
-        {#each dates as date}
-          <div
-            class="absolute border-l border-surface-400-600 h-full z-10 py-5"
-            style={`left: ${date.value}px;`}
-          >
-            &nbsp;
-          </div>
-        {/each}
-
-        <div
-          class="absolute border-l-4 border-teal-300 h-full py-5 border-dashed"
-          style={`left: ${dayjs().unix() * scale - minX}px;`}
+          class="absolute border-l border-surface-400-600 h-full z-10 py-5"
+          style={`left: ${date.value}px;`}
         >
           &nbsp;
         </div>
-      </div>
+      {/each}
 
-      <div class="row-start-1 col-start-1 relative text-white bg-teal-800 z-0">
-        {#each dates as date}
-          <div
-            class="absolute"
-            style={`left: ${date.value}px; transform: translate(-50%,0)`}
-          >
-            {date.label}
-          </div>
-        {/each}
+      <div
+        class="absolute border-l-4 border-teal-300 h-full py-5 border-dashed"
+        style={`left: ${dayjs().unix() * scale - minX}px;`}
+      >
+        &nbsp;
       </div>
     </div>
 
-    <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
-      style={`grid-row: 2 / span ${totalRows + 2};`}
-    >
-      {#each data.epics as epic, epicIndex}
-        {#each epic.scenarios as scenario}
-          <div
-            style={`${getEpicFillStyle(epicIndex)} grid-row: span ${scenario.rows.length};`}
-          >
-            &nbsp;
-          </div>
-        {/each}
+    <div class="row-start-1 col-start-1 relative text-white bg-teal-800 z-0">
+      {#each dates as date}
+        <div
+          class="absolute"
+          style={`left: ${date.value}px; transform: translate(-50%,0)`}
+        >
+          {date.label}
+        </div>
       {/each}
     </div>
+  </div>
 
-    <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
-      style={`grid-row: 2 / span ${totalRows + 2};`}
-    >
-      {#each data.epics as epic, epicIndex}
-        {#each epic.scenarios as scenario}
-          {#each scenario.rows as row}
-            <div
-              class="col-start-1 text-xs relative text-black"
-              style={`width: ${maxX - minX}px`}
-            >
-              {#each row.bars as bar}
-                {@const start = convertDate(bar.start) - minX}
-                {@const width = convertDate(bar.end) - convertDate(bar.start)}
+  <div
+    class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
+    style={`grid-row: 2 / span ${totalRows + 2};`}
+  >
+    {#each data.epics as epic, epicIndex}
+      {#each epic.scenarios as scenario}
+        <div
+          style={`${getEpicFillStyle(epicIndex)} grid-row: span ${scenario.rows.length};`}
+        >
+          &nbsp;
+        </div>
+      {/each}
+    {/each}
+  </div>
+
+  <div
+    class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
+    style={`grid-row: 2 / span ${totalRows + 2};`}
+  >
+    {#each data.epics as epic, epicIndex}
+      {#each epic.scenarios as scenario}
+        {#each scenario.rows as row}
+          <div
+            class="col-start-1 text-xs relative text-black"
+            style={`width: ${maxX - minX}px`}
+          >
+            {#each row.bars as bar}
+              {@const start = convertDate(bar.start) - minX}
+              {@const width = convertDate(bar.end) - convertDate(bar.start)}
+              <div
+                class="absolute content-center text-center h-full z-10"
+                style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
+              >
                 <div
-                  class="absolute content-center text-center h-full z-10"
-                  style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
+                  class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl"
+                  style={`${getBarFillStyle(bar.state)};`}
                 >
-                  <div
-                    class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl"
-                    style={`${getBarFillStyle(bar.state)};`}
-                  >
-                    {#if bar.label}
-                      {bar.label}
-                    {:else}
-                      &nbsp;
-                    {/if}
-                  </div>
+                  {#if bar.label}
+                    {bar.label}
+                  {:else}
+                    &nbsp;
+                  {/if}
                 </div>
-              {/each}
-            </div>
-          {/each}
+              </div>
+            {/each}
+          </div>
         {/each}
       {/each}
-    </div>
+    {/each}
   </div>
 </div>
