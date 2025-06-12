@@ -95,64 +95,32 @@
 </script>
 
 <div class="overflow-x-auto">
-  <div class="grid gap-1" style="grid-template-columns: auto auto auto 1fr ">
-    <div>Product Epic</div>
-    <div>Target Date</div>
-    <div>Engineering Scenarios</div>
-    <div class="w-full">
-      <svg
-        viewBox={`${minDate} 0 ${maxDate - minDate} 10`}
-        height="2em"
-        width="100%"
-        preserveAspectRatio="none"
-      >
-        <circle cx={minDate} cy="5" r="5" fill="red" />
-        <circle
-          cx={minDate + (maxDate - minDate) / 2}
-          cy="5"
-          r="5"
-          fill="red"
-        />
-        <circle cx={maxDate} cy="5" r="5" fill="red" />
-      </svg>
-    </div>
+  <div class="grid gap-1" style="grid-template-columns: auto auto auto auto">
+    <div class="font-bold p-1">Product Epic</div>
+    <div class="font-bold p-1">Target Date</div>
+    <div class="font-bold p-1">Engineering Scenarios</div>
+    <div class="w-[2048px]"></div>
 
     {#each data.epics as epic}
-      <div class="col-start-1" style={`grid-row: span ${getEpicRowSpan(epic)}`}>
+      <div class="col-start-1 p-1" style={`grid-row: span ${getEpicRowSpan(epic)}`}>
         {epic.name}
       </div>
-      <div style={`grid-row: span ${getEpicRowSpan(epic)}`}>
+      <div class="p-1" style={`grid-row: span ${getEpicRowSpan(epic)}`}>
         {epic.targetDate}
       </div>
       {#each epic.scenarios as scenario}
-        <div style={`grid-row: span ${scenario.rows.length}`}>
+        <div class="p-1" style={`grid-row: span ${scenario.rows.length}`}>
           {scenario.name}
         </div>
         {#each scenario.rows as row}
-          <div class="col-start-4">
-            <svg
-              viewBox={`${minDate} 0 ${maxDate - minDate} 10`}
-              height="2em"
-              width="100%"
-              preserveAspectRatio="none"
-            >
-              {#each row.bars as bar}
-                {@const start = convertDate(bar.start)}
-                {@const end = convertDate(bar.end)}
-                <rect
-                  fill={getFill(bar.state)}
-                  x={start}
-                  y="0"
-                  width={end - start}
-                  height="10"
-                />
-                {#if bar.label}
-                  <text fill="white" x={start} y="5" font-size="5"
-                    >{bar.label}</text
-                  >
-                {/if}
-              {/each}
-            </svg>
+          <div class="col-start-4 w-[2048px] p-1 text-xs">
+            {#each row.bars as bar}
+              {@const start = convertDate(bar.start)}
+              {@const end = convertDate(bar.end)}
+              {#if bar.label}
+                <span>{bar.label}</span>
+              {/if}
+            {/each}
           </div>
         {/each}
       {/each}
@@ -164,6 +132,6 @@
   @reference "../app.css";
 
   div {
-    border-width: 1px;
+    text-wrap-mode: nowrap;
   }
 </style>
