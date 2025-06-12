@@ -1,20 +1,9 @@
 <script lang="ts" module>
-  export type BarState =
-    | "completed"
-    | "onTrack"
-    | "atRisk"
-    | "offTrack"
-    | "notStarted"
-    | "noDates";
+  export type Data = {
+    epics: Epic[];
+  };
 
   export type Date = string;
-
-  export type Bar = {
-    state: BarState;
-    label?: string;
-    start: Date;
-    end: Date;
-  };
 
   export type Epic = {
     name: string;
@@ -31,9 +20,20 @@
     bars: Bar[];
   };
 
-  export type Data = {
-    epics: Epic[];
+  export type Bar = {
+    state: BarState;
+    label?: string;
+    start: Date;
+    end: Date;
   };
+
+  export type BarState =
+    | "completed"
+    | "onTrack"
+    | "atRisk"
+    | "offTrack"
+    | "notStarted"
+    | "noDates";
 </script>
 
 <script lang="ts">
@@ -136,10 +136,11 @@
       {/each}
     </div>
 
-    <div class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid overflow-x-auto overflow-y-clip" style={`grid-row: 1 / span ${totalRows + 2};`}>
-      <div
-        class="row-start-1 col-start-1 relative"
-      >
+    <div
+      class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid overflow-x-auto overflow-y-clip"
+      style={`grid-row: 1 / span ${totalRows + 2};`}
+    >
+      <div class="row-start-1 col-start-1 relative">
         <div
           class="absolute left-[100px] w-[100px] h-full bg-surface-500 text-center my-auto text-black text-xs"
         >
