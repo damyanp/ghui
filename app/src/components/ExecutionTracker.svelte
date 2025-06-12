@@ -136,21 +136,6 @@
     class="grid gap-1 overflow-y-auto"
     style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
   >
-    <!-- <div
-      class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-5 row-start-1 grid"
-      style={`grid-row: 1 / span ${totalRows + 1};`}
-    >
-      "
-      {#each data.epics as epic, epicIndex}
-        <div
-          class="w-full col-start-1 col-end-5 z-0"
-          style={`grid-row: span ${getEpicRowSpan(epic)}; ${getEpicFillStyle(epicIndex)}`}
-        >
-          {epic.name}&nbsp;
-        </div>
-      {/each}
-    </div> -->
-
     <div
       class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
       style={`grid-row: 1 / span ${totalRows + 2};`}
@@ -199,6 +184,13 @@
             &nbsp;
           </div>
         {/each}
+
+        <div
+          class="absolute border-l-4 border-teal-300 h-full py-5 border-dashed"
+          style={`left: ${dayjs().unix() * scale - minX}px;`}
+        >
+          &nbsp;
+        </div>
       </div>
 
       <div class="row-start-1 col-start-1 relative text-white bg-teal-800 z-0">
@@ -219,7 +211,11 @@
     >
       {#each data.epics as epic, epicIndex}
         {#each epic.scenarios as scenario}
-        <div style={`${getEpicFillStyle(epicIndex)} grid-row: span ${scenario.rows.length};`}>&nbsp;</div>
+          <div
+            style={`${getEpicFillStyle(epicIndex)} grid-row: span ${scenario.rows.length};`}
+          >
+            &nbsp;
+          </div>
         {/each}
       {/each}
     </div>
