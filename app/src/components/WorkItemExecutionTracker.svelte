@@ -14,7 +14,7 @@
 
   let context = getWorkItemContext();
 
-  const startDate = "2025-03-23";
+  const startDate = "2025-02-09";
 
   const epics: Epic[] = $derived.by(() => {
     return Object.values(context.data.fields.epic.options).map(
