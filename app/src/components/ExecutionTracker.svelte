@@ -41,11 +41,11 @@
 
 <script lang="ts">
   import { ZoomIn, ZoomInIcon, ZoomOut, ZoomOutIcon } from "@lucide/svelte";
-  import { getExecutionTrackerContext } from "./ExecutionTrackerContext.svelte";
+  import { ExecutionTrackerContext, getExecutionTrackerContext, setExecutionTrackerContext } from "./ExecutionTrackerContext.svelte";
 
   let { data }: { data: Data } = $props();
 
-  let context = getExecutionTrackerContext();
+  let context = getExecutionTrackerContext() || setExecutionTrackerContext(new ExecutionTrackerContext());
 
   const [minDate, maxDate] = $derived.by(() => {
     let minDate = Number.MAX_VALUE;
@@ -139,7 +139,7 @@
     }
   }
 
-  let startDragPos: [number, number] | undefined = undefined;
+  let startDragPos: [number, number] | undefined = $state(undefined);
   const scrollableId = $props.id();
 
   function onScrollPointerDown(e: PointerEvent) {
@@ -180,7 +180,9 @@
 >
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="col-start-4 row-start-1 z-[100] group cursor-grab"
+    class="col-start-4 row-start-1 z-[100] group"
+    class:cursor-grab={startDragPos === undefined}
+    class:cursor-grabbing={startDragPos !== undefined}
     onpointerdown={(e) => onScrollPointerDown(e)}
     onpointermove={(e) => onScrollPointerMove(e)}
     onpointerup={(e) => onScrollPointerUp(e)}
