@@ -40,7 +40,7 @@
 </script>
 
 <script lang="ts">
-  import { ZoomIn, ZoomInIcon, ZoomOut, ZoomOutIcon } from "@lucide/svelte";
+  import { ZoomIn, ZoomOut } from "@lucide/svelte";
   import {
     ExecutionTrackerContext,
     getExecutionTrackerContext,
