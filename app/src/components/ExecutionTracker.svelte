@@ -44,7 +44,7 @@
   import { getExecutionTrackerContext } from "./ExecutionTrackerContext.svelte";
 
   let { data }: { data: Data } = $props();
-  
+
   let context = getExecutionTrackerContext();
 
   const [minDate, maxDate] = $derived.by(() => {
@@ -71,7 +71,10 @@
     return [minDate, maxDate];
   });
 
-  const [minX, maxX] = $derived([minDate * context.scale, maxDate * context.scale]);
+  const [minX, maxX] = $derived([
+    minDate * context.scale,
+    maxDate * context.scale,
+  ]);
 
   function convertDate(date: string): number {
     return dayjs(date).unix() * context.scale;
@@ -135,13 +138,53 @@
       return "background-color: #203030;";
     }
   }
+
+  let startDragPos: [number, number] | undefined = undefined;
+  const scrollableId = $props.id();
+
+  function onScrollPointerDown(e: PointerEvent) {
+    if (e.button === 0) {
+      startDragPos = [e.x, document.getElementById(scrollableId)!.scrollLeft];
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }
+  }
+
+  function onScrollPointerUp(e: PointerEvent) {
+    if (e.button === 0) {
+      startDragPos = undefined;
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    }
+  }
+
+  function onScrollPointerMove(e: PointerEvent) {
+    if (startDragPos) {
+      const [startMouseX, startScroll] = startDragPos;
+      const offset = e.x - startMouseX;
+      document
+        .getElementById(scrollableId)!
+        .scroll({ left: startScroll - offset });
+    }
+  }
 </script>
 
 <div
+  id={scrollableId}
   class="grid gap-1 overflow-y-auto"
   style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
+  onscrollend={(e) => {
+    context.scrollLeft = (e.target as HTMLElement).scrollLeft;
+  }}
+  {@attach (e) => {
+    e.scrollLeft = context.scrollLeft;
+  }}
 >
-  <div class="col-start-4 row-start-1 z-[100] group cursor-grab">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="col-start-4 row-start-1 z-[100] group cursor-grab"
+    onpointerdown={(e) => onScrollPointerDown(e)}
+    onpointermove={(e) => onScrollPointerMove(e)}
+    onpointerup={(e) => onScrollPointerUp(e)}
+  >
     <div class="flex w-fit h-[2.5em] fixed right-[2em] items-center gap-1">
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
@@ -149,7 +192,8 @@
       >
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
-        onclick={() => (context.scale = context.scale / 1.1)}><ZoomOut /></button
+        onclick={() => (context.scale = context.scale / 1.1)}
+        ><ZoomOut /></button
       >
     </div>
   </div>
