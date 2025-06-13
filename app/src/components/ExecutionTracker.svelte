@@ -1,5 +1,4 @@
 <script lang="ts" module>
-  import { getContext, setContext } from "svelte";
   import dayjs from "dayjs";
 
   export type Data = {
@@ -38,28 +37,14 @@
     | "offTrack"
     | "notStarted"
     | "noDates";
-
-  const key = Symbol("ExecutionTrackerContext");
-
-  export function setExecutionTrackerContext(c: ExecutionTrackerContext) {
-    setContext(key, c);
-    return c;
-  }
-
-  function getExecutionTrackerContext() {
-    return getContext(key) as ExecutionTrackerContext;
-  }
-
-  export class ExecutionTrackerContext {
-    scale = $state(0.0001);
-  }
 </script>
 
 <script lang="ts">
   import { ZoomIn, ZoomInIcon, ZoomOut, ZoomOutIcon } from "@lucide/svelte";
+  import { getExecutionTrackerContext } from "./ExecutionTrackerContext.svelte";
 
   let { data }: { data: Data } = $props();
-
+  
   let context = getExecutionTrackerContext();
 
   const [minDate, maxDate] = $derived.by(() => {
@@ -156,7 +141,7 @@
   class="grid gap-1 overflow-y-auto"
   style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
 >
-  <div class="col-start-4 row-start-1 z-[100] group">
+  <div class="col-start-4 row-start-1 z-[100] group cursor-grab">
     <div class="flex w-fit h-[2.5em] fixed right-[2em] items-center gap-1">
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"

@@ -9,16 +9,18 @@
     WorkItemContext,
   } from "$lib/WorkItemContext.svelte";
   import SanitizeButton from "../components/SanitizeButton.svelte";
-  import {
-    ChartGantt,
-    ListTree,
-  } from "@lucide/svelte";
+  import { ChartGantt, ListTree } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
   import WorkItemExecutionTracker from "../components/WorkItemExecutionTracker.svelte";
-  import { ExecutionTrackerContext, setExecutionTrackerContext } from "../components/ExecutionTracker.svelte";
+  import {
+    ExecutionTrackerContext,
+    setExecutionTrackerContext,
+  } from "../components/ExecutionTrackerContext.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
-  const executionTrackerContext = setExecutionTrackerContext(new ExecutionTrackerContext());
+  const executionTrackerContext = setExecutionTrackerContext(
+    new ExecutionTrackerContext()
+  );
 
   async function onRefreshClicked(): Promise<void> {
     await context.refresh();
@@ -29,7 +31,7 @@
 
   const itemsIconClass = $derived(mode === "items" ? "bg-primary-500" : "");
   const xtrackerIconClass = $derived(
-    mode === "xtracker" ? "bg-primary-500" : "",
+    mode === "xtracker" ? "bg-primary-500" : ""
   );
 </script>
 
