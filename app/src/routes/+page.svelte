@@ -15,8 +15,10 @@
   } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
   import WorkItemExecutionTracker from "../components/WorkItemExecutionTracker.svelte";
+  import { ExecutionTrackerContext, setExecutionTrackerContext } from "../components/ExecutionTracker.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
+  const executionTrackerContext = setExecutionTrackerContext(new ExecutionTrackerContext());
 
   async function onRefreshClicked(): Promise<void> {
     await context.refresh();

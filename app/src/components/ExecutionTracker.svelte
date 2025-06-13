@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { getContext, setContext } from "svelte";
   import dayjs from "dayjs";
 
   export type Data = {
@@ -37,12 +38,29 @@
     | "offTrack"
     | "notStarted"
     | "noDates";
+
+  const key = Symbol("ExecutionTrackerContext");
+
+  export function setExecutionTrackerContext(c: ExecutionTrackerContext) {
+    setContext(key, c);
+    return c;
+  }
+
+  function getExecutionTrackerContext() {
+    return getContext(key) as ExecutionTrackerContext;
+  }
+
+  export class ExecutionTrackerContext {
+    scale = $state(0.0001);
+  }
 </script>
 
 <script lang="ts">
+  import { ZoomIn, ZoomInIcon, ZoomOut, ZoomOutIcon } from "@lucide/svelte";
+
   let { data }: { data: Data } = $props();
 
-  let scale = $state(0.0001);
+  let context = getExecutionTrackerContext();
 
   const [minDate, maxDate] = $derived.by(() => {
     let minDate = Number.MAX_VALUE;
@@ -68,10 +86,10 @@
     return [minDate, maxDate];
   });
 
-  const [minX, maxX] = $derived([minDate * scale, maxDate * scale]);
+  const [minX, maxX] = $derived([minDate * context.scale, maxDate * context.scale]);
 
   function convertDate(date: string): number {
-    return dayjs(date).unix() * scale;
+    return dayjs(date).unix() * context.scale;
   }
 
   function getBarFillStyle(state: BarState): string {
@@ -116,7 +134,7 @@
 
     while (date < endDate) {
       dates.push({
-        value: date.unix() * scale - minX,
+        value: date.unix() * context.scale - minX,
         label: date.format("MM-DD"),
       });
       date = date.add(7, "day");
@@ -138,6 +156,19 @@
   class="grid gap-1 overflow-y-auto"
   style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
 >
+  <div class="col-start-4 row-start-1 z-[100] group">
+    <div class="flex w-fit h-[2.5em] fixed right-[2em] items-center gap-1">
+      <button
+        class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
+        onclick={() => (context.scale = context.scale * 1.1)}><ZoomIn /></button
+      >
+      <button
+        class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
+        onclick={() => (context.scale = context.scale / 1.1)}><ZoomOut /></button
+      >
+    </div>
+  </div>
+
   <!-- The first three, frozen, columns -->
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
@@ -192,7 +223,7 @@
 
       <div
         class="absolute border-l-4 border-teal-300 h-full py-5 border-dashed"
-        style={`left: ${dayjs().unix() * scale - minX}px;`}
+        style={`left: ${dayjs().unix() * context.scale - minX}px;`}
       >
         &nbsp;
       </div>
