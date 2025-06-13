@@ -1,0 +1,141 @@
+<script lang="ts">
+  import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
+  import type { WorkItem } from "$lib/bindings/WorkItem";
+  import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
+  import dayjs from "dayjs";
+  import ExecutionTracker, {
+    type Bar,
+    type BarState,
+    type Epic,
+    type Data as ExecutionTrackerData,
+    type Row,
+    type Scenario,
+  } from "./ExecutionTracker.svelte";
+
+  let context = getWorkItemContext();
+
+  const startDate = "2025-03-23";
+
+  const epics: Epic[] = $derived.by(() => {
+    return Object.values(context.data.fields.epic.options).map(
+      (epicFieldOption) => {
+        return {
+          name: epicFieldOption.value,
+          targetDate: "TBD",
+          scenarios: getScenarios(epicFieldOption.id),
+        };
+      }
+    );
+  });
+
+  const scenarioKindId = $derived(
+    context.data.fields.kind.options.find((o) => o.value === "Scenario")?.id
+  );
+
+  const deliverableKindId = $derived(
+    context.data.fields.kind.options.find((o) => o.value === "Deliverable")?.id
+  );
+
+  const closedStatusId = $derived(
+    context.data.fields.status.options.find((o) => o.value === "Closed")?.id
+  );
+
+  const defaultStart = startDate;
+  const defaultEnd = dayjs().add(1, "week").format("YYYY-MM-DD");
+
+  function getScenarios(epicId: FieldOptionId): Scenario[] {
+    const scenarios = Object.values(context.data.workItems)
+      .filter((workItem): workItem is WorkItem => {
+        if (!workItem) return false;
+
+        return (
+          workItem.projectItem.epic === epicId &&
+          workItem.projectItem.kind.loadState === "loaded" &&
+          workItem.projectItem.kind.value === scenarioKindId
+        );
+      })
+      .map((scenario) => {
+        return { name: cleanUpTitle(scenario.title), rows: getRows(scenario) };
+      });
+
+    if (scenarios.length === 0) return [{ name: "TBD", rows: [] }];
+    else return scenarios;
+  }
+
+  function getRows(scenario: WorkItem): Row[] {
+    if (scenario.data.type !== "issue") return [];
+
+    const rows = scenario.data.subIssues
+      .map((id) => {
+        return context.data.workItems[id];
+      })
+      .filter((i): i is WorkItem => {
+        if (!i) return false;
+
+        return (
+          i.projectItem.kind.loadState === "loaded" &&
+          i.projectItem.kind.value === deliverableKindId
+        );
+      })
+      .map((deliverable) => {
+        const projectedEnd = getProjectedEnd(deliverable);
+        const status = deliverable.projectItem.status;
+
+        const state: BarState =
+          status === closedStatusId
+            ? "completed"
+            : projectedEnd === undefined
+              ? "noDates"
+              : dayjs(projectedEnd) < dayjs()
+                ? "offTrack"
+                : "onTrack";
+
+        return {
+          bars: [
+            {
+              state,
+              label: cleanUpTitle(deliverable.title),
+              start: defaultStart,
+              end: projectedEnd || defaultEnd,
+            },
+          ],
+        };
+      });
+
+    if (rows.length === 0) return [{ bars: [] }];
+    else return rows;
+  }
+
+  function getProjectedEnd(item: WorkItem) {
+    if (item.projectItem.iteration.loadState === "loaded") {
+      const iterationId = item.projectItem.iteration.value;
+      const iteration = context.data.fields.iteration.options.find(
+        (i) => i.id === iterationId
+      );
+      if (iteration) {
+        return dayjs(iteration.data.startDate)
+          .add(Number(iteration.data.duration), "days")
+          .format("YYYY-MM-DD");
+      }
+    }
+
+    return undefined;
+  }
+
+  function cleanUpTitle(title: string) {
+    return title
+      .replace("[HLSL]", "")
+      .replace("[Scenario]", "")
+      .replace("[Deliverable]", "")
+      .trim();
+  }
+
+  const data: ExecutionTrackerData = $derived.by(() => {
+    return {
+      startDate,
+      epics: epics,
+    };
+  });
+</script>
+
+<ExecutionTracker {data} />

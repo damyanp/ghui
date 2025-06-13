@@ -1,25 +1,20 @@
 <script lang="ts">
   import { AppBar, Switch } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
-  import { Channel, invoke } from "@tauri-apps/api/core";
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
-  import type { Data } from "$lib/bindings/Data";
   import ChangesToolbarButton from "../components/ChangesToolbarButton.svelte";
   import {
     setWorkItemContext,
     WorkItemContext,
   } from "$lib/WorkItemContext.svelte";
   import SanitizeButton from "../components/SanitizeButton.svelte";
-  import AppBarSwitch from "../components/AppBarSwitch.svelte";
   import {
     ChartGantt,
-    ChartGanttIcon,
     ListTree,
-    ListTreeIcon,
   } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
-  import ExecutionTracker from "../components/ExecutionTracker.svelte";
+  import WorkItemExecutionTracker from "../components/WorkItemExecutionTracker.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
 
@@ -79,7 +74,7 @@
   {#if mode === "items"}
     <WorkItemTree />
   {:else if mode === "xtracker"}
-    <ExecutionTracker />
+    <WorkItemExecutionTracker />
   {:else}
     <h1>Unknown mode {mode}</h1>
   {/if}

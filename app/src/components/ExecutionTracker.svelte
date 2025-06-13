@@ -92,9 +92,12 @@
   }
 
   function getEpicRowSpan(epic: Epic) {
-    return epic.scenarios.reduce((prev, current) => {
-      return prev + current.rows.length;
-    }, 0);
+    return Math.max(
+      1,
+      epic.scenarios.reduce((prev, current) => {
+        return prev + Math.max(1, current.rows.length);
+      }, 0)
+    );
   }
 
   const totalRows = $derived(
