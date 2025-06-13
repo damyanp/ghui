@@ -241,8 +241,6 @@
     if (row.data.type === "workItem") context.updateWorkItem(row.id);
   }
 
-  let expanded = $state([]);
-
   function linkHRef(item: WorkItem): string {
     const databaseId = item.projectItem.databaseId;
     const owner = item.repoNameWithOwner?.split("/")[0];
@@ -260,6 +258,8 @@
     }
     return `https://github.com${item.resourcePath}`;
   }
+
+  let expanded = $state(context.workItemTreeExpandedItems);
 </script>
 
 {#key context.data}

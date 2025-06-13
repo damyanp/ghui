@@ -35,6 +35,8 @@ export class WorkItemContext {
     changes: { data: {} },
   });
 
+  workItemTreeExpandedItems = $state<string[]>([]);
+
   loadProgress = $state<number>(0);
 
   updates_channel = new Channel<DataUpdate>();
