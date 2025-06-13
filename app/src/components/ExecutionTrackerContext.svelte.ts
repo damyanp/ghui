@@ -13,7 +13,8 @@ export function getExecutionTrackerContext() {
 
 export class ExecutionTrackerContext {
   scale = $state(0.0001);
-  scrollLeft = $state(0);
+  scrollLeft =0;// $state(0);
+  scrollTop = 0;//$state(0);
 }
 
 

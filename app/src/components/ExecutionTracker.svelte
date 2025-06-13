@@ -41,11 +41,18 @@
 
 <script lang="ts">
   import { ZoomIn, ZoomInIcon, ZoomOut, ZoomOutIcon } from "@lucide/svelte";
-  import { ExecutionTrackerContext, getExecutionTrackerContext, setExecutionTrackerContext } from "./ExecutionTrackerContext.svelte";
+  import {
+    ExecutionTrackerContext,
+    getExecutionTrackerContext,
+    setExecutionTrackerContext,
+  } from "./ExecutionTrackerContext.svelte";
+  import type { Attachment } from "svelte/attachments";
 
   let { data }: { data: Data } = $props();
 
-  let context = getExecutionTrackerContext() || setExecutionTrackerContext(new ExecutionTrackerContext());
+  let context =
+    getExecutionTrackerContext() ||
+    setExecutionTrackerContext(new ExecutionTrackerContext());
 
   const [minDate, maxDate] = $derived.by(() => {
     let minDate = Number.MAX_VALUE;
@@ -139,13 +146,41 @@
     }
   }
 
-  let startDragPos: [number, number] | undefined = $state(undefined);
+  let startDragPos: [[number, number], [number, number]] | undefined =
+    $state(undefined);
   const scrollableId = $props.id();
+
+  const pan: Attachment<HTMLElement> = (element: HTMLElement) => {
+    element.addEventListener("pointerdown", onScrollPointerDown);
+    element.addEventListener("pointerup", onScrollPointerUp);
+    element.addEventListener("pointermove", onScrollPointerMove);
+
+    $effect(() => {
+      if (startDragPos) {
+        element.classList.remove("cursor-grab");
+        element.classList.add("cursor-grabbing");
+      } else {
+        element.classList.add("cursor-grab");
+        element.classList.remove("cursor-grabbing");
+      }
+    });
+
+    return () => {
+      element.removeEventListener("pointerdown", onScrollPointerDown);
+      element.removeEventListener("pointerup", onScrollPointerUp);
+      element.removeEventListener("pointermove", onScrollPointerMove);
+    };
+  };
 
   function onScrollPointerDown(e: PointerEvent) {
     if (e.button === 0) {
-      startDragPos = [e.x, document.getElementById(scrollableId)!.scrollLeft];
+      const scrollable = document.getElementById(scrollableId)!;
+      startDragPos = [
+        [e.screenX, e.screenY],
+        [scrollable.scrollLeft, scrollable.scrollTop],
+      ];
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      e.preventDefault();
     }
   }
 
@@ -153,16 +188,19 @@
     if (e.button === 0) {
       startDragPos = undefined;
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      e.preventDefault();
     }
   }
 
   function onScrollPointerMove(e: PointerEvent) {
     if (startDragPos) {
-      const [startMouseX, startScroll] = startDragPos;
-      const offset = e.x - startMouseX;
-      document
-        .getElementById(scrollableId)!
-        .scroll({ left: startScroll - offset });
+      const [startMouse, startScroll] = startDragPos;
+      const pos = [e.screenX, e.screenY];
+      const offset = startMouse.map((p, i) => pos[i] - p);
+      const scroll = startScroll.map((o, i) => o - offset[i]);
+      const scrollable = document.getElementById(scrollableId)!;
+      scrollable.scroll({ left: scroll[0], top: scroll[1] });
+      e.preventDefault();
     }
   }
 </script>
@@ -172,21 +210,16 @@
   class="grid gap-1 overflow-y-auto"
   style={`grid-template-rows: repeat(${totalRows + 2}, 2.5em); grid-template-columns: repeat(3, max-content) 1fr`}
   onscrollend={(e) => {
-    context.scrollLeft = (e.target as HTMLElement).scrollLeft;
+    const element = e.target as HTMLElement;
+    context.scrollLeft = element.scrollLeft;
+    context.scrollTop = element.scrollTop;
   }}
   {@attach (e) => {
     e.scrollLeft = context.scrollLeft;
+    e.scrollTop = context.scrollTop;
   }}
 >
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="col-start-4 row-start-1 z-[100] group"
-    class:cursor-grab={startDragPos === undefined}
-    class:cursor-grabbing={startDragPos !== undefined}
-    onpointerdown={(e) => onScrollPointerDown(e)}
-    onpointermove={(e) => onScrollPointerMove(e)}
-    onpointerup={(e) => onScrollPointerUp(e)}
-  >
+  <div class="col-start-4 row-start-1 z-[100] group" {@attach pan}>
     <div class="flex w-fit h-[2.5em] fixed right-[2em] items-center gap-1">
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
@@ -237,6 +270,7 @@
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
     style={`grid-row: 1 / span ${totalRows + 2};`}
+    {@attach pan}
   >
     <!-- Vertical lines -->
     <div
@@ -294,6 +328,7 @@
   <div
     class="grid-cols-subgrid grid-rows-subgrid col-start-4 col-end-5 w-full grid"
     style={`grid-row: 2 / span ${totalRows + 2};`}
+    {@attach pan}
   >
     {#each data.epics as epic, epicIndex}
       {#each epic.scenarios as scenario}
