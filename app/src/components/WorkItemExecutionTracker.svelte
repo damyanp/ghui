@@ -162,11 +162,11 @@
 </script>
 
 <ExecutionTracker {data}>
-  {#snippet scenarioEditor(scenario: Scenario & { id?: string })}
+  <!-- {#snippet scenarioEditor(scenario: Scenario & { id?: string })}
     {#if scenario.id}
       {@render editor(scenario.id, scenario.name)}
     {/if}
-  {/snippet}
+  {/snippet} -->
 
   {#snippet barEditor(
     bar: Bar & { deliverableId?: string; deliverableTitle?: string }
