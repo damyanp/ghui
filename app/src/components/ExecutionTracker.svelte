@@ -226,7 +226,8 @@
     e.scrollTop = context.scrollTop;
   }}
 >
-  <div class="col-start-4 row-start-1 z-[100] group" {@attach pan}>
+  <!-- The zoom controls -->
+  <div class="col-start-4 row-start-1 z-[100] group sticky top-0" {@attach pan}>
     <div class="flex w-fit h-[2.5em] fixed right-[2em] items-center gap-1">
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
@@ -245,9 +246,11 @@
     class="grid-cols-subgrid grid-rows-subgrid col-start-1 col-end-4 grid left-0 sticky bg-surface-50-950 z-40 border-r"
     style={`grid-row: 1 / span ${totalRows + 2};`}
   >
-    <div class="font-bold p-1 bg-teal-800">Product Epic</div>
-    <div class="font-bold p-1 bg-teal-800">Target Date</div>
-    <div class="font-bold p-1 bg-teal-800">Engineering Scenarios</div>
+    <div class="font-bold p-1 bg-teal-800 sticky top-0">Product Epic</div>
+    <div class="font-bold p-1 bg-teal-800 sticky top-0">Target Date</div>
+    <div class="font-bold p-1 bg-teal-800 sticky top-0">
+      Engineering Scenarios
+    </div>
 
     {#each data.epics as epic, epicIndex}
       <div
@@ -303,7 +306,7 @@
     </div>
 
     <!-- Row 1's date labels -->
-    <div class="row-start-1 col-start-1 relative text-white bg-teal-800 z-0">
+    <div class="row-start-1 col-start-1 text-white bg-teal-800 z-20  sticky top-0">
       {#each dates as date}
         <div
           class="absolute"
