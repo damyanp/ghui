@@ -47,8 +47,15 @@
     setExecutionTrackerContext,
   } from "./ExecutionTrackerContext.svelte";
   import type { Attachment } from "svelte/attachments";
+  import type { Snippet } from "svelte";
 
-  let { data }: { data: Data } = $props();
+  type Props = {
+    data: Data;
+    scenarioEditor?: Snippet<[Scenario]>;
+    barEditor?: Snippet<[Bar]>;
+  };
+
+  let { data, scenarioEditor, barEditor }: Props = $props();
 
   let context =
     getExecutionTrackerContext() ||
@@ -257,10 +264,11 @@
       </div>
       {#each epic.scenarios as scenario}
         <div
-          class="p-1 col-start-3"
+          class="p-1 col-start-3 group"
           style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)}`}
         >
           {scenario.name}
+          {@render scenarioEditor?.(scenario)}
         </div>
       {/each}
     {/each}
@@ -345,7 +353,7 @@
                 style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
               >
                 <div
-                  class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl"
+                  class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl group"
                   style={`${getBarFillStyle(bar.state)};`}
                 >
                   {#if bar.label}
@@ -353,6 +361,7 @@
                   {:else}
                     &nbsp;
                   {/if}
+                  {@render barEditor?.(bar)}
                 </div>
               </div>
             {/each}

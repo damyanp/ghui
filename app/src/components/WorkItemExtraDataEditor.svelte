@@ -7,10 +7,10 @@
   type Props = {
     content: string;
     onSave: (content: string) => void;
-    title?: Snippet;
+    children?: Snippet;
   };
 
-  let props : Props = $props();
+  let props: Props = $props();
 
   let editorOpen = $state(false);
 </script>
@@ -27,12 +27,10 @@
   transitionsPositionerOut={{ x: -480, duration: 200 }}
 >
   {#snippet trigger()}
-    <Pencil size={16} />
+    <Pencil size={10} />
   {/snippet}
-  {#snippet content()}  
-    {#if props.title}
-    {@render props.title()}
-    {/if}
+  {#snippet content()}
+    {@render props.children?.()}
     <JsonEditor
       onSave={(c) => {
         props.onSave(c);

@@ -11,6 +11,7 @@
     type Row,
     type Scenario,
   } from "./ExecutionTracker.svelte";
+  import WorkItemExtraDataEditor from "./WorkItemExtraDataEditor.svelte";
 
   let context = getWorkItemContext();
 
@@ -138,4 +139,20 @@
   });
 </script>
 
-<ExecutionTracker {data} />
+<ExecutionTracker {data}>
+  {#snippet scenarioEditor(scenario: Scenario)}
+    <div class="inline group-hover:opacity-100 transition-opacity opacity-0">
+      <WorkItemExtraDataEditor content="" onSave={() => {}}>
+        <h1>{scenario.name}</h1>
+      </WorkItemExtraDataEditor>
+    </div>
+  {/snippet}
+
+  {#snippet barEditor(bar: Bar)}
+    <div class="inline group-hover:opacity-100 transition-opacity opacity-0">
+      <WorkItemExtraDataEditor content="" onSave={() => {}}>
+        <h1>{bar.label}</h1>
+      </WorkItemExtraDataEditor>
+    </div>
+  {/snippet}
+</ExecutionTracker>

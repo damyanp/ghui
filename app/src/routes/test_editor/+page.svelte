@@ -13,9 +13,7 @@
     class="inline group-hover:opacity-100 transition-opacity opacity-0"
   >
     <WorkItemExtraDataEditor content={text} onSave={(t) => (text = t)}>
-      {#snippet title()}
-        <h1>Blah blah blah</h1>
-      {/snippet}
+      <h1>Blah blah blah</h1>
     </WorkItemExtraDataEditor>
   </div>
 </div>
