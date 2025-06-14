@@ -45,6 +45,17 @@ export class WorkItemContext {
     this.updates_channel.onmessage = (data_update) =>
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
+
+    this.workItemExtraData = JSON.parse(
+      window.localStorage.getItem("workItemExtraData") || "{}"
+    );
+
+    $effect(() => {
+      window.localStorage.setItem(
+        "workItemExtraData",
+        JSON.stringify(this.workItemExtraData, undefined, " ")
+      );
+    });
   }
 
   on_data_update(dataUpdate: DataUpdate) {
@@ -210,6 +221,21 @@ export class WorkItemContext {
   }
 
   // #endregion
+
+  workItemExtraData: { [key in WorkItemId]?: any } = $state({});
+
+  public getWorkItemExtraData(id: WorkItemId): any {
+    const d = this.workItemExtraData[id];
+    if (d) {
+      return d;
+    }
+
+    return {};
+  }
+
+  public setWorkItemExtraData(id: WorkItemId, data: any) {
+    this.workItemExtraData[id] = data;
+  }
 }
 
 type Progress = number[];

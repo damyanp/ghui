@@ -9,17 +9,29 @@
     content: string;
     onSave: (content:string) => void;
     onCancel: () => void;
+    schema?: any
   };
 
-  let { content, onSave, onCancel }: Props = $props();
+  let { content, onSave, onCancel, schema }: Props = $props();
 
   $effect(() => {
     loader.init().then((monaco) => {
+        if (schema) {
+            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                validate: true,                
+                schemas: [
+                    {
+                        uri: "http://ghui/extra-data.json",
+                        fileMatch: ["*"],
+                        schema: schema
+                    }
+            ]});
+        }
       theEditor = monaco.editor.create(editorContainer, {
         value: content,
         language: "json",
         theme: "vs-dark",
-      });
+      });      
     });
 
     return () => {};

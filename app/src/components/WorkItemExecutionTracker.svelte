@@ -12,6 +12,7 @@
     type Scenario,
   } from "./ExecutionTracker.svelte";
   import WorkItemExtraDataEditor from "./WorkItemExtraDataEditor.svelte";
+  import { type WorkItemId } from "$lib/bindings/WorkItemId";
 
   let context = getWorkItemContext();
 
@@ -56,7 +57,11 @@
         );
       })
       .map((scenario) => {
-        return { name: cleanUpTitle(scenario.title), rows: getRows(scenario) };
+        return {
+          name: cleanUpTitle(scenario.title),
+          rows: getRows(scenario),
+          id: scenario.id,
+        };
       });
 
     if (scenarios.length === 0) return [{ name: "TBD", rows: [] }];
@@ -98,6 +103,8 @@
               label: cleanUpTitle(deliverable.title),
               start: defaultStart,
               end: projectedEnd || defaultEnd,
+              deliverableId: deliverable.id,
+              deliverableTitle: cleanUpTitle(deliverable.title),
             },
           ],
         };
@@ -140,19 +147,30 @@
 </script>
 
 <ExecutionTracker {data}>
-  {#snippet scenarioEditor(scenario: Scenario)}
-    <div class="inline group-hover:opacity-100 transition-opacity opacity-0">
-      <WorkItemExtraDataEditor content="" onSave={() => {}}>
-        <h1>{scenario.name}</h1>
-      </WorkItemExtraDataEditor>
-    </div>
+  {#snippet scenarioEditor(scenario: Scenario & { id?: string })}
+    {#if scenario.id}
+      {@render editor(scenario.id, scenario.name)}
+    {/if}
   {/snippet}
 
-  {#snippet barEditor(bar: Bar)}
-    <div class="inline group-hover:opacity-100 transition-opacity opacity-0">
-      <WorkItemExtraDataEditor content="" onSave={() => {}}>
-        <h1>{bar.label}</h1>
-      </WorkItemExtraDataEditor>
-    </div>
+  {#snippet barEditor(
+    bar: Bar & { deliverableId?: string; deliverableTitle?: string }
+  )}
+    {#if bar.deliverableId && bar.deliverableTitle}
+      {@render editor(bar.deliverableId, bar.deliverableTitle)}
+    {/if}
   {/snippet}
 </ExecutionTracker>
+
+{#snippet editor(id: WorkItemId, label: string)}
+  <div class="inline group-hover:opacity-100 transition-opacity opacity-0">
+    <WorkItemExtraDataEditor
+      content={JSON.stringify(context.getWorkItemExtraData(id), undefined, 4)}
+      onSave={(text) => {
+        context.setWorkItemExtraData(id, JSON.parse(text));
+      }}
+    >
+      <h1>{label}</h1>
+    </WorkItemExtraDataEditor>
+  </div>
+{/snippet}

@@ -13,6 +13,8 @@
   let props: Props = $props();
 
   let editorOpen = $state(false);
+
+  const schema = { type: "object", properties: { q1: { enum: ["a", "b"] } } };
 </script>
 
 <Modal
@@ -32,6 +34,7 @@
   {#snippet content()}
     {@render props.children?.()}
     <JsonEditor
+      {schema}
       onSave={(c) => {
         props.onSave(c);
         editorOpen = false;
