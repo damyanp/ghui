@@ -84,6 +84,21 @@
         );
       })
       .map((deliverable) => {
+        const extraData = context.getWorkItemExtraData(deliverable.id);
+
+        if (extraData && extraData.bars) {
+          const bars = <Bar[]>extraData.bars;
+          return {
+            bars: bars.map((bar) => {
+              return {
+                ...bar,
+                deliverableId: deliverable.id,
+                deliverableTitle: cleanUpTitle(deliverable.title),
+              };
+            }),
+          };
+        }
+
         const projectedEnd = getProjectedEnd(deliverable);
         const status = deliverable.projectItem.status;
 

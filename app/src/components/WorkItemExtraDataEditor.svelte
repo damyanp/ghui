@@ -14,7 +14,33 @@
 
   let editorOpen = $state(false);
 
-  const schema = { type: "object", properties: { q1: { enum: ["a", "b"] } } };
+  const schema = {
+    type: "object",
+    properties: {
+      bars: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            state: {
+              enum: [
+                "completed",
+                "onTrack",
+                "atRisk",
+                "offTrack",
+                "notStarted",
+                "noDates",
+              ],
+            },
+            label: { type: "string" },
+            start: { type: "string" },
+            end: { type: "string" },
+          },
+          required: ["state", "start", "end"]
+        },
+      },
+    },
+  };;
 </script>
 
 <Modal
