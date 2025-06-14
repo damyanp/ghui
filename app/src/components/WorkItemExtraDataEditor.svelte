@@ -53,6 +53,8 @@
   positionerPadding=""
   transitionsPositionerIn={{ x: -480, duration: 200 }}
   transitionsPositionerOut={{ x: -480, duration: 200 }}
+  closeOnEscape={false}
+  closeOnInteractOutside={false}
 >
   {#snippet trigger()}
     <Pencil size={10} />
