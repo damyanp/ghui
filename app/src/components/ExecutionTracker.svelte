@@ -40,7 +40,7 @@
 </script>
 
 <script lang="ts">
-  import { ZoomIn, ZoomOut } from "@lucide/svelte";
+  import { Copy, ZoomIn, ZoomOut } from "@lucide/svelte";
   import {
     ExecutionTrackerContext,
     getExecutionTrackerContext,
@@ -237,6 +237,11 @@
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
         onclick={() => (context.scale = context.scale / 1.1)}
         ><ZoomOut /></button
+      >
+      <button
+        class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
+        onclick={() => navigator.clipboard.writeText(JSON.stringify(data, undefined, " "))}
+        ><Copy /></button
       >
     </div>
   </div>
