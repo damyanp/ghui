@@ -86,17 +86,48 @@
       .map((deliverable) => {
         const extraData = context.getWorkItemExtraData(deliverable.id);
 
-        if (extraData && extraData.bars) {
-          const bars = <Bar[]>extraData.bars;
-          return {
-            bars: bars.map((bar) => {
-              return {
-                ...bar,
+        // If there are bars explicitly provided these override everything
+        if (extraData) {
+          if (extraData.bars) {
+            const bars = <Bar[]>extraData.bars;
+            return {
+              bars: bars.map((bar) => {
+                return {
+                  ...bar,
+                  deliverableId: deliverable.id,
+                  deliverableTitle: cleanUpTitle(deliverable.title),
+                };
+              }),
+            };
+          }
+          if (extraData.split) {
+            let bars = [];
+            let previousBar: Partial<Bar> | undefined = undefined;
+
+            for (const entry of <Partial<Bar>[]>extraData.split) {
+              let newBar = $state.snapshot(entry);
+              if (!newBar.start) {
+                newBar.start = previousBar?.end;
+                if (!newBar.start) newBar.start = defaultStart;
+              }
+
+              if (previousBar && !previousBar.end)
+                previousBar.end = newBar.start;
+
+              bars.push({
+                ...newBar,
                 deliverableId: deliverable.id,
                 deliverableTitle: cleanUpTitle(deliverable.title),
-              };
-            }),
-          };
+              });
+              previousBar = bars[bars.length - 1];
+            }
+
+            if (bars.length > 1 && !bars[bars.length - 1].end) {
+              bars[bars.length - 1].end = getProjectedEnd(deliverable);
+            }
+            console.log(bars);
+            return { bars: <Bar[]>bars };
+          }
         }
 
         const projectedEnd = getProjectedEnd(deliverable);

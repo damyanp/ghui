@@ -14,33 +14,44 @@
 
   let editorOpen = $state(false);
 
+  const barSchema = {
+    type: "object",
+    properties: {
+      state: {
+        enum: [
+          "completed",
+          "onTrack",
+          "atRisk",
+          "offTrack",
+          "notStarted",
+          "noDates",
+        ],
+      },
+      label: { type: "string" },
+      start: { type: "string" },
+      end: { type: "string" },
+    },
+  };
+
   const schema = {
     type: "object",
     properties: {
       bars: {
         type: "array",
         items: {
-          type: "object",
-          properties: {
-            state: {
-              enum: [
-                "completed",
-                "onTrack",
-                "atRisk",
-                "offTrack",
-                "notStarted",
-                "noDates",
-              ],
-            },
-            label: { type: "string" },
-            start: { type: "string" },
-            end: { type: "string" },
-          },
-          required: ["state", "start", "end"]
+          ...barSchema,
+          required: ["label", "state", "start", "end"],
+        },
+      },
+      split: {
+        type: "array",
+        items: {
+          ...barSchema,
+          required: ["state", "label"],
         },
       },
     },
-  };;
+  };
 </script>
 
 <Modal
