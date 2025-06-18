@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
-  import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
+  import { getWorkItemContext, linkHRef } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable from "./TreeTable.svelte";
   import { createRawSnippet, type Snippet } from "svelte";
@@ -241,23 +241,6 @@
     if (row.data.type === "workItem") context.updateWorkItem(row.id);
   }
 
-  function linkHRef(item: WorkItem): string {
-    const databaseId = item.projectItem.databaseId;
-    const owner = item.repoNameWithOwner?.split("/")[0];
-    const repo = item.repoNameWithOwner?.split("/")[1];
-    const number = item.resourcePath?.split("/")[4];
-
-    if (
-      item.data.type !== "pullRequest" &&
-      databaseId &&
-      owner &&
-      repo &&
-      number
-    ) {
-      return `https://github.com/orgs/llvm/projects/4?pane=issue&itemId=${databaseId}&issue=${owner}%7C${repo}%7C${number}`;
-    }
-    return `https://github.com${item.resourcePath}`;
-  }
 
   let expanded = $state(context.workItemTreeExpandedItems);
 </script>

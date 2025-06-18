@@ -17,6 +17,7 @@
   export type Scenario = {
     name: string;
     rows: Row[];
+    getMenuItems?: () => MenuItem[];
   };
 
   export type Row = {
@@ -28,6 +29,7 @@
     label?: string;
     start: Date;
     end: Date;
+    getMenuItems?: () => MenuItem[];
   };
 
   export type BarState =
@@ -48,14 +50,15 @@
   } from "./ExecutionTrackerContext.svelte";
   import type { Attachment } from "svelte/attachments";
   import type { Snippet } from "svelte";
+  import ExecutionTrackerContextMenu, {
+    type MenuItem,
+  } from "./ExecutionTrackerContextMenu.svelte";
 
   type Props = {
     data: Data;
-    scenarioEditor?: Snippet<[Scenario]>;
-    barEditor?: Snippet<[Bar]>;
   };
 
-  let { data, scenarioEditor, barEditor }: Props = $props();
+  let { data }: Props = $props();
 
   let context =
     getExecutionTrackerContext() ||
@@ -240,7 +243,8 @@
       >
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
-        onclick={() => navigator.clipboard.writeText(JSON.stringify(data, undefined, " "))}
+        onclick={() =>
+          navigator.clipboard.writeText(JSON.stringify(data, undefined, " "))}
         ><Copy /></button
       >
     </div>
@@ -271,13 +275,17 @@
         {epic.targetDate}
       </div>
       {#each epic.scenarios as scenario}
-        <div
-          class="p-1 col-start-3 group"
-          style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)}`}
-        >
-          {scenario.name}
-          {@render scenarioEditor?.(scenario)}
-        </div>
+        <ExecutionTrackerContextMenu getItems={scenario.getMenuItems}>
+          {#snippet trigger({ props }: { props: any })}
+            <div
+              {...props}
+              class="p-1 col-start-3 group"
+              style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)};`}
+            >
+              {scenario.name}
+            </div>
+          {/snippet}
+        </ExecutionTrackerContextMenu>
       {/each}
     {/each}
   </div>
@@ -311,7 +319,9 @@
     </div>
 
     <!-- Row 1's date labels -->
-    <div class="row-start-1 col-start-1 text-white bg-teal-800 z-20  sticky top-0">
+    <div
+      class="row-start-1 col-start-1 text-white bg-teal-800 z-20 sticky top-0"
+    >
       {#each dates as date}
         <div
           class="absolute"
@@ -356,22 +366,26 @@
             {#each row.bars as bar}
               {@const start = convertDate(bar.start) - minX}
               {@const width = convertDate(bar.end) - convertDate(bar.start)}
-              <div
-                class="absolute content-center text-center h-full z-10"
-                style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
-              >
-                <div
-                  class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl group"
-                  style={`${getBarFillStyle(bar.state)};`}
-                >
-                  {#if bar.label}
-                    {bar.label}
-                  {:else}
-                    &nbsp;
-                  {/if}
-                  {@render barEditor?.(bar)}
-                </div>
-              </div>
+              <ExecutionTrackerContextMenu getItems={bar.getMenuItems}>
+                {#snippet trigger({ props }: { props: any })}
+                  <div
+                    {...props}
+                    class="absolute content-center text-center h-full z-10"
+                    style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
+                  >
+                    <div
+                      class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl group"
+                      style={`${getBarFillStyle(bar.state)};`}
+                    >
+                      {#if bar.label}
+                        {bar.label}
+                      {:else}
+                        &nbsp;
+                      {/if}
+                    </div>
+                  </div>
+                {/snippet}
+              </ExecutionTrackerContextMenu>
             {/each}
           </div>
         {/each}

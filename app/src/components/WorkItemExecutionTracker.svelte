@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { WorkItem } from "$lib/bindings/WorkItem";
-  import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
+  import { getWorkItemContext, linkHRef } from "$lib/WorkItemContext.svelte";
   import dayjs from "dayjs";
   import ExecutionTracker, {
     type Bar,
@@ -13,6 +13,8 @@
   } from "./ExecutionTracker.svelte";
   import WorkItemExtraDataEditor from "./WorkItemExtraDataEditor.svelte";
   import { type WorkItemId } from "$lib/bindings/WorkItemId";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  
 
   let context = getWorkItemContext();
 
@@ -46,7 +48,7 @@
   const defaultEnd = dayjs().add(3, "month").format("YYYY-MM-DD");
 
   function getScenarios(epicId: FieldOptionId): Scenario[] {
-    const scenarios = Object.values(context.data.workItems)
+    const scenarios: Scenario[] = Object.values(context.data.workItems)
       .filter((workItem): workItem is WorkItem => {
         if (!workItem) return false;
 
@@ -57,10 +59,19 @@
         );
       })
       .map((scenario) => {
-        return {
+        return <Scenario>{
           name: cleanUpTitle(scenario.title),
           rows: getRows(scenario),
           id: scenario.id,
+          getMenuItems: () => [
+            {
+              type: "action",
+              title: "Open...",
+              action: () => {
+                openUrl(linkHRef(scenario));
+              },
+            },
+          ],
         };
       })
       .sort((a, b) => getScenarioStartDate(a) - getScenarioStartDate(b));
@@ -160,7 +171,9 @@
             {
               state,
               label: cleanUpTitle(deliverable.title),
-              start: projectedEnd ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
+              start: projectedEnd
+                ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD")
+                : dayjs().format("YYYY-MM-DD"),
               end: projectedEnd || defaultEnd,
               deliverableId: deliverable.id,
               deliverableTitle: cleanUpTitle(deliverable.title),
