@@ -43,7 +43,7 @@
   );
 
   const defaultStart = startDate;
-  const defaultEnd = dayjs().add(1, "week").format("YYYY-MM-DD");
+  const defaultEnd = dayjs().add(3, "month").format("YYYY-MM-DD");
 
   function getScenarios(epicId: FieldOptionId): Scenario[] {
     const scenarios = Object.values(context.data.workItems)
@@ -62,10 +62,23 @@
           rows: getRows(scenario),
           id: scenario.id,
         };
-      });
+      })
+      .sort((a, b) => getScenarioStartDate(a) - getScenarioStartDate(b));
 
     if (scenarios.length === 0) return [{ name: "TBD", rows: [] }];
     else return scenarios;
+  }
+
+  function getScenarioStartDate(scenario: Scenario) {
+    if (scenario.rows.length === 0) return dayjs().unix();
+
+    return scenario.rows
+      .map((row) =>
+        row.bars
+          .map((bar) => dayjs(bar.start).unix())
+          .reduce((a, b) => Math.min(a, b), Number.MAX_VALUE)
+      )
+      .reduce((a, b) => Math.min(a, b), Number.MAX_VALUE);
   }
 
   function getRows(scenario: WorkItem): Row[] {
@@ -147,7 +160,7 @@
             {
               state,
               label: cleanUpTitle(deliverable.title),
-              start: defaultStart,
+              start: projectedEnd ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
               end: projectedEnd || defaultEnd,
               deliverableId: deliverable.id,
               deliverableTitle: cleanUpTitle(deliverable.title),
