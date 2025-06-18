@@ -122,7 +122,7 @@
               previousBar = bars[bars.length - 1];
             }
 
-            if (bars.length > 1 && !bars[bars.length - 1].end) {
+            if (bars.length > 0 && !bars[bars.length - 1].end) {
               bars[bars.length - 1].end = getProjectedEnd(deliverable);
             }
             console.log(bars);
