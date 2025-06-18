@@ -269,7 +269,12 @@ fn test_apply_changes_update_parent() {
     let mut data = TestData::default();
 
     let child = data.build().issue().add();
-    let old_parent = data.build().sub_issues(&[&child]).add();
+    let other_child_1 = data.build().issue().add();
+    let other_child_2 = data.build().issue().add();
+    let old_parent = data
+        .build()
+        .sub_issues(&[&other_child_1, &child, &other_child_2])
+        .add();
     let new_parent = data.build().issue().add();
 
     let mut changes = Changes::default();
@@ -293,7 +298,7 @@ fn test_apply_changes_update_parent() {
         .unwrap()
         .get_sub_issues()
         .unwrap();
-    assert_eq!(actual_old_parent_sub_issues.len(), 0);
+    assert_eq!(actual_old_parent_sub_issues.len(), 2);
 
     let actual_new_parent_sub_issues = data
         .work_items

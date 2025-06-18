@@ -376,7 +376,7 @@ impl WorkItems {
                     if let Some(old_parent_id) = &old_parent_id {
                         if let Some(old_parent) = self.get_mut(old_parent_id) {
                             if let WorkItemData::Issue(issue) = &mut old_parent.data {
-                                issue.sub_issues.pop_if(|i| i == child_id);
+                                issue.sub_issues.retain(|i| i != child_id);
                             } else {
                                 println!("WARNING: old parent '{0}' not an issue", old_parent_id.0);
                             }

@@ -52,6 +52,20 @@ impl<'a> NodeBuilder<'a> {
 
     pub fn build(&mut self) -> Vec<Node> {
         self.add_nodes(&self.work_items.get_roots(), 0, "");
+
+        #[cfg(debug_assertions)]
+        {
+            let ids: Vec<String> = self.nodes.iter().map(|i| i.id.clone()).collect();
+            let mut unique_ids = std::collections::HashSet::new();
+            for id in &ids {
+                assert!(
+                    unique_ids.insert(id.clone()),
+                    "Duplicate node ID found: {}",
+                    id
+                );
+            }
+        }
+
         std::mem::take(&mut self.nodes)
     }
 
