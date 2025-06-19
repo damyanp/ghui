@@ -65,6 +65,7 @@
 
     const barRect = barEl.getBoundingClientRect();
     const scrollRect = scrollable.getBoundingClientRect();
+    const labelRect = labelEl.getBoundingClientRect();
 
     // Find intersection with scrollable area
     let visibleLeft = Math.max(barRect.left, scrollRect.left);
@@ -86,9 +87,16 @@
     const visibleWidth = Math.max(0, visibleRight - visibleLeft);
 
     // Center label in visible area
-    const offset = visibleLeft - barRect.left;
-    labelEl.style.left = `${offset + visibleWidth / 2}px`;
-    labelEl.style.transform = "translateX(-50%)";
+    const offset = visibleLeft - barRect.left;    
+    if (labelRect.width < visibleWidth) {
+      labelEl.style.left = `${offset + visibleWidth / 2}px`;
+      labelEl.style.transform = "translateX(-50%)";
+      labelEl.style.color = "black";
+    }
+    else {
+      labelEl.style.left = `${offset}px`;
+      labelEl.style.transform = "";
+    }
     labelEl.style.position = "absolute";
     labelEl.style.width = "max-content";
     labelEl.style.pointerEvents = "none";
