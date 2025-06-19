@@ -106,6 +106,13 @@
     else return scenarios;
   }
 
+  function getTitleMenuItem(workItem: WorkItem): MenuItem {
+    return {
+      type: "text",
+      title: workItem.title,
+    };
+  }
+
   function getOpenMenuItem(workItem: WorkItem): MenuItem {
     return {
       type: "link",
@@ -221,13 +228,14 @@
       let estimate: number = extraData.estimate;
 
       if (!start) {
-        start = (end && estimate)
-          ? dayjs(end).subtract(estimate, "days").format("YYYY-MM-DD")
-          : dayjs().add(1, "week").format("YYYY-MM-DD");
+        start =
+          end && estimate
+            ? dayjs(end).subtract(estimate, "days").format("YYYY-MM-DD")
+            : dayjs().add(1, "week").format("YYYY-MM-DD");
       }
 
       if (!end && estimate) {
-        end = dayjs(start).add(estimate, "days").format("YYYY-MM-DD")
+        end = dayjs(start).add(estimate, "days").format("YYYY-MM-DD");
       }
 
       return {
@@ -251,10 +259,15 @@
         return {
           ...bar,
           getMenuItems: () => {
-            const items = bar.getMenuItems ? bar.getMenuItems() : [];
+            let items = bar.getMenuItems ? bar.getMenuItems() : [];
 
             if (bar.data) {
-              items.push(getOpenMenuItem(bar.data), getEditMenuItem(bar.data));
+              items = [
+                getTitleMenuItem(bar.data),
+                ...items,
+                getOpenMenuItem(bar.data),
+                getEditMenuItem(bar.data),
+              ];
             }
 
             return items;

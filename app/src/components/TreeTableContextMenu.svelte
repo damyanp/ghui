@@ -22,7 +22,7 @@
       <ContextMenu.Content class="p-3 border rounded bg-surface-900">
         {#each getItems() as item}
           {#if item.type === "text"}
-            <ContextMenu.Item class="cursor-default">
+            <ContextMenu.Item class="cursor-default text-lg">
               {item.title}
             </ContextMenu.Item>
           {:else if item.type === "action"}
