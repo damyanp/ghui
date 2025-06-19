@@ -196,14 +196,20 @@
               ? "offTrack"
               : "onTrack";
 
+      let start: string | undefined = extraData.start;
+
+      if (!start) {
+        start = projectedEnd
+          ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD")
+          : dayjs().format("YYYY-MM-DD");
+      }
+
       return {
         bars: [
           {
             state,
             label: cleanUpTitle(deliverable.title),
-            start: projectedEnd
-              ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD")
-              : dayjs().format("YYYY-MM-DD"),
+            start,
             end: projectedEnd || defaultEnd,
             deliverableId: deliverable.id,
             deliverableTitle: cleanUpTitle(deliverable.title),
@@ -240,7 +246,7 @@
     if (item.projectItem.iteration.loadState === "loaded") {
       const iterationId = item.projectItem.iteration.value;
       const iteration = context.data.fields.iteration.options.find(
-      (i) => i.id === iterationId
+        (i) => i.id === iterationId
       );
       if (iteration) {
         return dayjs(iteration.data.startDate)

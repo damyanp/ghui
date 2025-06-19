@@ -49,6 +49,7 @@
           required: ["state", "label"],
         },
       },
+      start: { type: "string" }
     },
   };
 </script>
