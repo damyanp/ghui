@@ -1,27 +1,25 @@
 <script lang="ts" module>
-  import dayjs from "dayjs";
-
-  export type Data = {
-    epics: Epic[];
+  export type Data<BAR extends Bar> = {
+    epics: Epic<BAR>[];
     startDate: Date;
   };
 
   export type Date = string;
 
-  export type Epic = {
+  export type Epic<BAR extends Bar> = {
     name: string;
     targetDate: Date;
-    scenarios: Scenario[];
+    scenarios: Scenario<BAR>[];
   };
 
-  export type Scenario = {
+  export type Scenario<BAR extends Bar> = {
     name: string;
-    rows: Row[];
+    rows: Row<BAR>[];
     getMenuItems?: () => MenuItem[];
   };
 
-  export type Row = {
-    bars: Bar[];
+  export type Row<BAR extends Bar> = {
+    bars: BAR[];
   };
 
   export type Bar = {
@@ -41,7 +39,8 @@
     | "noDates";
 </script>
 
-<script lang="ts">
+<script lang="ts" generics="BAR extends Bar">
+  import dayjs from "dayjs";
   import { Copy, ZoomIn, ZoomOut } from "@lucide/svelte";
   import {
     ExecutionTrackerContext,
@@ -50,12 +49,11 @@
   } from "./ExecutionTrackerContext.svelte";
   import type { Attachment } from "svelte/attachments";
   import type { Snippet } from "svelte";
-  import ExecutionTrackerContextMenu, {
-    type MenuItem,
-  } from "./ExecutionTrackerContextMenu.svelte";
+  import type { MenuItem } from "./TreeTableContextMenu.svelte";
+  import TreeTableContextMenu from "./TreeTableContextMenu.svelte";
 
   type Props = {
-    data: Data;
+    data: Data<BAR>;
   };
 
   let { data }: Props = $props();
@@ -114,7 +112,7 @@
     }
   }
 
-  function getEpicRowSpan(epic: Epic) {
+  function getEpicRowSpan(epic: Epic<BAR>) {
     return Math.max(
       1,
       epic.scenarios.reduce((prev, current) => {
@@ -275,7 +273,7 @@
         {epic.targetDate}
       </div>
       {#each epic.scenarios as scenario}
-        <ExecutionTrackerContextMenu getItems={scenario.getMenuItems}>
+        <TreeTableContextMenu getItems={scenario.getMenuItems}>
           {#snippet trigger({ props }: { props: any })}
             <div
               {...props}
@@ -285,7 +283,7 @@
               {scenario.name}
             </div>
           {/snippet}
-        </ExecutionTrackerContextMenu>
+        </TreeTableContextMenu>
       {/each}
     {/each}
   </div>
@@ -366,7 +364,7 @@
             {#each row.bars as bar}
               {@const start = convertDate(bar.start) - minX}
               {@const width = convertDate(bar.end) - convertDate(bar.start)}
-              <ExecutionTrackerContextMenu getItems={bar.getMenuItems}>
+              <TreeTableContextMenu getItems={bar.getMenuItems}>
                 {#snippet trigger({ props }: { props: any })}
                   <div
                     {...props}
@@ -385,7 +383,7 @@
                     </div>
                   </div>
                 {/snippet}
-              </ExecutionTrackerContextMenu>
+              </TreeTableContextMenu>
             {/each}
           </div>
         {/each}

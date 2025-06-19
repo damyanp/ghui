@@ -290,3 +290,8 @@ export function linkHRef(item: WorkItem): string {
   }
   return `https://github.com${item.resourcePath}`;
 }
+
+export function linkTitle(item: WorkItem): string {
+  const path = item.resourcePath?.split("/");
+  return `${path?.at(-3)}#${path?.at(-1)}`;
+}

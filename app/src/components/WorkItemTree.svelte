@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
-  import { getWorkItemContext, linkHRef } from "$lib/WorkItemContext.svelte";
+  import { getWorkItemContext, linkHRef, linkTitle } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable from "./TreeTable.svelte";
   import { createRawSnippet, type Snippet } from "svelte";
@@ -279,7 +279,6 @@
 
 {#snippet renderTitle(item: WorkItem | undefined)}
   {#if item}
-    {@const path = item.resourcePath?.split("/")}
     <div class="overflow-hidden whitespace-nowrap overflow-ellipsis shrink-2">
       <ItemMiniIcon workItemData={item.data} />
       {item.title}
@@ -289,7 +288,7 @@
       target="_blank"
       href={linkHRef(item)}
     >
-      {path?.at(-3)}#{path?.at(-1)}
+      {linkTitle(item)}
     </a>
   {:else}
     &nbsp;

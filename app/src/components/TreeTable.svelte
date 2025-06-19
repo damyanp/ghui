@@ -256,7 +256,7 @@
       {@const modifiedDescendent = !modified && row.modifiedDescendent}
       {@const unmodified = !(modified || modifiedDescendent)}
       {@const onRowFirstVisible = props.onRowFirstVisible}
-      <TreeTableContextMenu items={props.getContextMenuItems(row)}>
+      <TreeTableContextMenu getItems={() => props.getContextMenuItems(row)}>
         {#snippet trigger({ props }: { props: any })}
           {@const menuOpen = props["data-state"] === "open"}
           <div

@@ -1,18 +1,17 @@
 <script lang="ts">
   import { Modal } from "@skeletonlabs/skeleton-svelte";
   import JsonEditor from "./JsonEditor.svelte";
-  import { Pencil } from "@lucide/svelte";
   import type { Snippet } from "svelte";
 
   type Props = {
-    content: string;
+    open: boolean;
+    getInitialContent: () => string;
     onSave: (content: string) => void;
+    onCancel: () => void;
     children?: Snippet;
   };
 
   let props: Props = $props();
-
-  let editorOpen = $state(false);
 
   const barSchema = {
     type: "object",
@@ -55,9 +54,7 @@
 </script>
 
 <Modal
-  open={editorOpen}
-  onOpenChange={(e) => (editorOpen = e.open)}
-  triggerBase="btn btn-sm"
+  open={props.open}
   contentBase="bg-surface-100-900 p-4 space-y-4 shadow-xl w-[480px] h-screen flex flex-col"
   positionerJustify="justify-start"
   positionerAlign=""
@@ -66,22 +63,17 @@
   transitionsPositionerOut={{ x: -480, duration: 200 }}
   closeOnEscape={false}
   closeOnInteractOutside={false}
+  modal={false}
 >
-  {#snippet trigger()}
-    <Pencil size={10} />
-  {/snippet}
   {#snippet content()}
     {@render props.children?.()}
     <JsonEditor
       {schema}
       onSave={(c) => {
         props.onSave(c);
-        editorOpen = false;
       }}
-      onCancel={() => {
-        editorOpen = false;
-      }}
-      content={props.content}
+      onCancel={props.onCancel}
+      content={props.getInitialContent()}
     />
   {/snippet}
 </Modal>

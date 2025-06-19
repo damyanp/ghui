@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { WorkItem } from "$lib/bindings/WorkItem";
-  import { getWorkItemContext, linkHRef } from "$lib/WorkItemContext.svelte";
+  import {
+    getWorkItemContext,
+    linkHRef,
+    linkTitle,
+  } from "$lib/WorkItemContext.svelte";
   import dayjs from "dayjs";
   import ExecutionTracker, {
     type Bar,
@@ -14,13 +18,19 @@
   import WorkItemExtraDataEditor from "./WorkItemExtraDataEditor.svelte";
   import { type WorkItemId } from "$lib/bindings/WorkItemId";
   import { openUrl } from "@tauri-apps/plugin-opener";
-  
+  import type { MenuItem } from "./TreeTableContextMenu.svelte";
+  import { tick } from "svelte";
 
   let context = getWorkItemContext();
 
   const startDate = "2025-02-09";
 
-  const epics: Epic[] = $derived.by(() => {
+  type BarD = Bar & {
+    deliverableId?: string;
+    deliverableTitle?: string;
+  };
+
+  const epics: Epic<BarD>[] = $derived.by(() => {
     return Object.values(context.data.fields.epic.options).map(
       (epicFieldOption) => {
         return {
@@ -47,8 +57,8 @@
   const defaultStart = startDate;
   const defaultEnd = dayjs().add(3, "month").format("YYYY-MM-DD");
 
-  function getScenarios(epicId: FieldOptionId): Scenario[] {
-    const scenarios: Scenario[] = Object.values(context.data.workItems)
+  function getScenarios(epicId: FieldOptionId): Scenario<BarD>[] {
+    const scenarios: Scenario<BarD>[] = Object.values(context.data.workItems)
       .filter((workItem): workItem is WorkItem => {
         if (!workItem) return false;
 
@@ -59,19 +69,11 @@
         );
       })
       .map((scenario) => {
-        return <Scenario>{
+        return {
           name: cleanUpTitle(scenario.title),
           rows: getRows(scenario),
           id: scenario.id,
-          getMenuItems: () => [
-            {
-              type: "action",
-              title: "Open...",
-              action: () => {
-                openUrl(linkHRef(scenario));
-              },
-            },
-          ],
+          getMenuItems: () => [getOpenMenuItem(scenario)],
         };
       })
       .sort((a, b) => getScenarioStartDate(a) - getScenarioStartDate(b));
@@ -80,7 +82,26 @@
     else return scenarios;
   }
 
-  function getScenarioStartDate(scenario: Scenario) {
+  function getOpenMenuItem(workItem: WorkItem): MenuItem {
+    return {
+      type: "link",
+      title: linkTitle(workItem),
+      href: linkHRef(workItem),
+    };
+  }
+
+  function getEditMenuItem(workItemId: WorkItemId): MenuItem {
+    return {
+      type: "action",
+      title: "Edit...",
+      action: () => {
+        editorWorkItemId = workItemId;
+        editorOpen = true;
+      },
+    };
+  }
+
+  function getScenarioStartDate(scenario: Scenario<BarD>) {
     if (scenario.rows.length === 0) return dayjs().unix();
 
     return scenario.rows
@@ -92,105 +113,134 @@
       .reduce((a, b) => Math.min(a, b), Number.MAX_VALUE);
   }
 
-  function getRows(scenario: WorkItem): Row[] {
-    if (scenario.data.type !== "issue") return [];
-
-    const rows = scenario.data.subIssues
-      .map((id) => {
-        return context.data.workItems[id];
-      })
-      .filter((i): i is WorkItem => {
-        if (!i) return false;
-
-        return (
-          i.projectItem.kind.loadState === "loaded" &&
-          i.projectItem.kind.value === deliverableKindId
-        );
-      })
-      .map((deliverable) => {
-        const extraData = context.getWorkItemExtraData(deliverable.id);
-
-        // If there are bars explicitly provided these override everything
-        if (extraData) {
-          if (extraData.bars) {
-            const bars = <Bar[]>extraData.bars;
-            return {
-              bars: bars.map((bar) => {
-                return {
-                  ...bar,
-                  deliverableId: deliverable.id,
-                  deliverableTitle: cleanUpTitle(deliverable.title),
-                };
-              }),
-            };
-          }
-          if (extraData.split) {
-            let bars = [];
-            let previousBar: Partial<Bar> | undefined = undefined;
-
-            for (const entry of <Partial<Bar>[]>extraData.split) {
-              let newBar = $state.snapshot(entry);
-              if (!newBar.start) {
-                newBar.start = previousBar?.end;
-                if (!newBar.start) newBar.start = defaultStart;
-              }
-
-              if (previousBar && !previousBar.end)
-                previousBar.end = newBar.start;
-
-              bars.push({
-                ...newBar,
-                deliverableId: deliverable.id,
-                deliverableTitle: cleanUpTitle(deliverable.title),
-              });
-              previousBar = bars[bars.length - 1];
-            }
-
-            if (bars.length > 0 && !bars[bars.length - 1].end) {
-              bars[bars.length - 1].end = getProjectedEnd(deliverable);
-            }
-            console.log(bars);
-            return { bars: <Bar[]>bars };
-          }
-        }
-
-        const projectedEnd = getProjectedEnd(deliverable);
-        const status = deliverable.projectItem.status;
-
-        const state: BarState =
-          status === closedStatusId
-            ? "completed"
-            : projectedEnd === undefined
-              ? "noDates"
-              : dayjs(projectedEnd) < dayjs()
-                ? "offTrack"
-                : "onTrack";
-
-        return {
-          bars: [
-            {
-              state,
-              label: cleanUpTitle(deliverable.title),
-              start: projectedEnd
-                ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD")
-                : dayjs().format("YYYY-MM-DD"),
-              end: projectedEnd || defaultEnd,
-              deliverableId: deliverable.id,
-              deliverableTitle: cleanUpTitle(deliverable.title),
-            },
-          ],
-        };
-      });
+  function getRows(scenario: WorkItem): Row<BarD>[] {
+    const rows = getDeliverables()
+      .map(buildRowFromDeliverable)
+      .map(addStandardMenuItems);
 
     if (rows.length === 0) return [{ bars: [] }];
     else return rows;
+
+    function getDeliverables(): WorkItem[] {
+      if (scenario.data.type !== "issue") return [];
+
+      return scenario.data.subIssues
+        .map((id) => {
+          return context.data.workItems[id];
+        })
+        .filter((i): i is WorkItem => {
+          if (!i) return false;
+
+          return (
+            i.projectItem.kind.loadState === "loaded" &&
+            i.projectItem.kind.value === deliverableKindId
+          );
+        });
+    }
+
+    function buildRowFromDeliverable(deliverable: WorkItem): Row<BarD> {
+      const extraData = context.getWorkItemExtraData(deliverable.id);
+
+      // If there are bars explicitly provided these override everything
+      if (extraData) {
+        if (extraData.bars) {
+          const bars = <BarD[]>extraData.bars;
+          return {
+            bars: bars.map((bar) => {
+              return {
+                ...bar,
+                deliverableId: deliverable.id,
+                deliverableTitle: cleanUpTitle(deliverable.title),
+              };
+            }),
+          };
+        }
+        if (extraData.split) {
+          let bars: Partial<BarD>[] = [];
+          let previousBar: Partial<BarD> | undefined = undefined;
+
+          for (const entry of <Partial<BarD>[]>extraData.split) {
+            let newBar = $state.snapshot(entry);
+            if (!newBar.start) {
+              newBar.start = previousBar?.end;
+              if (!newBar.start) newBar.start = defaultStart;
+            }
+
+            if (previousBar && !previousBar.end) previousBar.end = newBar.start;
+
+            bars.push(<BarD>{
+              ...newBar,
+              deliverableId: deliverable.id,
+              deliverableTitle: cleanUpTitle(deliverable.title),
+            });
+            previousBar = bars[bars.length - 1];
+          }
+
+          if (bars.length > 0 && !bars[bars.length - 1].end) {
+            bars[bars.length - 1].end = getProjectedEnd(deliverable);
+          }
+          console.log(bars);
+          return { bars: <BarD[]>bars };
+        }
+      }
+
+      const projectedEnd = getProjectedEnd(deliverable);
+      const status = deliverable.projectItem.status;
+
+      const state: BarState =
+        status === closedStatusId
+          ? "completed"
+          : projectedEnd === undefined
+            ? "noDates"
+            : dayjs(projectedEnd) < dayjs()
+              ? "offTrack"
+              : "onTrack";
+
+      return {
+        bars: [
+          {
+            state,
+            label: cleanUpTitle(deliverable.title),
+            start: projectedEnd
+              ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD")
+              : dayjs().format("YYYY-MM-DD"),
+            end: projectedEnd || defaultEnd,
+            deliverableId: deliverable.id,
+            deliverableTitle: cleanUpTitle(deliverable.title),
+          },
+        ],
+      };
+    }
+  }
+
+  function addStandardMenuItems(row: Row<BarD>): Row<BarD> {
+    return {
+      ...row,
+      bars: row.bars.map((bar) => {
+        return {
+          ...bar,
+          getMenuItems: () => {
+            const items = bar.getMenuItems ? bar.getMenuItems() : [];
+
+            if (bar.deliverableId) {
+              items.push(
+                getOpenMenuItem(context.data.workItems[bar.deliverableId]!),
+                getEditMenuItem(bar.deliverableId)
+              );
+            }
+
+            return items;
+          },
+        };
+      }),
+    };
   }
 
   function getProjectedEnd(item: WorkItem) {
     if (item.projectItem.iteration.loadState === "loaded") {
       const iterationId = item.projectItem.iteration.value;
       const iteration = context.data.fields.iteration.options.find(
-        (i) => i.id === iterationId
+      (i) => i.id === iterationId
       );
       if (iteration) {
         return dayjs(iteration.data.startDate)
@@ -210,39 +260,34 @@
       .trim();
   }
 
-  const data: ExecutionTrackerData = $derived.by(() => {
+  const data: ExecutionTrackerData<BarD> = $derived.by(() => {
     return {
       startDate,
       epics: epics,
     };
   });
+
+  let editorWorkItemId: string | undefined = $state(undefined);
+  let editorOpen = $state(false);
 </script>
 
-<ExecutionTracker {data}>
-  <!-- {#snippet scenarioEditor(scenario: Scenario & { id?: string })}
-    {#if scenario.id}
-      {@render editor(scenario.id, scenario.name)}
-    {/if}
-  {/snippet} -->
+<ExecutionTracker {data} />
 
-  {#snippet barEditor(
-    bar: Bar & { deliverableId?: string; deliverableTitle?: string }
-  )}
-    {#if bar.deliverableId && bar.deliverableTitle}
-      {@render editor(bar.deliverableId, bar.deliverableTitle)}
-    {/if}
-  {/snippet}
-</ExecutionTracker>
-
-{#snippet editor(id: WorkItemId, label: string)}
-  <div class="inline group-hover:opacity-100 transition-opacity opacity-0">
-    <WorkItemExtraDataEditor
-      content={JSON.stringify(context.getWorkItemExtraData(id), undefined, 4)}
-      onSave={(text) => {
-        context.setWorkItemExtraData(id, JSON.parse(text));
-      }}
-    >
-      <h1>{label}</h1>
-    </WorkItemExtraDataEditor>
-  </div>
-{/snippet}
+<WorkItemExtraDataEditor
+  getInitialContent={() =>
+    JSON.stringify(
+      context.getWorkItemExtraData(editorWorkItemId!),
+      undefined,
+      4
+    )}
+  onSave={(text) => {
+    context.setWorkItemExtraData(editorWorkItemId!, JSON.parse(text));
+    editorOpen = false;
+  }}
+  onCancel={() => {
+    editorOpen = false;
+  }}
+  open={editorOpen}
+>
+  <h1>{context.data!.workItems[$state.snapshot(editorWorkItemId)!]?.title}</h1>
+</WorkItemExtraDataEditor>

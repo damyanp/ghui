@@ -5,10 +5,11 @@
     */
 
   import ExecutionTracker, {
+    type Bar,
     type Data,
   } from "../../components/ExecutionTracker.svelte";
 
-  const data: Data = {
+  const data: Data<Bar> = {
     startDate: "2025-01-12",
     epics: [
       {
@@ -290,5 +291,5 @@
 </script>
 
 <div class="py-10 px-1">
-<ExecutionTracker {data} />
+  <ExecutionTracker {data} />
 </div>
