@@ -54,8 +54,9 @@
   import type { MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTableContextMenu from "./TreeTableContextMenu.svelte";
   import { tick } from "svelte";
+  import { onMount, onDestroy } from "svelte";
 
-  // Helper to center label in visible portion of bar
+  // Center label in visible portion of bar
   function centerLabelInView(barEl: HTMLElement, labelEl: HTMLElement) {
     const scrollable = barEl.closest(
       "[id='" + scrollableId + "']"
@@ -93,19 +94,36 @@
     labelEl.style.pointerEvents = "none";
   }
 
-  function labelCenterAttach(node: HTMLElement) {
-    let barEl = node.parentElement as HTMLElement;
-    function update() {
-      centerLabelInView(barEl, node);
+  // Center all labels at once
+  function centerAllLabels() {
+    // Select all label spans with the class 'bar-label'
+    const labels = document.querySelectorAll<HTMLElement>(
+      `#${scrollableId} .bar-label`
+    );
+    for (const label of labels) {
+      const barEl = label.parentElement?.parentElement as HTMLElement;
+      if (barEl) centerLabelInView(barEl, label);
     }
-    window.addEventListener("scroll", update, true);
+  }
+
+  function setupLabelCentering() {
+    const scrollable = document.getElementById(scrollableId);
+    if (!scrollable) return;
+    const update = () => centerAllLabels();
+    scrollable.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
+    // Initial centering after DOM is ready
     tick().then(update);
     return () => {
-      window.removeEventListener("scroll", update, true);
+      scrollable.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
   }
+
+  onMount(() => {
+    const cleanup = setupLabelCentering();
+    return cleanup;
+  });
 
   type Props = {
     data: Data<T>;
@@ -431,7 +449,7 @@
                       style={`${getBarFillStyle(bar.state)};`}
                     >
                       {#if bar.label}
-                        <span {@attach labelCenterAttach}>{bar.label}</span>
+                        <span class="bar-label">{bar.label}</span>
                       {:else}
                         &nbsp;
                       {/if}
