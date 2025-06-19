@@ -49,7 +49,8 @@
           required: ["state", "label"],
         },
       },
-      start: { type: "string" }
+      start: { type: "string" },
+      estimate: { type: "number" },
     },
   };
 </script>

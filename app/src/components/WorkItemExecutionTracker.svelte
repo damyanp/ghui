@@ -205,24 +205,29 @@
         }
       }
 
-      const projectedEnd = getProjectedEnd(deliverable);
+      let end = getProjectedEnd(deliverable);
       const status = deliverable.projectItem.status;
 
       const state: BarState =
         status === closedStatusId
           ? "completed"
-          : projectedEnd === undefined
+          : end === undefined
             ? "noDates"
-            : dayjs(projectedEnd) < dayjs()
+            : dayjs(end) < dayjs()
               ? "offTrack"
               : "onTrack";
 
       let start: string | undefined = extraData.start;
+      let estimate: number = extraData.estimate;
 
       if (!start) {
-        start = projectedEnd
-          ? dayjs(projectedEnd).subtract(1, "week").format("YYYY-MM-DD")
-          : dayjs().format("YYYY-MM-DD");
+        start = (end && estimate)
+          ? dayjs(end).subtract(estimate, "days").format("YYYY-MM-DD")
+          : dayjs().add(1, "week").format("YYYY-MM-DD");
+      }
+
+      if (!end && estimate) {
+        end = dayjs(start).add(estimate, "days").format("YYYY-MM-DD")
       }
 
       return {
@@ -231,7 +236,7 @@
             state,
             label: cleanUpTitle(deliverable.title),
             start,
-            end: projectedEnd || defaultEnd,
+            end: end || defaultEnd,
             data: deliverable,
           },
         ],
