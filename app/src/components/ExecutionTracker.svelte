@@ -15,6 +15,7 @@
   export type Scenario<BAR extends Bar> = {
     name: string;
     rows: Row<BAR>[];
+    extraClasses?: string[];
     getMenuItems?: () => MenuItem[];
   };
 
@@ -329,7 +330,7 @@
           {#snippet trigger({ props }: { props: any })}
             <div
               {...props}
-              class="p-1 col-start-3 group"
+              class={["p-1 col-start-3 group", ...scenario.extraClasses || []]}
               style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)};`}
             >
               {scenario.name}

@@ -69,10 +69,17 @@
         );
       })
       .map((scenario) => {
+        const isClosed = scenario.projectItem.status === closedStatusId;
+
+        let rows = getRows(scenario);
+
+        if (isClosed) rows = collapseRows(rows);
+
         return {
           name: cleanUpTitle(scenario.title),
-          rows: getRows(scenario),
+          rows,
           id: scenario.id,
+          extraClasses: isClosed ? ["text-gray-500"] : undefined,
           getMenuItems: () => [getOpenMenuItem(scenario)],
         };
       })
@@ -256,6 +263,30 @@
     }
 
     return undefined;
+  }
+
+  function collapseRows(rows: Row<BarD>[]): Row<BarD>[] {
+    let minDate = Number.MAX_VALUE;
+    let maxDate = Number.MIN_VALUE;
+
+    for (const row of rows) {
+      for (const bar of row.bars) {
+        minDate = Math.min(minDate, dayjs(bar.start).unix());
+        maxDate = Math.max(maxDate, dayjs(bar.end).unix());
+      }
+    }
+
+    return [
+      {
+        bars: [
+          {
+            state: "completed",
+            start: dayjs.unix(minDate).format("YYYY-MM-DD"),
+            end: dayjs.unix(maxDate).format("YYYY-MM-DD"),
+          },
+        ],
+      },
+    ];
   }
 
   function cleanUpTitle(title: string) {
