@@ -284,6 +284,12 @@
       e.preventDefault();
     }
   }
+
+  $effect(() => {
+    // Track changes to all bars in all epics for label centering
+    data.epics.flatMap(e => e.scenarios).flatMap(s => s.rows).flatMap(r => r.bars);
+    tick().then(centerAllLabels);
+  });
 </script>
 
 <div
