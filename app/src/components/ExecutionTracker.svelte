@@ -48,9 +48,61 @@
     setExecutionTrackerContext,
   } from "./ExecutionTrackerContext.svelte";
   import type { Attachment } from "svelte/attachments";
-  import type { Snippet } from "svelte";
   import type { MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTableContextMenu from "./TreeTableContextMenu.svelte";
+  import { tick } from "svelte";
+
+  // Helper to center label in visible portion of bar
+  function centerLabelInView(barEl: HTMLElement, labelEl: HTMLElement) {
+    const scrollable = barEl.closest(
+      "[id='" + scrollableId + "']"
+    ) as HTMLElement;
+    if (!scrollable) return;
+
+    const barRect = barEl.getBoundingClientRect();
+    const scrollRect = scrollable.getBoundingClientRect();
+
+    // Find intersection with scrollable area
+    let visibleLeft = Math.max(barRect.left, scrollRect.left);
+    let visibleRight = Math.min(barRect.right, scrollRect.right);
+
+    // Account for sticky columns overlay
+    const stickyColumns = document.querySelector(
+      ".grid-cols-subgrid.grid-rows-subgrid.col-start-1.col-end-4"
+    ) as HTMLElement;
+
+    if (stickyColumns) {
+      const stickyRect = stickyColumns.getBoundingClientRect();
+      // If sticky columns overlap the bar, adjust visibleLeft
+      if (stickyRect.right > visibleLeft && stickyRect.right < visibleRight) {
+        visibleLeft = stickyRect.right;
+      }
+    }
+
+    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+
+    // Center label in visible area
+    const offset = visibleLeft - barRect.left;
+    labelEl.style.left = `${offset + visibleWidth / 2}px`;
+    labelEl.style.transform = "translateX(-50%)";
+    labelEl.style.position = "absolute";
+    labelEl.style.width = "max-content";
+    labelEl.style.pointerEvents = "none";
+  }
+
+  function labelCenterAttach(node: HTMLElement) {
+    let barEl = node.parentElement as HTMLElement;
+    function update() {
+      centerLabelInView(barEl, node);
+    }
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    tick().then(update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }
 
   type Props = {
     data: Data<BAR>;
@@ -372,11 +424,11 @@
                     style={`left: ${start}px; max-width: ${width}px; width: ${width}px;`}
                   >
                     <div
-                      class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip content-center text-center rounded-r-xl group"
+                      class="w-full h-[2em] text-nowrap overflow-ellipsis overflow-clip flex items-center justify-center text-center rounded-r-xl group relative"
                       style={`${getBarFillStyle(bar.state)};`}
                     >
                       {#if bar.label}
-                        {bar.label}
+                        <span {@attach labelCenterAttach}>{bar.label}</span>
                       {:else}
                         &nbsp;
                       {/if}
