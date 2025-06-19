@@ -9,7 +9,7 @@
     type Data,
   } from "../../components/ExecutionTracker.svelte";
 
-  const data: Data<Bar> = {
+  const data: Data<never> = {
     startDate: "2025-01-12",
     epics: [
       {

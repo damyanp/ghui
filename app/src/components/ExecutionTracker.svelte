@@ -1,34 +1,36 @@
 <script lang="ts" module>
-  export type Data<BAR extends Bar> = {
-    epics: Epic<BAR>[];
+  export type Data<T> = {
+    epics: Epic<T>[];
     startDate: Date;
   };
 
   export type Date = string;
 
-  export type Epic<BAR extends Bar> = {
+  export type Epic<T> = {
     name: string;
     targetDate: Date;
-    scenarios: Scenario<BAR>[];
+    scenarios: Scenario<T>[];
   };
 
-  export type Scenario<BAR extends Bar> = {
+  export type Scenario<T> = {
     name: string;
-    rows: Row<BAR>[];
+    rows: Row<T>[];
     extraClasses?: string[];
     getMenuItems?: () => MenuItem[];
+    data?: T;
   };
 
-  export type Row<BAR extends Bar> = {
-    bars: BAR[];
+  export type Row<T> = {
+    bars: Bar<T>[];
   };
 
-  export type Bar = {
+  export type Bar<T> = {
     state: BarState;
     label?: string;
     start: Date;
     end: Date;
     getMenuItems?: () => MenuItem[];
+    data?: T;
   };
 
   export type BarState =
@@ -40,7 +42,7 @@
     | "noDates";
 </script>
 
-<script lang="ts" generics="BAR extends Bar">
+<script lang="ts" generics="T">
   import dayjs from "dayjs";
   import { Copy, ZoomIn, ZoomOut } from "@lucide/svelte";
   import {
@@ -106,7 +108,7 @@
   }
 
   type Props = {
-    data: Data<BAR>;
+    data: Data<T>;
   };
 
   let { data }: Props = $props();
@@ -165,7 +167,7 @@
     }
   }
 
-  function getEpicRowSpan(epic: Epic<BAR>) {
+  function getEpicRowSpan(epic: Epic<T>) {
     return Math.max(
       1,
       epic.scenarios.reduce((prev, current) => {

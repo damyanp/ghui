@@ -25,12 +25,9 @@
 
   const startDate = "2025-02-09";
 
-  type BarD = Bar & {
-    deliverableId?: string;
-    deliverableTitle?: string;
-  };
+  type Payload = WorkItem;
 
-  const epics: Epic<BarD>[] = $derived.by(() => {
+  const epics: Epic<Payload>[] = $derived.by(() => {
     return Object.values(context.data.fields.epic.options).map(
       (epicFieldOption) => {
         return {
@@ -54,11 +51,23 @@
     context.data.fields.status.options.find((o) => o.value === "Closed")?.id
   );
 
+  const statusOrdering = ["Active", "Ready", "Planning", undefined, "Closed"];
+  const statusOrder = $derived.by(() => {
+    return new Map(
+      statusOrdering.map((name, index) => {
+        return [
+          context.data.fields.status.options.find((o) => o.value === name)?.id,
+          index,
+        ];
+      })
+    );
+  });
+
   const defaultStart = startDate;
   const defaultEnd = dayjs().add(3, "month").format("YYYY-MM-DD");
 
-  function getScenarios(epicId: FieldOptionId): Scenario<BarD>[] {
-    const scenarios: Scenario<BarD>[] = Object.values(context.data.workItems)
+  function getScenarios(epicId: FieldOptionId): Scenario<Payload>[] {
+    const scenarios: Scenario<Payload>[] = Object.values(context.data.workItems)
       .filter((workItem): workItem is WorkItem => {
         if (!workItem) return false;
 
@@ -68,7 +77,7 @@
           workItem.projectItem.kind.value === scenarioKindId
         );
       })
-      .map((scenario) => {
+      .map((scenario): Scenario<Payload> => {
         const isClosed = scenario.projectItem.status === closedStatusId;
 
         let rows = getRows(scenario);
@@ -78,12 +87,20 @@
         return {
           name: cleanUpTitle(scenario.title),
           rows,
-          id: scenario.id,
           extraClasses: isClosed ? ["text-gray-500"] : undefined,
           getMenuItems: () => [getOpenMenuItem(scenario)],
+          data: scenario,
         };
       })
-      .sort((a, b) => getScenarioStartDate(a) - getScenarioStartDate(b));
+      .sort((a, b) => getScenarioStartDate(a) - getScenarioStartDate(b))
+      .sort((a, b) => {
+        const aIsClosed = a.data!.projectItem.status === closedStatusId;
+        const bIsClosed = b.data!.projectItem.status === closedStatusId;
+        return (
+          (statusOrder.get(a.data!.projectItem.status || undefined) || 0) -
+          (statusOrder.get(b.data!.projectItem.status || undefined) || 0)
+        );
+      });
 
     if (scenarios.length === 0) return [{ name: "TBD", rows: [] }];
     else return scenarios;
@@ -97,18 +114,18 @@
     };
   }
 
-  function getEditMenuItem(workItemId: WorkItemId): MenuItem {
+  function getEditMenuItem(workItem: WorkItem): MenuItem {
     return {
       type: "action",
       title: "Edit...",
       action: () => {
-        editorWorkItemId = workItemId;
+        editorWorkItem = workItem;
         editorOpen = true;
       },
     };
   }
 
-  function getScenarioStartDate(scenario: Scenario<BarD>) {
+  function getScenarioStartDate(scenario: Scenario<Payload>) {
     if (scenario.rows.length === 0) return dayjs().unix();
 
     return scenario.rows
@@ -120,7 +137,7 @@
       .reduce((a, b) => Math.min(a, b), Number.MAX_VALUE);
   }
 
-  function getRows(scenario: WorkItem): Row<BarD>[] {
+  function getRows(scenario: WorkItem): Row<Payload>[] {
     const rows = getDeliverables()
       .map(buildRowFromDeliverable)
       .map(addStandardMenuItems);
@@ -145,28 +162,27 @@
         });
     }
 
-    function buildRowFromDeliverable(deliverable: WorkItem): Row<BarD> {
+    function buildRowFromDeliverable(deliverable: WorkItem): Row<Payload> {
       const extraData = context.getWorkItemExtraData(deliverable.id);
 
       // If there are bars explicitly provided these override everything
       if (extraData) {
         if (extraData.bars) {
-          const bars = <BarD[]>extraData.bars;
+          const bars = <Bar<Payload>[]>extraData.bars;
           return {
             bars: bars.map((bar) => {
               return {
                 ...bar,
-                deliverableId: deliverable.id,
-                deliverableTitle: cleanUpTitle(deliverable.title),
+                data: deliverable,
               };
             }),
           };
         }
         if (extraData.split) {
-          let bars: Partial<BarD>[] = [];
-          let previousBar: Partial<BarD> | undefined = undefined;
+          let bars: Partial<Bar<Payload>>[] = [];
+          let previousBar: Partial<Bar<Payload>> | undefined = undefined;
 
-          for (const entry of <Partial<BarD>[]>extraData.split) {
+          for (const entry of <Partial<Bar<Payload>>[]>extraData.split) {
             let newBar = $state.snapshot(entry);
             if (!newBar.start) {
               newBar.start = previousBar?.end;
@@ -175,10 +191,9 @@
 
             if (previousBar && !previousBar.end) previousBar.end = newBar.start;
 
-            bars.push(<BarD>{
+            bars.push(<Bar<Payload>>{
               ...newBar,
-              deliverableId: deliverable.id,
-              deliverableTitle: cleanUpTitle(deliverable.title),
+              data: deliverable,
             });
             previousBar = bars[bars.length - 1];
           }
@@ -186,8 +201,7 @@
           if (bars.length > 0 && !bars[bars.length - 1].end) {
             bars[bars.length - 1].end = getProjectedEnd(deliverable);
           }
-          console.log(bars);
-          return { bars: <BarD[]>bars };
+          return { bars: <Bar<Payload>[]>bars };
         }
       }
 
@@ -218,15 +232,14 @@
             label: cleanUpTitle(deliverable.title),
             start,
             end: projectedEnd || defaultEnd,
-            deliverableId: deliverable.id,
-            deliverableTitle: cleanUpTitle(deliverable.title),
+            data: deliverable,
           },
         ],
       };
     }
   }
 
-  function addStandardMenuItems(row: Row<BarD>): Row<BarD> {
+  function addStandardMenuItems(row: Row<Payload>): Row<Payload> {
     return {
       ...row,
       bars: row.bars.map((bar) => {
@@ -235,11 +248,8 @@
           getMenuItems: () => {
             const items = bar.getMenuItems ? bar.getMenuItems() : [];
 
-            if (bar.deliverableId) {
-              items.push(
-                getOpenMenuItem(context.data.workItems[bar.deliverableId]!),
-                getEditMenuItem(bar.deliverableId)
-              );
+            if (bar.data) {
+              items.push(getOpenMenuItem(bar.data), getEditMenuItem(bar.data));
             }
 
             return items;
@@ -265,7 +275,7 @@
     return undefined;
   }
 
-  function collapseRows(rows: Row<BarD>[]): Row<BarD>[] {
+  function collapseRows(rows: Row<Payload>[]): Row<Payload>[] {
     let minDate = Number.MAX_VALUE;
     let maxDate = Number.MIN_VALUE;
 
@@ -297,14 +307,14 @@
       .trim();
   }
 
-  const data: ExecutionTrackerData<BarD> = $derived.by(() => {
+  const data: ExecutionTrackerData<Payload> = $derived.by(() => {
     return {
       startDate,
       epics: epics,
     };
   });
 
-  let editorWorkItemId: string | undefined = $state(undefined);
+  let editorWorkItem: WorkItem | undefined = $state(undefined);
   let editorOpen = $state(false);
 </script>
 
@@ -313,12 +323,12 @@
 <WorkItemExtraDataEditor
   getInitialContent={() =>
     JSON.stringify(
-      context.getWorkItemExtraData(editorWorkItemId!),
+      context.getWorkItemExtraData(editorWorkItem!.id),
       undefined,
       4
     )}
   onSave={(text) => {
-    context.setWorkItemExtraData(editorWorkItemId!, JSON.parse(text));
+    context.setWorkItemExtraData(editorWorkItem!.id, JSON.parse(text));
     editorOpen = false;
   }}
   onCancel={() => {
@@ -326,5 +336,5 @@
   }}
   open={editorOpen}
 >
-  <h1>{context.data!.workItems[$state.snapshot(editorWorkItemId)!]?.title}</h1>
+  <h1>{$state.snapshot(editorWorkItem!.title)}</h1>
 </WorkItemExtraDataEditor>
