@@ -41,6 +41,8 @@ pub fn run() {
             data::set_preview_changes,
             data::save_changes,
             data::set_filters,
+            data::set_work_items_extra_data,
+            data::get_work_items_extra_data,
             actions::convert_tracked_to_sub_issues,
             actions::sanitize,
             actions::add_change,

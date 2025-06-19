@@ -46,15 +46,19 @@ export class WorkItemContext {
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
 
-    this.workItemExtraData = JSON.parse(
-      window.localStorage.getItem("workItemExtraData") || "{}"
-    );
+    let loadedExtraData = false;
+    invoke<string>("get_work_items_extra_data")
+      .then((value) => {
+        this.workItemExtraData = JSON.parse(value);
+        loadedExtraData = true;
+      })
+      .catch(() => (this.workItemExtraData = {}));
 
     $effect(() => {
-      window.localStorage.setItem(
-        "workItemExtraData",
-        JSON.stringify(this.workItemExtraData, undefined, " ")
-      );
+      const extraData = JSON.stringify(this.workItemExtraData, undefined, " ");
+      if (loadedExtraData) {
+        invoke("set_work_items_extra_data", { extraData });
+      }
     });
   }
 

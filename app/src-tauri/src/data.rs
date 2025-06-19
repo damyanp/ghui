@@ -1,5 +1,8 @@
 use crate::TauriCommandResult;
-use ghui_app::{DataState, DataUpdate, Filters, ItemToUpdate};
+use ghui_app::{
+    load_work_items_extra_data, save_work_items_extra_data, DataState, DataUpdate, Filters,
+    ItemToUpdate,
+};
 use tauri::{ipc::Channel, State};
 
 #[tauri::command]
@@ -68,4 +71,14 @@ pub async fn set_filters(
     let mut data_state = data_state.lock().await;
     data_state.set_filters(filters).await?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn set_work_items_extra_data(extra_data: String) -> TauriCommandResult<()> {
+    Ok(save_work_items_extra_data(extra_data.as_str())?)
+}
+
+#[tauri::command]
+pub async fn get_work_items_extra_data() -> TauriCommandResult<String> {
+    Ok(load_work_items_extra_data()?)
 }

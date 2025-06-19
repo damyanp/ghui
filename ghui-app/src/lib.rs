@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs,
-    io::{BufReader, BufWriter},
+    io::{BufReader, BufWriter, Read, Write},
     ops::Deref,
     path::PathBuf,
     sync::Arc,
@@ -470,6 +470,28 @@ fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
         BufWriter::new(writer),
         work_items,
     )?)
+}
+
+const WORK_ITEMS_EXTRA_DATA: &str = "work_items_extra_data";
+
+pub fn save_work_items_extra_data(data: &str) -> anyhow::Result<()> {
+    let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
+    println!("Saving work items extra data to {path:?}");
+
+    let mut writer = fs::File::create(path)?;
+    writer.write_all(data.as_bytes())?;
+    Ok(())
+}
+
+pub fn load_work_items_extra_data() -> anyhow::Result<String> {
+    let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
+    println!("Loading work items extra data from {path:?}");
+
+    let mut reader = fs::File::open(path)?;
+
+    let mut buf = String::new();
+    reader.read_to_string(&mut buf)?;
+    Ok(buf)
 }
 
 fn get_appdata_path(name: &str) -> PathBuf {
