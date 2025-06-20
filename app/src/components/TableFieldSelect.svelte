@@ -4,20 +4,19 @@
   import type { FieldOption } from "$lib/bindings/FieldOption";
   import * as select from "@zag-js/select";
   import { portal, useMachine, normalizeProps } from "@zag-js/svelte";
+  import { onMount, tick } from "svelte";
+  import type { Attachment } from "svelte/attachments";
 
   type Props = {
     field: Field<T>;
-    defaultValue: FieldOptionId|undefined;
+    defaultValue: FieldOptionId | undefined;
     onValueChange: (value: FieldOptionId | undefined) => void;
   };
 
-  const {
-    field,
-    defaultValue,
-    ...props
-  }: Props = $props();
+  const { field, defaultValue, ...props }: Props = $props();
 
   const options = [{ id: "", value: "-" }, ...field.options];
+  type OptionType = (typeof options)[0];
 
   const collection = select.collection({
     items: options,
@@ -47,6 +46,21 @@
     if (item.id === "") props.onValueChange(undefined);
     else props.onValueChange(item.id);
   }
+
+  function itemAttachment(option: OptionType): Attachment {
+    if (
+      option.id === defaultValue ||
+      (option.id === "" && defaultValue === undefined)
+    ) {
+      return (element) => {
+        tick().then(() => {
+          element.scrollIntoView({ behavior: "instant", block: "center" });
+        });
+      };
+    }
+
+    return () => {};
+  }
 </script>
 
 <div {...api.getRootProps()}>
@@ -59,17 +73,27 @@
     </button>
   </div>
 
-  <div use:portal {...api.getPositionerProps()}>
-    <ul {...api.getContentProps()} class="bg-surface-50-950 py-3 border">
-      {#each options as item}
-        <li {...api.getItemProps({ item })} class="w-full">
-          <div {...api.getItemTextProps({ item })} class="menu">
-            {item.value}
-          </div>
-        </li>
-      {/each}
-    </ul>
-  </div>
+  {#if api.open}
+    <div
+      use:portal
+      {...api.getPositionerProps()}
+      class="max-h-1/2 bg-surface-50-950 py-3 border overflow-y-auto"
+    >
+      <ul {...api.getContentProps()} class="">
+        {#each options as item}
+          <li
+            {...api.getItemProps({ item })}
+            {@attach itemAttachment(item)}
+            class="w-full"
+          >
+            <div {...api.getItemTextProps({ item })} class="menu">
+              {item.value}
+            </div>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
 </div>
 
 <style lang="postcss">
