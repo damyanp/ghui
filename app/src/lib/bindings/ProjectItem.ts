@@ -14,4 +14,6 @@ export type ProjectItem = {
   epic: FieldOptionId | null;
   workstream: DelayLoad<FieldOptionId | null>;
   projectMilestone: DelayLoad<FieldOptionId | null>;
+  estimate: FieldOptionId | null;
+  priority: FieldOptionId | null;
 };

@@ -156,6 +156,8 @@ pub struct ProjectItem {
     pub epic: Option<FieldOptionId>,
     pub workstream: FieldValue,
     pub project_milestone: FieldValue,
+    pub estimate: Option<FieldOptionId>,
+    pub priority: Option<FieldOptionId>,
 }
 impl ProjectItem {
     pub fn default_loaded() -> ProjectItem {

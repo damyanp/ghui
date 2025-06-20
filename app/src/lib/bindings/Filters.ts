@@ -7,4 +7,6 @@ export type Filters = {
   epic: Array<FieldOptionId | null>;
   iteration: Array<FieldOptionId | null>;
   kind: Array<FieldOptionId | null>;
+  estimate: Array<FieldOptionId | null>;
+  priority: Array<FieldOptionId | null>;
 };

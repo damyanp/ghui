@@ -227,6 +227,8 @@ impl Fields {
                 ],
             ),
             kind: Field::test("Kind", &["Bug", "Task"]),
+            estimate: Field::test("Estimate", &["Hours", "Days", "Week", "Sprint"]),
+            priority: Field::test("Priority", &["Low", "Medium", "High"]),
         }
     }
 }

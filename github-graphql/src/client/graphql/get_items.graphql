@@ -31,6 +31,12 @@ fragment Item on Node {
     ProjectMilestone: fieldValueByName(name: "ProjectMilestone") {
       ...CustomField
     }
+    Estimate: fieldValueByName(name: "Estimate") {
+      ...CustomField
+    }
+    Priority: fieldValueByName(name: "Priority") {
+      ...CustomField
+    }
     content {
       __typename
 

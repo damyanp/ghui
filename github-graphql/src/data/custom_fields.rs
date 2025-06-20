@@ -41,6 +41,8 @@ pub struct Fields {
     pub iteration: Field<Iteration>,
     pub project_milestone: Field<SingleSelect>,
     pub kind: Field<SingleSelect>,
+    pub estimate: Field<SingleSelect>,
+    pub priority: Field<SingleSelect>,
 }
 
 impl<T> Field<T> {

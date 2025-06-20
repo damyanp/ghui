@@ -20,6 +20,12 @@ query CustomFieldsQuery {
       Kind: field(name: "Kind") {
         ...FieldConfig
       }
+      Estimate: field(name: "Estimate") {
+        ...FieldConfig
+      }
+      Priority: field(name: "Priority") {
+        ...FieldConfig
+      }
     }
   }
 }

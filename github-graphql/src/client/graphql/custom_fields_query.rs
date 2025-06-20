@@ -129,5 +129,7 @@ pub async fn get_fields(client: &impl Client) -> Result<Fields> {
         iteration: fields.iteration.try_into()?,
         project_milestone: fields.project_milestone.try_into()?,
         kind: fields.kind.try_into()?,
+        estimate: fields.estimate.try_into()?,
+        priority: fields.priority.try_into()?,
     })
 }

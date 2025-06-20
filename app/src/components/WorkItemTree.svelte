@@ -134,6 +134,18 @@
       renderHeader: renderSingleSelectFieldHeader,
     },
     {
+      name: "estimate",
+      width: "1fr",
+      render: renderEstimate,
+      renderHeader: renderSingleSelectFieldHeader,
+    },
+    {
+      name: "priority",
+      width: "1fr",
+      render: renderPriority,
+      renderHeader: renderSingleSelectFieldHeader,
+    },
+    {
       name: "Assigned",
       width: "1fr",
       render: renderTextCell((i) => {
@@ -345,6 +357,12 @@
 {/snippet}
 {#snippet renderEpic(item: WorkItem)}
   {@render renderLoadedCustomField(item, "epic")}
+{/snippet}
+{#snippet renderEstimate(item: WorkItem)}
+  {@render renderLoadedCustomField(item, "estimate")}
+{/snippet}
+{#snippet renderPriority(item: WorkItem)}
+  {@render renderLoadedCustomField(item, "priority")}
 {/snippet}
 
 {#snippet renderDelayLoadCustomField(item: WorkItem, field: keyof Fields)}
