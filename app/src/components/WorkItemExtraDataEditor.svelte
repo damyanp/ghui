@@ -51,6 +51,7 @@
       },
       start: { type: "string" },
       estimate: { type: "number" },
+      burnDown: { type: "boolean" },
     },
   };
 </script>

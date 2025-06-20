@@ -47,18 +47,17 @@
     context.data.fields.kind.options.find((o) => o.value === "Deliverable")?.id
   );
 
-  const closedStatusId = $derived(
-    context.data.fields.status.options.find((o) => o.value === "Closed")?.id
-  );
+  function getStatusId(name: string): string | undefined {
+    return context.data.fields.status.options.find((o) => o.value == name)?.id;
+  }
+
+  const closedStatusId = $derived(getStatusId("Closed"));
 
   const statusOrdering = ["Active", "Ready", "Planning", undefined, "Closed"];
   const statusOrder = $derived.by(() => {
     return new Map(
       statusOrdering.map((name, index) => {
-        return [
-          context.data.fields.status.options.find((o) => o.value === name)?.id,
-          index,
-        ];
+        return [name && getStatusId(name), index];
       })
     );
   });
@@ -81,6 +80,20 @@
         const isClosed = scenario.projectItem.status === closedStatusId;
 
         let rows = getRows(scenario);
+
+        const extraData = context.getWorkItemExtraData(scenario.id);
+        if (extraData.burnDown) {
+          rows.push({
+            bars: [
+              {
+                label: getBurndownLabel(scenario),
+                state: "onTrack",
+                start: dayjs().subtract(1, "week").format("YYYY-MM-DD"),
+                end: dayjs().add(1, "week").format("YYYY-MM-DD"),
+              },
+            ],
+          });
+        }
 
         if (isClosed) rows = collapseRows(rows);
 
@@ -237,7 +250,7 @@
         }
       }
 
-      const state: BarState =
+      let state: BarState =
         status === closedStatusId
           ? "completed"
           : noDates
@@ -248,11 +261,17 @@
                 ? "notStarted"
                 : "onTrack";
 
+      let label = cleanUpTitle(deliverable.title);
+      if (extraData.burnDown) {
+        label = `${label} (${getBurndownLabel(deliverable)})`;
+        state = "onTrack";
+      }
+
       return {
         bars: [
           {
             state,
-            label: cleanUpTitle(deliverable.title),
+            label,
             start,
             end,
             data: deliverable,
@@ -270,9 +289,8 @@
           ...bar,
           getMenuItems: () => {
             if (bar.data) {
-            return getStandardMenuItems(bar.data, bar.getMenuItems?.());
-            }
-            else {
+              return getStandardMenuItems(bar.data, bar.getMenuItems?.());
+            } else {
               return bar.getMenuItems?.() || [];
             }
           },
@@ -285,12 +303,12 @@
     workItem: WorkItem,
     extraItems?: MenuItem[]
   ): MenuItem[] {
-      return [
-        getTitleMenuItem(workItem),
-        ...extraItems ? extraItems : [],
-        getOpenMenuItem(workItem),
-        getEditMenuItem(workItem),
-      ];
+    return [
+      getTitleMenuItem(workItem),
+      ...(extraItems ? extraItems : []),
+      getOpenMenuItem(workItem),
+      getEditMenuItem(workItem),
+    ];
   }
 
   function getProjectedEnd(item: WorkItem) {
@@ -339,6 +357,45 @@
       .replace("[Scenario]", "")
       .replace("[Deliverable]", "")
       .trim();
+  }
+
+  function getBurndownLabel(parent: WorkItem) {
+    function getIssues(i: WorkItem): WorkItem[] {
+      if (i.data.type !== "issue") return [];
+
+      // We don't burn down deliverables
+      if (
+        i !== parent &&
+        (i.projectItem.kind.loadState !== "loaded" ||
+          i.projectItem.kind.value === deliverableKindId)
+      )
+        return [];
+
+      let issues = [i];
+      for (const subIssueId of i.data.subIssues) {
+        const subIssue = context.data!.workItems[subIssueId];
+        if (subIssue) issues = [...issues, ...getIssues(subIssue)];
+      }
+
+      return issues;
+    }
+
+    const issues = getIssues(parent);
+
+    let active = 0;
+    let open = 0;
+    let closed = 0;
+
+    const activeId = getStatusId("Active");
+
+    for (const issue of issues) {
+      const status = issue.projectItem.status;
+      if (status === closedStatusId) closed++;
+      else if (status == activeId) active++;
+      else open++;
+    }
+
+    return `${active} active / ${open} open / ${closed} closed`;
   }
 
   const data: ExecutionTrackerData<Payload> = $derived.by(() => {
