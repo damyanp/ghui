@@ -1,7 +1,13 @@
 <script lang="ts">
+  import dayjs from "dayjs";
+  import isBetween from "dayjs/plugin/isBetween";
   import type { Node } from "$lib/bindings/Node";
   import type { WorkItem } from "$lib/bindings/WorkItem";
-  import { getWorkItemContext, linkHRef, linkTitle } from "$lib/WorkItemContext.svelte";
+  import {
+    getWorkItemContext,
+    linkHRef,
+    linkTitle,
+  } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable from "./TreeTable.svelte";
   import { createRawSnippet, type Snippet } from "svelte";
@@ -17,6 +23,10 @@
   import { type Field } from "$lib/bindings/Field";
   import TableSingleSelectColumnHeader from "./TableSingleSelectColumnHeader.svelte";
   import TableIterationColumnHeader from "./TableIterationColumnHeader.svelte";
+  import { type FieldOption } from "$lib/bindings/FieldOption";
+  import { type Iteration } from "$lib/bindings/Iteration";
+
+  dayjs.extend(isBetween);
 
   let context = getWorkItemContext();
 
@@ -253,6 +263,13 @@
     if (row.data.type === "workItem") context.updateWorkItem(row.id);
   }
 
+  function isCurrentIteration(option: FieldOption<Iteration>) {
+    const start = dayjs(option.data.startDate);
+    const end = start.add(Number(option.data.duration) - 1, "days");
+    const now = dayjs();
+
+    return now.isBetween(start, end);
+  }
 
   let expanded = $state(context.workItemTreeExpandedItems);
 </script>
@@ -394,8 +411,30 @@
     <TableFieldSelect
       field={context.getIterationField(field)}
       defaultValue={value}
+      isGoodDefault={isCurrentIteration}
       onValueChange={(newValue) => context.setFieldValue(item, field, newValue)}
-    />
+    >
+      {#snippet renderOption(option)}
+        {#if option}
+          <div
+            class="flex items-center justify-items-center {option &&
+              isCurrentIteration(option) &&
+              'bg-secondary-500'}"
+          >
+            <div class="flex-1 pr-2">{option.value}</div>
+            <div class="flex-1 align-center text-xs">
+              {dayjs(option.data.startDate).format("MM-DD")}
+              -
+              {dayjs(option.data.startDate)
+                .add(Number(option.data.duration) - 1, "days")
+                .format("MM-DD")}
+            </div>
+          </div>
+        {:else}
+          -
+        {/if}
+      {/snippet}
+    </TableFieldSelect>
   {:else}
     <TableFieldSelect
       field={context.getSingleSelectField(field)}

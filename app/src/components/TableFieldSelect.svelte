@@ -4,24 +4,27 @@
   import type { FieldOption } from "$lib/bindings/FieldOption";
   import * as select from "@zag-js/select";
   import { portal, useMachine, normalizeProps } from "@zag-js/svelte";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, type Snippet } from "svelte";
   import type { Attachment } from "svelte/attachments";
 
   type Props = {
     field: Field<T>;
     defaultValue: FieldOptionId | undefined;
+    isGoodDefault?: (option: FieldOption<T>) => boolean;
     onValueChange: (value: FieldOptionId | undefined) => void;
+    renderOption?: Snippet<[FieldOption<T> | undefined]>;
   };
 
   const { field, defaultValue, ...props }: Props = $props();
 
-  const options = [{ id: "", value: "-" }, ...field.options];
-  type OptionType = (typeof options)[0];
+  const options = [{ id: undefined }, ...field.options];
 
   const collection = select.collection({
     items: options,
-    itemToString: (item) => item.value,
-    itemToValue: (item) => item.id,
+    itemToString: (item) => (item.id ? item.value : "-"),
+    itemToValue: (item) => {
+      return item.id || "";
+    },
   });
 
   const id = $props.id();
@@ -47,11 +50,20 @@
     else props.onValueChange(item.id);
   }
 
-  function itemAttachment(option: OptionType): Attachment {
-    if (
-      option.id === defaultValue ||
-      (option.id === "" && defaultValue === undefined)
-    ) {
+  function itemAttachment(
+    option: FieldOption<T> | { id: undefined }
+  ): Attachment {
+    let shouldScroll = false;
+
+    if (props.isGoodDefault) {
+      if (option.id) {
+        shouldScroll = props.isGoodDefault(option);
+      }
+    } else {
+      shouldScroll = option?.id === defaultValue;
+    }
+
+    if (shouldScroll) {
       return (element) => {
         tick().then(() => {
           element.scrollIntoView({ behavior: "instant", block: "center" });
@@ -87,7 +99,11 @@
             class="w-full"
           >
             <div {...api.getItemTextProps({ item })} class="menu">
-              {item.value}
+              {#if props.renderOption}
+                {@render props.renderOption(item.id ? item : undefined)}
+              {:else}
+                {item.id ? item.value : "-"}
+              {/if}
             </div>
           </li>
         {/each}
