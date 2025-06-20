@@ -213,16 +213,8 @@
       }
 
       let end = getProjectedEnd(deliverable);
+      let noDates = end === undefined;
       const status = deliverable.projectItem.status;
-
-      const state: BarState =
-        status === closedStatusId
-          ? "completed"
-          : end === undefined
-            ? "noDates"
-            : dayjs(end) < dayjs()
-              ? "offTrack"
-              : "onTrack";
 
       let start: string | undefined = extraData.start;
       let estimate: number = extraData.estimate;
@@ -244,6 +236,18 @@
           end = defaultEnd;
         }
       }
+
+      const state: BarState =
+        status === closedStatusId
+          ? "completed"
+          : noDates
+            ? "noDates"
+            : dayjs(end) < dayjs()
+              ? "offTrack"
+              : dayjs(start) > dayjs()
+                ? "notStarted"
+                : "onTrack";
+
 
       return {
         bars: [
