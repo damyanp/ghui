@@ -44,7 +44,7 @@
 
 <script lang="ts" generics="T">
   import dayjs from "dayjs";
-  import { Copy, ZoomIn, ZoomOut } from "@lucide/svelte";
+  import { Copy, LucideBadgeDollarSign, ZoomIn, ZoomOut } from "@lucide/svelte";
   import {
     ExecutionTrackerContext,
     getExecutionTrackerContext,
@@ -86,17 +86,43 @@
 
     const visibleWidth = Math.max(0, visibleRight - visibleLeft);
 
-    // Center label in visible area
-    const offset = visibleLeft - barRect.left;    
+    const offset = visibleLeft - barRect.left;
+
     if (labelRect.width < visibleWidth) {
+      // Center label in visible area
       labelEl.style.left = `${offset + visibleWidth / 2}px`;
       labelEl.style.transform = "translateX(-50%)";
-      labelEl.style.color = "black";
-    }
-    else {
+      barEl.classList.remove("naked-label");
+    } else if (labelEl.classList.contains("only-child")) {
+      // We can move the label outside of the bar if it is the only bar on this
+      // row.
+
+      const spaceOnRight = scrollRect.right - barRect.right;
+
+      if (spaceOnRight > labelRect.width) {
+        labelEl.style.left = `${offset + visibleWidth}px`;
+      } else {
+        labelEl.style.left = `${offset - labelRect.width}px`;
+      }
+      labelEl.style.transform = "";
+      barEl.classList.add("naked-label");
+    } else {
       labelEl.style.left = `${offset}px`;
       labelEl.style.transform = "";
     }
+
+    // else {
+    //   // Move to the right
+    //   labelEl.style.left = `${offset + visibleWidth}px`;
+    //   labelEl.style.transform = "";
+    //   barEl.classList.add("naked-label");
+    // }
+
+    // if (labelRect.width < visibleWidth) {
+    // } else {
+    //   labelEl.style.left = `${offset}px`;
+    //   labelEl.style.transform = "";
+    // }
     labelEl.style.position = "absolute";
     labelEl.style.width = "max-content";
     labelEl.style.pointerEvents = "none";
@@ -109,7 +135,7 @@
       `#${scrollableId} .bar-label`
     );
     for (const label of labels) {
-      const barEl = label.parentElement?.parentElement as HTMLElement;
+      const barEl = label.parentElement as HTMLElement;
       if (barEl) centerLabelInView(barEl, label);
     }
   }
@@ -295,7 +321,10 @@
 
   $effect(() => {
     // Track changes to all bars in all epics for label centering
-    data.epics.flatMap(e => e.scenarios).flatMap(s => s.rows).flatMap(r => r.bars);
+    data.epics
+      .flatMap((e) => e.scenarios)
+      .flatMap((s) => s.rows)
+      .flatMap((r) => r.bars);
     tick().then(centerAllLabels);
   });
 </script>
@@ -364,7 +393,10 @@
           {#snippet trigger({ props }: { props: any })}
             <div
               {...props}
-              class={["p-1 col-start-3 group", ...scenario.extraClasses || []]}
+              class={[
+                "p-1 col-start-3 group",
+                ...(scenario.extraClasses || []),
+              ]}
               style={`grid-row: span ${scenario.rows.length}; ${getEpicFillStyle(epicIndex)};`}
             >
               {scenario.name}
@@ -463,7 +495,11 @@
                       style={`${getBarFillStyle(bar.state)};`}
                     >
                       {#if bar.label}
-                        <span class="bar-label">{bar.label}</span>
+                        <span
+                          class="bar-label px-1"
+                          class:only-child={row.bars.length === 1}
+                          >{bar.label}</span
+                        >
                       {:else}
                         &nbsp;
                       {/if}
@@ -478,3 +514,14 @@
     {/each}
   </div>
 </div>
+
+<style>
+  .naked-label {
+    color: var(--base-font-color);
+    overflow: visible;
+  }
+
+  :global(html[data-mode="dark"]) .naked-label {
+    color: var(--base-font-color-dark);
+  }
+</style>
