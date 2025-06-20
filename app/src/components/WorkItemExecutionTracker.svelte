@@ -97,6 +97,10 @@
 
         if (isClosed) rows = collapseRows(rows);
 
+        if (rows.length === 0) {
+          rows.push({ bars: [] });
+        }
+
         return {
           name: cleanUpTitle(scenario.title),
           rows,
@@ -162,8 +166,7 @@
       .map(buildRowFromDeliverable)
       .map(addStandardMenuItems);
 
-    if (rows.length === 0) return [{ bars: [] }];
-    else return rows;
+    return rows;
 
     function getDeliverables(): WorkItem[] {
       if (scenario.data.type !== "issue") return [];
@@ -363,15 +366,19 @@
     function getIssues(i: WorkItem): WorkItem[] {
       if (i.data.type !== "issue") return [];
 
-      // We don't burn down deliverables
-      if (
-        i !== parent &&
-        (i.projectItem.kind.loadState !== "loaded" ||
-          i.projectItem.kind.value === deliverableKindId)
-      )
-        return [];
+      let issues: WorkItem[] = [];
 
-      let issues = [i];
+      if (i !== parent) {
+        // We don't burn down deliverables
+        if (
+          i.projectItem.kind.loadState !== "loaded" ||
+          i.projectItem.kind.value === deliverableKindId
+        )
+          return [];
+
+        issues = [i];
+      }
+
       for (const subIssueId of i.data.subIssues) {
         const subIssue = context.data!.workItems[subIssueId];
         if (subIssue) issues = [...issues, ...getIssues(subIssue)];
