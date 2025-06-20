@@ -228,14 +228,21 @@
       let estimate: number = extraData.estimate;
 
       if (!start) {
-        start =
-          end && estimate
-            ? dayjs(end).subtract(estimate, "days").format("YYYY-MM-DD")
-            : dayjs().add(1, "week").format("YYYY-MM-DD");
+        if (end) {
+          if (estimate)
+            start = dayjs(end).subtract(estimate, "days").format("YYYY-MM-DD");
+          else start = dayjs(end).subtract(2, "weeks").format("YYYY-MM-DD");
+        } else {
+          start = dayjs().add(1, "week").format("YYYY-MM-DD");
+        }
       }
 
-      if (!end && estimate) {
-        end = dayjs(start).add(estimate, "days").format("YYYY-MM-DD");
+      if (!end) {
+        if (estimate) {
+          end = dayjs(start).add(estimate, "days").format("YYYY-MM-DD");
+        } else {
+          end = defaultEnd;
+        }
       }
 
       return {
@@ -244,7 +251,7 @@
             state,
             label: cleanUpTitle(deliverable.title),
             start,
-            end: end || defaultEnd,
+            end,
             data: deliverable,
           },
         ],
