@@ -88,7 +88,7 @@
           name: cleanUpTitle(scenario.title),
           rows,
           extraClasses: isClosed ? ["text-gray-500"] : undefined,
-          getMenuItems: () => [getOpenMenuItem(scenario)],
+          getMenuItems: () => getStandardMenuItems(scenario, []),
           data: scenario,
         };
       })
@@ -248,7 +248,6 @@
                 ? "notStarted"
                 : "onTrack";
 
-
       return {
         bars: [
           {
@@ -270,22 +269,28 @@
         return {
           ...bar,
           getMenuItems: () => {
-            let items = bar.getMenuItems ? bar.getMenuItems() : [];
-
             if (bar.data) {
-              items = [
-                getTitleMenuItem(bar.data),
-                ...items,
-                getOpenMenuItem(bar.data),
-                getEditMenuItem(bar.data),
-              ];
+            return getStandardMenuItems(bar.data, bar.getMenuItems?.());
             }
-
-            return items;
+            else {
+              return bar.getMenuItems?.() || [];
+            }
           },
         };
       }),
     };
+  }
+
+  function getStandardMenuItems(
+    workItem: WorkItem,
+    extraItems?: MenuItem[]
+  ): MenuItem[] {
+      return [
+        getTitleMenuItem(workItem),
+        ...extraItems ? extraItems : [],
+        getOpenMenuItem(workItem),
+        getEditMenuItem(workItem),
+      ];
   }
 
   function getProjectedEnd(item: WorkItem) {
