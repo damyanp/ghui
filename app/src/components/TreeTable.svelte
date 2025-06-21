@@ -1,16 +1,25 @@
+<script lang="ts" module>
+  export type Column<ITEM> = {
+    name: string;
+    width: string;
+    render: Snippet<[ITEM]>;
+    disableMenu?: boolean;
+    getMenuIconSVG?: (column: Column<ITEM>) => string | undefined;
+    renderMenuContent?: Snippet<[Column<ITEM>]>;
+  };
+</script>
+
 <script lang="ts" generics="T, GROUP, ITEM">
   import { ChevronDown, ChevronRight } from "@lucide/svelte";
-  import { ContextMenu } from "bits-ui";
   import { tick, type Snippet } from "svelte";
   import TreeTableContextMenu, {
     type MenuItem,
   } from "./TreeTableContextMenu.svelte";
   import { onFirstVisible } from "$lib/OnVirstVisible";
-  import TableColumnHeader from "./TableSingleSelectColumnHeader.svelte";
   import { SvelteSet } from "svelte/reactivity";
   import type { Attachment } from "svelte/attachments";
-  import { fade } from "svelte/transition";
   import FindDialog from "./FindDialog.svelte";
+  import TableColumnMenu from "./TableColumnMenu.svelte";
 
   type Row<T> = {
     level: number;
@@ -21,16 +30,9 @@
     data: T;
   };
 
-  type Column = {
-    name: string;
-    width: string;
-    render: Snippet<[ITEM]>;
-    renderHeader?: Snippet<[string]>;
-  };
-
   type Props = {
     rows: Row<T>[];
-    columns: Column[];
+    columns: Column<ITEM>[];
 
     // These exist outside the TreeTable itself so they get persisted even if
     // the table unmounted.
@@ -230,7 +232,7 @@
 
   let rowVisibilityObserver: IntersectionObserver | undefined = $state();
 
-  const rowVisbilityObserverAttachment: Attachment = (element) => {
+  const rowVisbilityObserverAttachment: Attachment = () => {
     rowVisibilityObserver = new IntersectionObserver(
       (intersections) => {
         intersections.forEach((intersection) => {
@@ -277,11 +279,7 @@
           id="column-index-{index}"
           class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
         >
-          {#if column.renderHeader}
-            {@render column.renderHeader(column.name)}
-          {:else}
-            {column.name}
-          {/if}
+          {@render columnHeader(column)}
           <div
             class="overflow-visible z-10 my-1 border-r border-r-surface-800-200"
           >
@@ -304,7 +302,6 @@
     {#each rows as row (row.id)}
       {@const modified = row.isModified}
       {@const modifiedDescendent = !modified && row.modifiedDescendent}
-      {@const unmodified = !(modified || modifiedDescendent)}
       {@const onRowFirstVisible = props.onRowFirstVisible}
       <TreeTableContextMenu getItems={() => props.getContextMenuItems(row)}>
         {#snippet trigger({ props }: { props: any })}
@@ -340,6 +337,17 @@
     {/each}
   </div>
 </div>
+
+{#snippet columnHeader<ITEM>(column: Column<ITEM>)}
+  <div class="w-full flex justify-between overflow-hidden">
+    <div class="overflow-hidden text-ellipsis">
+      {column.name.charAt(0).toUpperCase() + column.name.slice(1)}
+    </div>
+    {#if !column.disableMenu}
+      <TableColumnMenu {column} />
+    {/if}
+  </div>
+{/snippet}
 
 {#snippet groupRow(row: Row<T>)}
   <div class="py-2 font-bold">

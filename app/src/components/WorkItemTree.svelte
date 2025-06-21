@@ -9,7 +9,7 @@
     linkTitle,
   } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
-  import TreeTable from "./TreeTable.svelte";
+  import TreeTable, { type Column } from "./TreeTable.svelte";
   import { createRawSnippet, type Snippet } from "svelte";
   import type { Change } from "$lib/bindings/Change";
   import type { DelayLoad } from "$lib/bindings/DelayLoad";
@@ -20,13 +20,12 @@
   import { type Fields } from "$lib/bindings/Fields";
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
   import TableFieldSelect from "./TableFieldSelect.svelte";
-  import { type Field } from "$lib/bindings/Field";
-  import TableSingleSelectColumnHeader from "./TableSingleSelectColumnHeader.svelte";
-  import TableIterationColumnHeader from "./TableIterationColumnHeader.svelte";
   import { type FieldOption } from "$lib/bindings/FieldOption";
   import { type Iteration } from "$lib/bindings/Iteration";
   import { SvelteSet } from "svelte/reactivity";
-  import { dataDir } from "@tauri-apps/api/path";
+  import * as octicons from "@primer/octicons";
+  import SingleSelectColumnMenu from "./SingleSelectColumnMenu.svelte";
+  import IterationColumnMenu from "./IterationColumnMenu.svelte";
 
   dayjs.extend(isBetween);
 
@@ -113,50 +112,21 @@
     });
   });
 
-  let columns = $state([
-    { name: "Title", width: "5fr", render: renderTitle },
-    {
-      name: "kind",
-      width: "1fr",
-      render: renderKind,
-      renderHeader: renderSingleSelectFieldHeader,
-    },
-    {
-      name: "status",
-      width: "1fr",
-      render: renderStatus,
-      renderHeader: renderSingleSelectFieldHeader,
-    },
+  let columns = $state<Column<WorkItem>[]>([
+    { name: "Title", width: "5fr", disableMenu: true, render: renderTitle },
+    singleSelectColumn("kind", renderKind),
+    singleSelectColumn("status", renderStatus),
     {
       name: "iteration",
       width: "1fr",
       render: renderIteration,
-      renderHeader: renderIterationFieldHeader,
+      getMenuIconSVG: getCustomFieldColumnMenuSVG,
+      renderMenuContent: renderIterationFieldMenuContent,
     },
-    {
-      name: "blocked",
-      width: "1fr",
-      render: renderBlocked,
-      renderHeader: renderSingleSelectFieldHeader,
-    },
-    {
-      name: "epic",
-      width: "1fr",
-      render: renderEpic,
-      renderHeader: renderSingleSelectFieldHeader,
-    },
-    {
-      name: "estimate",
-      width: "1fr",
-      render: renderEstimate,
-      renderHeader: renderSingleSelectFieldHeader,
-    },
-    {
-      name: "priority",
-      width: "1fr",
-      render: renderPriority,
-      renderHeader: renderSingleSelectFieldHeader,
-    },
+    singleSelectColumn("blocked", renderBlocked),
+    singleSelectColumn("epic", renderEpic),
+    singleSelectColumn("estimate", renderEstimate),
+    singleSelectColumn("priority", renderPriority),
     {
       name: "Assigned",
       width: "1fr",
@@ -198,6 +168,26 @@
       }),
     },
   ]);
+
+  function singleSelectColumn(
+    name: string,
+    render: Snippet<[WorkItem]>
+  ): Column<WorkItem> {
+    return {
+      name,
+      width: "1fr",
+      render,
+      getMenuIconSVG: getCustomFieldColumnMenuSVG,
+      renderMenuContent: renderSingleSelectFieldMenuContent,
+    };
+  }
+
+  function getCustomFieldColumnMenuSVG(column: Column<WorkItem>) {
+    const fieldName = column.name as keyof Fields;
+    if (context.getFilter(fieldName).length > 0)
+      return octicons["filter"].toSVG();
+    return undefined;
+  }
 
   function getGroup(n: Node) {
     if (n.data.type === "group") return n.data.name;
@@ -300,18 +290,17 @@
   />
 {/key}
 
-{#snippet renderSingleSelectFieldHeader(name: string)}
-  {@const fieldName = name as keyof Fields}
-  <TableSingleSelectColumnHeader
+{#snippet renderSingleSelectFieldMenuContent(column: Column<WorkItem>)}
+  {@const fieldName = column.name as keyof Fields}
+  <SingleSelectColumnMenu
     field={context.getSingleSelectField(fieldName)}
     filter={context.getFilter(fieldName)}
     onFilterChange={(filter) => context.setFilter(fieldName, filter)}
   />
 {/snippet}
 
-{#snippet renderIterationFieldHeader(name: string)}
-  {@const fieldName = name as keyof Fields}
-  <TableIterationColumnHeader {fieldName} />
+{#snippet renderIterationFieldMenuContent(column: Column<WorkItem>)}
+  <IterationColumnMenu fieldName={column.name as keyof Fields} />
 {/snippet}
 
 {#snippet renderGroup(name: string | undefined)}
