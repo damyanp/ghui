@@ -7,19 +7,6 @@
     getMenuIconSVG?: (column: Column<ITEM>) => string | undefined;
     renderMenuContent?: Snippet<[Column<ITEM>]>;
   };
-</script>
-
-<script lang="ts" generics="T, GROUP, ITEM">
-  import { ChevronDown, ChevronRight } from "@lucide/svelte";
-  import { tick, type Snippet } from "svelte";
-  import TreeTableContextMenu, {
-    type MenuItem,
-  } from "./TreeTableContextMenu.svelte";
-  import { onFirstVisible } from "$lib/OnVirstVisible";
-  import { SvelteSet } from "svelte/reactivity";
-  import type { Attachment } from "svelte/attachments";
-  import FindDialog from "./FindDialog.svelte";
-  import TableColumnMenu from "./TableColumnMenu.svelte";
 
   type Row<T> = {
     level: number;
@@ -30,9 +17,10 @@
     data: T;
   };
 
-  type Props = {
+  type Props<T, GROUP, ITEM> = {
     rows: Row<T>[];
     columns: Column<ITEM>[];
+    hiddenColumns: Column<ITEM>[];
 
     // These exist outside the TreeTable itself so they get persisted even if
     // the table unmounted.
@@ -47,13 +35,28 @@
     onRowFirstVisible?: (row: Row<T>) => void;
     matchesFilter?: (row: Row<T>, filter: string) => boolean;
   };
+</script>
+
+<script lang="ts" generics="T, GROUP, ITEM">
+  import { ChevronDown, ChevronRight, CirclePlus } from "@lucide/svelte";
+  import { tick, type Snippet } from "svelte";
+  import TreeTableContextMenu, {
+    type MenuItem,
+  } from "./TreeTableContextMenu.svelte";
+  import { onFirstVisible } from "$lib/OnVirstVisible";
+  import { SvelteSet } from "svelte/reactivity";
+  import type { Attachment } from "svelte/attachments";
+  import FindDialog from "./FindDialog.svelte";
+  import TableColumnMenu from "./TableColumnMenu.svelte";
+  import AddColumnButton from "./AddColumnButton.svelte";
 
   let {
     columns = $bindable(),
+    hiddenColumns = $bindable(),
     expanded = $bindable([]),
     visibleRows = $bindable(new SvelteSet<string>()),
     ...props
-  }: Props = $props();
+  }: Props<T, GROUP, ITEM> = $props();
 
   type MRow<T> = Row<T> & { modifiedDescendent: boolean };
 
@@ -294,6 +297,19 @@
               aria-orientation="vertical"
             ></div>
           </div>
+          {#if index === columns.length - 1 && hiddenColumns.length > 0}
+            <div class="left-[100%] absolute flex items-center h-full">
+              <AddColumnButton
+                columns={hiddenColumns}
+                onColumnSelected={(column) => {
+                  columns.push(column);
+                  hiddenColumns = hiddenColumns.filter(
+                    (c) => c.name !== column.name
+                  );
+                }}
+              />
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
@@ -338,13 +354,19 @@
   </div>
 </div>
 
-{#snippet columnHeader<ITEM>(column: Column<ITEM>)}
+{#snippet columnHeader(column: Column<ITEM>)}
   <div class="w-full flex justify-between overflow-hidden">
     <div class="overflow-hidden text-ellipsis">
       {column.name.charAt(0).toUpperCase() + column.name.slice(1)}
     </div>
     {#if !column.disableMenu}
-      <TableColumnMenu {column} />
+      <TableColumnMenu
+        {column}
+        onHideColumn={(column: Column<ITEM>) => {
+          columns = columns.filter((c) => c.name != column.name);
+          hiddenColumns.push(column);
+        }}
+      />
     {/if}
   </div>
 {/snippet}

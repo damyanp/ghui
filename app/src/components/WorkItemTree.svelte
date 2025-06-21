@@ -169,6 +169,8 @@
     },
   ]);
 
+  let hiddenColumns = $state<Column<WorkItem>[]>([]);
+
   function singleSelectColumn(
     name: string,
     render: Snippet<[WorkItem]>
@@ -278,6 +280,7 @@
   <TreeTable
     {rows}
     bind:columns
+    bind:hiddenColumns
     bind:expanded
     bind:visibleRows
     {getGroup}

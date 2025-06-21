@@ -5,6 +5,7 @@
 
   type Props = {
     column: Column<ITEM>;
+    onHideColumn?: (column: Column<ITEM>) => void;
   };
 
   const props: Props = $props();
@@ -25,7 +26,7 @@
   onOpenChange={(d) => (open = d.open)}
   arrow
   arrowBackground="!bg-surface-100 dark:!bg-surface-900"
-  contentBase="card bg-surface-100-900 p-4 space-y-4 max-w-[320px] "
+  contentBase="card bg-surface-100-900 p-4 space-y-4 "
 >
   {#snippet trigger()}
     <div class="hover:bg-surface-200-800 m-0.5 px-1 rounded-full flex-none">
@@ -35,9 +36,19 @@
 
   {#snippet content()}
     <div class="flex flex-col gap-2">
-      <div class="w-full rounded bg-surface-200-800 p-2 flex justify-center">
-        <button class="btn btn-sm preset-tonal">Hide Column</button>
-      </div>
+      {#if props.onHideColumn}
+        <div class="w-full rounded bg-surface-200-800 p-2 flex justify-center">
+          <button
+            class="btn btn-sm preset-tonal"
+            onclick={() => {
+              open = false;
+              props.onHideColumn?.(props.column);
+            }}
+          >
+            Hide Column
+          </button>
+        </div>
+      {/if}
       {#if props.column.renderMenuContent}
         <div>
           {@render props.column.renderMenuContent(props.column)}
