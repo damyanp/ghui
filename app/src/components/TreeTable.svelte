@@ -30,7 +30,12 @@
   type Props = {
     rows: Row<T>[];
     columns: Column[];
+
+    // These exist outside the TreeTable itself so they get persisted even if
+    // the table unmounted.
     expanded?: string[];
+    visibleRows?: SvelteSet<string>;
+
     getGroup: (row: Row<T>) => GROUP;
     getItem: (row: Row<T>) => ITEM | undefined;
     renderGroup: Snippet<[GROUP]>;
@@ -42,6 +47,7 @@
   let {
     columns = $bindable(),
     expanded = $bindable([]),
+    visibleRows = $bindable(new SvelteSet<string>()),
     ...props
   }: Props = $props();
 
@@ -212,7 +218,6 @@
     columns[columnIndex].width = "max-content";
   }
 
-  const visibleRows = new SvelteSet<string>();
   let rowVisibilityObserver: IntersectionObserver | undefined = $state();
 
   const rowVisbilityObserverAttachment: Attachment = (element) => {

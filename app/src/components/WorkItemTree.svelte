@@ -25,6 +25,7 @@
   import TableIterationColumnHeader from "./TableIterationColumnHeader.svelte";
   import { type FieldOption } from "$lib/bindings/FieldOption";
   import { type Iteration } from "$lib/bindings/Iteration";
+  import { SvelteSet } from "svelte/reactivity";
 
   dayjs.extend(isBetween);
 
@@ -272,6 +273,7 @@
   }
 
   let expanded = $state(context.workItemTreeExpandedItems);
+  let visibleRows = $state(new SvelteSet<string>());
 </script>
 
 {#key context.data}
@@ -279,6 +281,7 @@
     {rows}
     bind:columns
     bind:expanded
+    bind:visibleRows
     {getGroup}
     {getItem}
     {renderGroup}
