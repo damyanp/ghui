@@ -26,6 +26,7 @@
   import { type FieldOption } from "$lib/bindings/FieldOption";
   import { type Iteration } from "$lib/bindings/Iteration";
   import { SvelteSet } from "svelte/reactivity";
+  import { dataDir } from "@tauri-apps/api/path";
 
   dayjs.extend(isBetween);
 
@@ -274,6 +275,13 @@
 
   let expanded = $state(context.workItemTreeExpandedItems);
   let visibleRows = $state(new SvelteSet<string>());
+
+  function matchesFilter(row: Node, filterText: string) {
+    const item = getItem(row);
+    if (!item) return true;
+
+    return item.title.toLowerCase().includes(filterText.toLowerCase());
+  }
 </script>
 
 {#key context.data}
@@ -288,6 +296,7 @@
     {getContextMenuItems}
     {onRowDragDrop}
     {onRowFirstVisible}
+    {matchesFilter}
   />
 {/key}
 

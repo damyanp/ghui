@@ -10,6 +10,7 @@
   import { SvelteSet } from "svelte/reactivity";
   import type { Attachment } from "svelte/attachments";
   import { fade } from "svelte/transition";
+  import FindDialog from "./FindDialog.svelte";
 
   type Row<T> = {
     level: number;
@@ -42,6 +43,7 @@
     getContextMenuItems: (row: Row<T>) => MenuItem[];
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
     onRowFirstVisible?: (row: Row<T>) => void;
+    matchesFilter?: (row: Row<T>, filter: string) => boolean;
   };
 
   let {
@@ -53,29 +55,37 @@
 
   type MRow<T> = Row<T> & { modifiedDescendent: boolean };
 
+  let filterText = $state<string>("");
+
   const rows: MRow<T>[] = $derived.by(() => {
     let rows: MRow<T>[] = [];
 
-    let level = 0;
-
-    for (const row of props.rows) {
-      // Skip unexpanded rows, but figure out if any of the ones that were
-      // skipped were modified.
-      if (row.level > level) {
-        rows[rows.length - 1].modifiedDescendent =
-          rows[rows.length - 1].modifiedDescendent || row.isModified;
-        continue;
+    if (filterText.trim().length > 1 && props.matchesFilter) {
+      for (const row of props.rows) {
+        if (props.matchesFilter(row, filterText))
+          rows.push({ ...row, modifiedDescendent: false });
       }
+    } else {
+      let level = 0;
 
-      rows.push({ ...row, modifiedDescendent: false });
+      for (const row of props.rows) {
+        // Skip unexpanded rows, but figure out if any of the ones that were
+        // skipped were modified.
+        if (row.level > level) {
+          rows[rows.length - 1].modifiedDescendent =
+            rows[rows.length - 1].modifiedDescendent || row.isModified;
+          continue;
+        }
 
-      if (row.hasChildren && expanded.includes(row.id)) {
-        level = row.level + 1;
-      } else {
-        level = row.level;
+        rows.push({ ...row, modifiedDescendent: false });
+
+        if (row.hasChildren && expanded.includes(row.id)) {
+          level = row.level + 1;
+        } else {
+          level = row.level;
+        }
       }
     }
-
     return [...rows];
   });
 
@@ -248,6 +258,10 @@
   class="px-5 my-5 overflow-x-auto overflow-y-scroll"
   {@attach rowVisbilityObserverAttachment}
 >
+  {#if props.matchesFilter}
+    <FindDialog bind:text={filterText} />
+  {/if}
+
   <!-- Table container -->
   <div
     class="grid w-full"
