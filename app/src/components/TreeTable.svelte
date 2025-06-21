@@ -7,6 +7,9 @@
   } from "./TreeTableContextMenu.svelte";
   import { onFirstVisible } from "$lib/OnVirstVisible";
   import TableColumnHeader from "./TableSingleSelectColumnHeader.svelte";
+  import { SvelteSet } from "svelte/reactivity";
+  import type { Attachment } from "svelte/attachments";
+  import { fade } from "svelte/transition";
 
   type Row<T> = {
     level: number;
@@ -208,10 +211,38 @@
 
     columns[columnIndex].width = "max-content";
   }
+
+  const visibleRows = new SvelteSet<string>();
+  let rowVisibilityObserver: IntersectionObserver | undefined = $state();
+
+  const rowVisbilityObserverAttachment: Attachment = (element) => {
+    rowVisibilityObserver = new IntersectionObserver(
+      (intersections) => {
+        intersections.forEach((intersection) => {
+          const rowId = intersection.target.getAttribute("data-row-id");
+          if (rowId) {
+            if (intersection.isIntersecting) visibleRows.add(rowId);
+            else visibleRows.delete(rowId);
+          }
+        });
+      },
+      { rootMargin: "500px" }
+    );
+  };
+
+  const rowVisibilityChecker: Attachment = (element) => {
+    rowVisibilityObserver?.observe(element);
+    return () => {
+      rowVisibilityObserver?.unobserve(element);
+    };
+  };
 </script>
 
 <!-- Component Container -->
-<div class="px-5 my-5 overflow-x-auto overflow-y-scroll">
+<div
+  class="px-5 my-5 overflow-x-auto overflow-y-scroll"
+  {@attach rowVisbilityObserverAttachment}
+>
   <!-- Table container -->
   <div
     class="grid w-full"
@@ -275,11 +306,14 @@
             ondragover={dragOverHandler}
             ondrop={dropHandler}
             {@attach onFirstVisible(row, onRowFirstVisible)}
+            {@attach rowVisibilityChecker}
           >
             {#if row.isGroup}
               {@render groupRow(row)}
-            {:else}
+            {:else if visibleRows.has(row.id)}
               {@render itemRow(row)}
+            {:else}
+              &nbsp;
             {/if}
           </div>
         {/snippet}
