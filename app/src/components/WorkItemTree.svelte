@@ -10,7 +10,7 @@
   } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
   import TreeTable, { type Column } from "./TreeTable.svelte";
-  import { createRawSnippet, type Snippet } from "svelte";
+  import { createRawSnippet, onMount, type Snippet } from "svelte";
   import type { Change } from "$lib/bindings/Change";
   import type { DelayLoad } from "$lib/bindings/DelayLoad";
   import { type FieldOptionId } from "$lib/bindings/FieldOptionId";
@@ -170,6 +170,63 @@
   ]);
 
   let hiddenColumns = $state<Column<WorkItem>[]>([]);
+
+  // Load (on mount) and save (on unmount) column state
+  onMount(() => {
+    type ColState = {
+      name: string;
+      width: string;
+      visible: boolean;
+    };
+
+    const columnDefs = new Map(
+      columns.map((c) => {
+        return [c.name, c];
+      })
+    );
+
+    let state = JSON.parse(
+      localStorage.getItem("work-item-tree-columns") || "[]"
+    ) as ColState[];
+    if (!state) state = [];
+
+    columns = [];
+    hiddenColumns = [];
+
+    state.forEach((columnState) => {
+      let column = columnDefs.get(columnState.name);
+      if (!column) {
+        console.log(
+          `Have stored state for unknown column '${columnState.name}'`
+        );
+        return;
+      }
+
+      column.width = columnState.width;
+
+      if (columnState.visible) columns.push(column);
+      else hiddenColumns.push(column);
+
+      columnDefs.delete(columnState.name);
+    });
+
+    // Any remaining columns are assumed to be visible
+    columnDefs.values().forEach((c) => columns.push(c));
+
+    return () => {
+      let state: ColState[] = [];
+
+      columns.forEach((c) => {
+        state.push({ name: c.name, width: c.width, visible: true });
+      });
+
+      hiddenColumns.forEach((c) => {
+        state.push({ name: c.name, width: c.width, visible: false });
+      });
+
+      localStorage.setItem("work-item-tree-columns", JSON.stringify(state));
+    };
+  });
 
   function singleSelectColumn(
     name: string,
