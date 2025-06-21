@@ -186,6 +186,8 @@ export class WorkItemContext {
       case "status":
       case "epic":
       case "kind":
+      case "estimate":
+      case "priority":
         await this.addChange({
           workItemId: item.id,
           data: {

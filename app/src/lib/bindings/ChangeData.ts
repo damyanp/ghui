@@ -9,5 +9,7 @@ export type ChangeData =
   | { "type": "epic"; "value": FieldOptionId | null }
   | { "type": "iteration"; "value": FieldOptionId | null }
   | { "type": "kind"; "value": FieldOptionId | null }
+  | { "type": "estimate"; "value": FieldOptionId | null }
+  | { "type": "priority"; "value": FieldOptionId | null }
   | { "type": "setParent"; "value": WorkItemId }
   | { "type": "addToProject" };

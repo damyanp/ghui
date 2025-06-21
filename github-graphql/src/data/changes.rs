@@ -136,6 +136,26 @@ impl Change {
                 self.save_field(client, work_items, &fields.project_id, &fields.kind, value)
                     .await
             }
+            ChangeData::Estimate(value) => {
+                self.save_field(
+                    client,
+                    work_items,
+                    &fields.project_id,
+                    &fields.estimate,
+                    value,
+                )
+                .await
+            }
+            ChangeData::Priority(value) => {
+                self.save_field(
+                    client,
+                    work_items,
+                    &fields.project_id,
+                    &fields.priority,
+                    value,
+                )
+                .await
+            }
             ChangeData::SetParent(new_parent) => {
                 add_sub_issue(client, &new_parent.0, &self.work_item_id.0).await
             }
@@ -245,6 +265,8 @@ pub enum ChangeData {
     Epic(Option<FieldOptionId>),
     Iteration(Option<FieldOptionId>),
     Kind(Option<FieldOptionId>),
+    Estimate(Option<FieldOptionId>),
+    Priority(Option<FieldOptionId>),
     SetParent(WorkItemId),
     AddToProject,
 }
@@ -280,6 +302,12 @@ impl Change {
             ChangeData::Kind(_) => fields
                 .iteration
                 .option_name(work_item.project_item.kind.expect_loaded().as_ref()),
+            ChangeData::Estimate(_) => fields
+                .estimate
+                .option_name(work_item.project_item.kind.expect_loaded().as_ref()),
+            ChangeData::Priority(_) => fields
+                .priority
+                .option_name(work_item.project_item.kind.expect_loaded().as_ref()),
             ChangeData::SetParent(_) => match &work_item.data {
                 WorkItemData::Issue(issue) => issue.parent_id.as_ref().map(|v| v.0.as_str()),
                 _ => None,
@@ -295,6 +323,8 @@ impl Change {
             ChangeData::Epic(_) => "Epic",
             ChangeData::Iteration(_) => "Iteration",
             ChangeData::Kind(_) => "Kind",
+            ChangeData::Estimate(_) => "Estimate",
+            ChangeData::Priority(_) => "Priority",
             ChangeData::SetParent(_) => "SetParent",
             ChangeData::AddToProject => "AddToProject",
         };
@@ -306,6 +336,8 @@ impl Change {
             ChangeData::Epic(value) => fields.epic.option_name(value.as_ref()),
             ChangeData::Iteration(value) => fields.iteration.option_name(value.as_ref()),
             ChangeData::Kind(value) => fields.kind.option_name(value.as_ref()),
+            ChangeData::Estimate(value) => fields.estimate.option_name(value.as_ref()),
+            ChangeData::Priority(value) => fields.priority.option_name(value.as_ref()),
             ChangeData::SetParent(value) => Some(value.0.as_str()),
             ChangeData::AddToProject => None,
         }
@@ -359,6 +391,8 @@ impl WorkItems {
                     work_item.project_item.iteration = value.clone().into()
                 }
                 ChangeData::Kind(value) => work_item.project_item.kind = value.clone().into(),
+                ChangeData::Estimate(value) => work_item.project_item.estimate = value.clone(),
+                ChangeData::Priority(value) => work_item.project_item.priority = value.clone(),
                 ChangeData::SetParent(new_parent_id) => {
                     let child_id = &change.work_item_id;
 
