@@ -34,9 +34,14 @@
   {/snippet}
 
   {#snippet content()}
-    <div>
+    <div class="flex flex-col gap-2">
+      <div class="w-full rounded bg-surface-200-800 p-2 flex justify-center">
+        <button class="btn btn-sm preset-tonal">Hide Column</button>
+      </div>
       {#if props.column.renderMenuContent}
-        {@render props.column.renderMenuContent(props.column)}
+        <div>
+          {@render props.column.renderMenuContent(props.column)}
+        </div>
       {/if}
     </div>
   {/snippet}

@@ -78,36 +78,50 @@
   }
 </script>
 
-<div class="border-b pb-2 grid grid-cols-2">
-  <button class="btn preset-tonal m-2 btn-sm" onclick={onAllClicked}>All</button
-  >
-  <button class="btn preset-tonal m-2 btn-sm" onclick={onNoneClicked}
-    >None</button
-  >
-  <Switch checked={showAll} onCheckedChange={(d) => (showAll = d.checked)}>
-    {#if showAll}
-      Show All
-    {:else}
-      Show Used
-    {/if}
-  </Switch>
-</div>
-<div class="grid grid-cols-1 max-h-[50vh] overflow-y-auto">
-  {#each values as value}
-    <div>
-      <Switch
-        classes="py-1"
-        checked={value.checked}
-        onCheckedChange={({ checked }) => onCheckedChange(value.id, checked)}
-      >
-        {value.value}
-        {#if value.data}
-          <small>{value.data.startDate}</small>
-        {/if}
-        {#snippet activeChild()}
-          {value.count}
-        {/snippet}
-      </Switch>
-    </div>
-  {/each}
+<div class="flex flex-col gap-2 rounded bg-surface-200-800 p-2">
+  <div class="text-xs border-b border-surface-500">Filters</div>
+
+  <div class="grid grid-cols-2">
+    <button class="btn preset-tonal m-2 btn-sm" onclick={onAllClicked}
+      >All</button
+    >
+    <button class="btn preset-tonal m-2 btn-sm" onclick={onNoneClicked}
+      >None</button
+    >
+  </div>
+  <div>
+    <Switch
+      checked={showAll}
+      onCheckedChange={(d) => (showAll = d.checked)}
+      classes="text-xs"
+    >
+      {#if showAll}
+        Show All
+      {:else}
+        Show Used
+      {/if}
+    </Switch>
+  </div>
+  <div class="border-surface-500 border-t"></div>
+  <div class="grid grid-cols-1 max-h-[50vh] overflow-y-auto">
+    {#each values as value}
+      <div>
+        <Switch
+          classes="py-1 text-s text-nowrap"
+          checked={value.checked}
+          onCheckedChange={({ checked }) => onCheckedChange(value.id, checked)}
+        >
+          {value.value}
+          {#if value.data}
+            <span class="text-xs text-nowrap">{value.data.startDate}</span>
+          {/if}
+          {#snippet activeChild()}
+            {#if value.count > 0}
+              <span class="text-xs">{value.count}</span>
+            {/if}
+          {/snippet}
+        </Switch>
+      </div>
+    {/each}
+  </div>
 </div>
