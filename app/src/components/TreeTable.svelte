@@ -133,7 +133,8 @@
 
   function dragOverHandler(e: DragEvent) {
     let rowId = findRowId(e.target as HTMLElement);
-    if (rowId && rowId !== draggedRowId) {
+
+    if (rowId && draggedRowId && rowId !== draggedRowId) {
       currentDropRowId = rowId;
       e.preventDefault();
     }
@@ -141,8 +142,11 @@
 
   function dragEnterHandler(e: DragEvent) {
     let rowId = findRowId(e.target as HTMLElement);
-    currentDropRowId = rowId;
-    e.preventDefault();
+
+    if (rowId && draggedRowId && rowId !== draggedRowId) {
+      currentDropRowId = rowId;
+      e.preventDefault();
+    }
   }
 
   function dragLeaveHandler(e: DragEvent) {
@@ -256,6 +260,53 @@
       rowVisibilityObserver?.unobserve(element);
     };
   };
+
+  type DivDragEvent = DragEvent & {
+    currentTarget: EventTarget & HTMLDivElement;
+  };
+
+  let draggedColumnIndex = $state(-1);
+  let droppedColumnIndex = $state(-1);
+
+  function handleColumnHeaderDragStart(event: DivDragEvent) {
+    let columnIndex = event.currentTarget.getAttribute("data-column-index");
+    if (columnIndex === null) {
+      console.log("WARNING: column drag started - but there's no index!");
+      draggedColumnIndex = -1;
+      return;
+    }
+    draggedColumnIndex = Number.parseInt(columnIndex);
+    if (event.dataTransfer !== null) event.dataTransfer.dropEffect = "move";
+  }
+
+  function handleColumnHeaderDrop(event: DivDragEvent) {
+    if (draggedColumnIndex === -1) return;
+    if (droppedColumnIndex === -1) return;
+
+    let column = columns[draggedColumnIndex];
+    columns.splice(draggedColumnIndex, 1);
+    columns.splice(droppedColumnIndex, 0, column);
+
+    droppedColumnIndex = -1;
+    event.preventDefault();
+  }
+
+  function handleColumnHeaderDragOver(event: DivDragEvent) {
+    if (draggedColumnIndex === -1) return;
+
+    let columnIndex = event.currentTarget.getAttribute("data-column-index");
+    if (columnIndex !== null) droppedColumnIndex = Number.parseInt(columnIndex);
+    if (droppedColumnIndex === 0 || droppedColumnIndex === draggedColumnIndex) {
+      droppedColumnIndex = -1;
+      return;
+    }
+
+    event.preventDefault();
+  }
+
+  function handleColumnHeaderDragLeave(event: DivDragEvent) {
+    droppedColumnIndex = -1;
+  }
 </script>
 
 <!-- Component Container -->
@@ -281,8 +332,9 @@
         <div
           id="column-index-{index}"
           class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
+          class:bg-secondary-500={index === droppedColumnIndex}
         >
-          {@render columnHeader(column)}
+          {@render columnHeader(column, index)}
           <div
             class="overflow-visible z-10 my-1 border-r border-r-surface-800-200"
           >
@@ -293,6 +345,10 @@
               onpointerup={handleColumnResizeOnPointerUp}
               onpointermove={handleColumnResizeOnPointerMove}
               ondblclick={handleColumnResizeDoubleClick}
+              ondragenter={handleColumnHeaderDragOver}
+              ondragleave={handleColumnHeaderDragLeave}
+              ondragover={handleColumnHeaderDragOver}
+              ondrop={handleColumnHeaderDrop}
               role="separator"
               aria-orientation="vertical"
             ></div>
@@ -354,8 +410,19 @@
   </div>
 </div>
 
-{#snippet columnHeader(column: Column<ITEM>)}
-  <div class="w-full flex justify-between overflow-hidden">
+{#snippet columnHeader(column: Column<ITEM>, index: number)}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="w-full flex justify-between overflow-hidden"
+    class:bg-secondary-500={index === droppedColumnIndex}
+    data-column-index={index}
+    draggable={index > 0}
+    ondragstart={handleColumnHeaderDragStart}
+    ondragenter={handleColumnHeaderDragOver}
+    ondragleave={handleColumnHeaderDragLeave}
+    ondragover={handleColumnHeaderDragOver}
+    ondrop={handleColumnHeaderDrop}
+  >
     <div class="overflow-hidden text-ellipsis">
       {column.name.charAt(0).toUpperCase() + column.name.slice(1)}
     </div>
