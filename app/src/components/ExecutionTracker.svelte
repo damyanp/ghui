@@ -1,7 +1,13 @@
 <script lang="ts" module>
   export type Data<T> = {
     epics: Epic<T>[];
-    startDate: Date;
+    iterations: Iteration[];
+  };
+
+  export type Iteration = {
+    name: string;
+    start: Date;
+    end: Date;
   };
 
   export type Date = string;
@@ -44,7 +50,7 @@
 
 <script lang="ts" generics="T">
   import dayjs from "dayjs";
-  import { Copy, LucideBadgeDollarSign, ZoomIn, ZoomOut } from "@lucide/svelte";
+  import { Copy, ZoomIn, ZoomOut } from "@lucide/svelte";
   import {
     ExecutionTrackerContext,
     getExecutionTrackerContext,
@@ -55,6 +61,7 @@
   import TreeTableContextMenu from "./TreeTableContextMenu.svelte";
   import { tick } from "svelte";
   import { onMount, onDestroy } from "svelte";
+  import Dice_1 from "@lucide/svelte/icons/dice-1";
 
   // Center label in visible portion of bar
   function centerLabelInView(barEl: HTMLElement, labelEl: HTMLElement) {
@@ -111,18 +118,6 @@
       labelEl.style.transform = "";
     }
 
-    // else {
-    //   // Move to the right
-    //   labelEl.style.left = `${offset + visibleWidth}px`;
-    //   labelEl.style.transform = "";
-    //   barEl.classList.add("naked-label");
-    // }
-
-    // if (labelRect.width < visibleWidth) {
-    // } else {
-    //   labelEl.style.left = `${offset}px`;
-    //   labelEl.style.transform = "";
-    // }
     labelEl.style.position = "absolute";
     labelEl.style.width = "max-content";
     labelEl.style.pointerEvents = "none";
@@ -239,15 +234,17 @@
   const dates = $derived.by(() => {
     let dates = [];
 
-    let date = dayjs(data.startDate);
-    let endDate = dayjs.unix(maxDate).add(1, "day");
+    for (const iteration of data.iterations) {
+      let date = dayjs(iteration.start);
+      let end = dayjs(iteration.end);
 
-    while (date < endDate) {
-      dates.push({
-        value: date.unix() * context.scale - minX,
-        label: date.format("MM-DD"),
-      });
-      date = date.add(7, "day");
+      while (date < end) {
+        dates.push({
+          value: date.unix() * context.scale - minX,
+          label: date.format("MM-DD"),
+        });
+        date = date.add(7, "days");
+      }
     }
 
     return dates;
@@ -439,9 +436,19 @@
     <div
       class="row-start-1 col-start-1 text-white bg-teal-800 z-20 sticky top-0"
     >
+      {#each data.iterations as iteration}
+        {@const start = dayjs(iteration.start).unix() * context.scale - minX}
+        {@const end = dayjs(iteration.end).add(1, "day").unix() * context.scale - minX}
+        <div
+          class="absolute text-center text-xs h-full even:bg-teal-600"
+          style={`left: ${start}px; width: ${end - start}px`}
+        >
+          {iteration.name}
+        </div>
+      {/each}
       {#each dates as date}
         <div
-          class="absolute"
+          class="absolute text-xs h-full flex items-end text-nowrap overflow-visible"
           style={`left: ${date.value}px; transform: translate(-50%,0)`}
         >
           {date.label}

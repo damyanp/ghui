@@ -12,18 +12,17 @@
     type BarState,
     type Epic,
     type Data as ExecutionTrackerData,
+    type Iteration,
     type Row,
     type Scenario,
   } from "./ExecutionTracker.svelte";
   import WorkItemExtraDataEditor from "./WorkItemExtraDataEditor.svelte";
-  import { type WorkItemId } from "$lib/bindings/WorkItemId";
-  import { openUrl } from "@tauri-apps/plugin-opener";
   import type { MenuItem } from "./TreeTableContextMenu.svelte";
-  import { tick } from "svelte";
+  import { infinity } from "@primer/octicons";
 
   let context = getWorkItemContext();
 
-  const startDate = "2025-02-09";
+  const startDate = dayjs().subtract(3, "months").format("YYYY-MM-DD");
 
   type Payload = WorkItem;
 
@@ -405,10 +404,43 @@
     return `${active} active / ${open} open / ${closed} closed`;
   }
 
+  const iterations: Iteration[] = $derived.by(() => {
+    // Find the left-most bar
+    const startDate = epics
+      .map((e) =>
+        e.scenarios.map((s) => s.rows.map((r) => r.bars.map((b) => b.start)))
+      )
+      .flat(3)
+      .reduce((acc, value) => {
+        const v = dayjs(value);
+        return acc < v ? acc : v;
+      }, dayjs());
+
+    const iterations: Iteration[] = [];
+
+    context.getIterationField("iteration").options.filter((o) => {
+      const end = dayjs(o.data.startDate).add(
+        Number(o.data.duration) - 1,
+        "days"
+      );
+      if (end > startDate) {
+        iterations.push({
+          name: o.value,
+          start: o.data.startDate,
+          end: end.format("YYYY-MM-DD"),
+        });
+      }
+    });
+
+    return iterations;
+  });
+
+  $inspect(iterations);
+
   const data: ExecutionTrackerData<Payload> = $derived.by(() => {
     return {
-      startDate,
-      epics: epics,
+      iterations,
+      epics,
     };
   });
 
