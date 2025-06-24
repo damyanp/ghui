@@ -118,7 +118,7 @@
         );
       });
 
-    if (scenarios.length === 0) return [{ name: "TBD", rows: [] }];
+    if (scenarios.length === 0) return [{ name: "TBD", rows: [{ bars: [] }] }];
     else return scenarios;
   }
 
