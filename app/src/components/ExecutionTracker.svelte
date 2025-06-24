@@ -438,7 +438,8 @@
     >
       {#each data.iterations as iteration}
         {@const start = dayjs(iteration.start).unix() * context.scale - minX}
-        {@const end = dayjs(iteration.end).add(1, "day").unix() * context.scale - minX}
+        {@const end =
+          dayjs(iteration.end).add(1, "day").unix() * context.scale - minX}
         <div
           class="absolute text-center text-xs h-full even:bg-teal-600"
           style={`left: ${start}px; width: ${end - start}px`}
@@ -522,13 +523,18 @@
   </div>
 </div>
 
-<style>
-  .naked-label {
-    color: var(--base-font-color);
-    overflow: visible;
-  }
+<!-- force these styles to be included in final builds -->
+<span class="naked-label" style="display:none"></span>
 
-  :global(html[data-mode="dark"]) .naked-label {
-    color: var(--base-font-color-dark);
+<style>
+  :global {
+    .naked-label {
+      color: var(--base-font-color);
+      overflow: visible;
+    }
+
+    :global(html[data-mode="dark"]) .naked-label {
+      color: var(--base-font-color-dark);
+    }
   }
 </style>
