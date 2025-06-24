@@ -18,24 +18,26 @@
   } from "./ExecutionTracker.svelte";
   import WorkItemExtraDataEditor from "./WorkItemExtraDataEditor.svelte";
   import type { MenuItem } from "./TreeTableContextMenu.svelte";
-  import { infinity } from "@primer/octicons";
+  import { SvelteSet } from "svelte/reactivity";
+  import { Portal } from "bits-ui";
 
   let context = getWorkItemContext();
 
+  let hiddenEpics = new SvelteSet<string>();
   const startDate = dayjs().subtract(3, "months").format("YYYY-MM-DD");
 
   type Payload = WorkItem;
 
   const epics: Epic<Payload>[] = $derived.by(() => {
-    return Object.values(context.data.fields.epic.options).map(
-      (epicFieldOption) => {
+    return Object.values(context.data.fields.epic.options)
+      .filter((epicFieldOption) => !hiddenEpics.has(epicFieldOption.value))
+      .map((epicFieldOption) => {
         return {
           name: epicFieldOption.value,
           targetDate: "TBD",
           scenarios: getScenarios(epicFieldOption.id),
         };
-      }
-    );
+      });
   });
 
   const scenarioKindId = $derived(
@@ -435,8 +437,6 @@
     return iterations;
   });
 
-  $inspect(iterations);
-
   const data: ExecutionTrackerData<Payload> = $derived.by(() => {
     return {
       iterations,
@@ -448,23 +448,39 @@
   let editorOpen = $state(false);
 </script>
 
-<ExecutionTracker {data} />
+<ExecutionTracker {data}/>
 
-<WorkItemExtraDataEditor
-  getInitialContent={() =>
-    JSON.stringify(
-      context.getWorkItemExtraData(editorWorkItem!.id),
-      undefined,
-      4
-    )}
-  onSave={(text) => {
-    context.setWorkItemExtraData(editorWorkItem!.id, JSON.parse(text));
-    editorOpen = false;
-  }}
-  onCancel={() => {
-    editorOpen = false;
-  }}
-  open={editorOpen}
->
-  <h1>{$state.snapshot(editorWorkItem!.title)}</h1>
-</WorkItemExtraDataEditor>
+<div class="mt-auto flex flex-row gap-2 p-2 max-h-fit">
+  {#each Object.values(context.data.fields.epic.options) as epic}
+    <button
+      class="btn btn-sm {hiddenEpics.has(epic.value)
+        ? 'preset-tonal'
+        : 'preset-tonal-primary'}"
+      onclick={() => {
+        if (hiddenEpics.has(epic.value)) hiddenEpics.delete(epic.value);
+        else hiddenEpics.add(epic.value);
+      }}>{epic.value}</button
+    >
+  {/each}
+</div>
+
+<Portal>
+  <WorkItemExtraDataEditor
+    getInitialContent={() =>
+      JSON.stringify(
+        context.getWorkItemExtraData(editorWorkItem!.id),
+        undefined,
+        4
+      )}
+    onSave={(text) => {
+      context.setWorkItemExtraData(editorWorkItem!.id, JSON.parse(text));
+      editorOpen = false;
+    }}
+    onCancel={() => {
+      editorOpen = false;
+    }}
+    open={editorOpen}
+  >
+    <h1>{$state.snapshot(editorWorkItem!.title)}</h1>
+  </WorkItemExtraDataEditor>
+</Portal>

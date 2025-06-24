@@ -35,7 +35,7 @@
   );
 </script>
 
-<div class="grid grid-rows-[max-content_auto] gap-1 h-full w-full fixed">
+<div class="flex flex-col gap-1 h-full w-full fixed">
   <AppBar centerClasses="flex gap-1" padding="px-4 py-1">
     {#snippet lead()}
       <div
