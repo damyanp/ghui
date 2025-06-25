@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use github_graphql::client::graphql::custom_fields_query::get_fields;
 use github_graphql::client::graphql::{add_to_project, get_resource_id, set_project_field_value};
 use github_graphql::client::transport::GithubClient;
-use github_graphql::data::{FieldOptionId, Fields};
+use github_graphql::data::{FieldOptionId, Fields, SingleSelect};
 use regex::Regex;
 use std::fs::File;
 use std::io::Read;
@@ -59,7 +59,7 @@ async fn add_item(
     let content_id = get_resource_id(client, issue).await?;
     let item_id = add_to_project(client, &fields.project_id, &content_id).await?;
     if let Some(epic_id) = epic_id {
-        set_project_field_value(
+        set_project_field_value::<SingleSelect>(
             client,
             &fields.project_id,
             &item_id,

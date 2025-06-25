@@ -3,8 +3,8 @@ use super::{
 };
 use crate::client::{
     graphql::{
-        add_sub_issue, add_to_project, clear_project_field_value, get_issue_types, set_issue_type,
-        set_project_field_value,
+        add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
+        mutators::SettableProjectFieldValue, set_issue_type, set_project_field_value,
     },
     transport::Client,
 };
@@ -167,7 +167,7 @@ impl Change {
         }
     }
 
-    async fn save_field<T>(
+    async fn save_field<T: SettableProjectFieldValue>(
         &self,
         client: &impl Client,
         work_items: &WorkItems,
@@ -180,7 +180,7 @@ impl Change {
             .map(|item| &item.project_item.id)
         {
             if let Some(new_value_id) = value {
-                set_project_field_value(
+                set_project_field_value::<T>(
                     client,
                     project_id,
                     project_item_id,

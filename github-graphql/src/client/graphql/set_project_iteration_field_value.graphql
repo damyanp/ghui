@@ -1,4 +1,4 @@
-mutation SetProjectFieldValue(
+mutation SetProjectIterationFieldValue(
   $projectId: ID!
   $itemId: ID!
   $fieldId: ID!
@@ -9,7 +9,7 @@ mutation SetProjectFieldValue(
       projectId: $projectId
       itemId: $itemId
       fieldId: $fieldId
-      value: { singleSelectOptionId: $optionId }
+      value: { iterationId: $optionId }
     }
   ) {
     clientMutationId

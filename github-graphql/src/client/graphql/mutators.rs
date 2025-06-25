@@ -1,6 +1,8 @@
+use std::future::Future;
+
 use crate::{
     client::transport::Client,
-    data::{FieldId, FieldOptionId, ProjectItemId},
+    data::{FieldId, FieldOptionId, Iteration, ProjectItemId, SingleSelect},
     Error, Result,
 };
 use graphql_client::{GraphQLQuery, Response};
@@ -82,35 +84,90 @@ pub async fn clear_project_field_value(
     Ok(())
 }
 
-gql!(
-    SetProjectFieldValue,
-    "src/client/graphql/set_project_field_value.graphql"
-);
-
-pub async fn set_project_field_value(
+pub async fn set_project_field_value<T: SettableProjectFieldValue>(
     client: &impl Client,
     project_id: &str,
     item_id: &ProjectItemId,
     field_id: &FieldId,
     option_id: &FieldOptionId,
 ) -> Result {
-    let variables = set_project_field_value::Variables {
-        project_id: project_id.to_owned(),
-        item_id: item_id.0.to_owned(),
-        field_id: field_id.0.to_owned(),
-        option_id: option_id.0.to_owned(),
-    };
+    T::set_project_field_value(client, project_id, item_id, field_id, option_id).await
+}
 
-    let request_body = SetProjectFieldValue::build_query(variables);
+pub trait SettableProjectFieldValue {
+    fn set_project_field_value(
+        client: &impl Client,
+        project_id: &str,
+        item_id: &ProjectItemId,
+        field_id: &FieldId,
+        option_id: &FieldOptionId,
+    ) -> impl Future<Output = Result>;
+}
 
-    let response: Response<set_project_field_value::ResponseData> =
-        client.request(&request_body).await?;
+gql!(
+    SetProjectSingleSelectFieldValue,
+    "src/client/graphql/set_project_single_select_field_value.graphql"
+);
 
-    if let Some(errors) = response.errors {
-        Err(Error::GraphQlResponseErrors(errors))?;
+impl SettableProjectFieldValue for SingleSelect {
+    async fn set_project_field_value(
+        client: &impl Client,
+        project_id: &str,
+        item_id: &ProjectItemId,
+        field_id: &FieldId,
+        option_id: &FieldOptionId,
+    ) -> Result {
+        let variables = set_project_single_select_field_value::Variables {
+            project_id: project_id.to_owned(),
+            item_id: item_id.0.to_owned(),
+            field_id: field_id.0.to_owned(),
+            option_id: option_id.0.to_owned(),
+        };
+
+        let request_body = SetProjectSingleSelectFieldValue::build_query(variables);
+
+        let response: Response<set_project_single_select_field_value::ResponseData> =
+            client.request(&request_body).await?;
+
+        if let Some(errors) = response.errors {
+            Err(Error::GraphQlResponseErrors(errors))?;
+        }
+
+        Ok(())
     }
+}
 
-    Ok(())
+gql!(
+    SetProjectIterationFieldValue,
+    "src/client/graphql/set_project_iteration_field_value.graphql"
+);
+
+impl SettableProjectFieldValue for Iteration {
+    async fn set_project_field_value(
+        client: &impl Client,
+        project_id: &str,
+        item_id: &ProjectItemId,
+        field_id: &FieldId,
+        option_id: &FieldOptionId,
+    ) -> Result {
+        let variables = set_project_iteration_field_value::Variables {
+            project_id: project_id.to_owned(),
+            item_id: item_id.0.to_owned(),
+            field_id: field_id.0.to_owned(),
+            option_id: option_id.0.to_owned(),
+        };
+
+        let request_body = SetProjectIterationFieldValue::build_query(variables);
+
+        let response: Response<set_project_iteration_field_value::ResponseData> =
+            client.request(&request_body).await?;
+
+        if let Some(errors) = response.errors {
+            Err(Error::GraphQlResponseErrors(errors))?;
+        }
+
+        Ok(())
+    }
 }
 
 gql!(SetIssueType, "src/client/graphql/set_issue_type.graphql");
