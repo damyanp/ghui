@@ -80,9 +80,16 @@
       .map((scenario): Scenario<Payload> => {
         const isClosed = scenario.projectItem.status === closedStatusId;
 
-        let rows = getRows(scenario);
-
         const extraData = context.getWorkItemExtraData(scenario.id);
+
+        let rows: Row<WorkItem>[] = [];
+
+        if (extraData.bars) {
+          rows.push(getBars(extraData, scenario));
+        }
+
+        rows = [...rows, ...getRows(scenario)];
+
         if (extraData.burnDown) {
           rows.push({
             bars: [
@@ -192,15 +199,7 @@
       // If there are bars explicitly provided these override everything
       if (extraData) {
         if (extraData.bars) {
-          const bars = <Bar<Payload>[]>extraData.bars;
-          return {
-            bars: bars.map((bar) => {
-              return {
-                ...bar,
-                data: deliverable,
-              };
-            }),
-          };
+          return getBars(extraData, deliverable);
         }
         if (extraData.split) {
           let bars: Partial<Bar<Payload>>[] = [];
@@ -283,6 +282,18 @@
         ],
       };
     }
+  }
+
+  function getBars(extraData: any, workItem: WorkItem) {
+    const bars = <Bar<Payload>[]>extraData.bars;
+    return {
+      bars: bars.map((bar) => {
+        return {
+          ...bar,
+          data: workItem,
+        };
+      }),
+    };
   }
 
   function addStandardMenuItems(row: Row<Payload>): Row<Payload> {
@@ -448,7 +459,7 @@
   let editorOpen = $state(false);
 </script>
 
-<ExecutionTracker {data}/>
+<ExecutionTracker {data} />
 
 <div class="mt-auto flex flex-row gap-2 p-2 max-h-fit">
   {#each Object.values(context.data.fields.epic.options) as epic}
