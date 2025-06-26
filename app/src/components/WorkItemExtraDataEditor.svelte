@@ -13,19 +13,21 @@
 
   let props: Props = $props();
 
+  const stateEnum = {
+    enum: [
+      "completed",
+      "onTrack",
+      "atRisk",
+      "offTrack",
+      "notStarted",
+      "noDates",
+    ],
+  };
+
   const barSchema = {
     type: "object",
     properties: {
-      state: {
-        enum: [
-          "completed",
-          "onTrack",
-          "atRisk",
-          "offTrack",
-          "notStarted",
-          "noDates",
-        ],
-      },
+      state: stateEnum,
       label: { type: "string" },
       start: { type: "string" },
       end: { type: "string" },
@@ -51,7 +53,7 @@
       },
       start: { type: "string" },
       estimate: { type: "number" },
-      burnDown: { type: "boolean" },
+      burnDown: stateEnum,
     },
   };
 </script>

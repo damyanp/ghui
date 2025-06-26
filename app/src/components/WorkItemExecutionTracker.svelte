@@ -91,13 +91,24 @@
         rows = [...rows, ...getRows(scenario)];
 
         if (extraData.burnDown) {
+
+          let start = dayjs().subtract(1, "week");
+          let end = dayjs().add(1, "week");
+
+          if (extraData.start)
+            start = dayjs(extraData.start);
+          else if (extraData.burnDown === "noDates") {
+            start = dayjs().add(1, "week");
+            end = dayjs(defaultEnd);
+          }
+
           rows.push({
             bars: [
               {
                 label: getBurndownLabel(scenario),
-                state: "onTrack",
-                start: dayjs().subtract(1, "week").format("YYYY-MM-DD"),
-                end: dayjs().add(1, "week").format("YYYY-MM-DD"),
+                state: extraData.burnDown,
+                start: start.format("YYYY-MM-DD"),
+                end: end.format("YYYY-MM-DD"),
               },
             ],
           });
@@ -267,7 +278,7 @@
       let label = cleanUpTitle(deliverable.title);
       if (extraData.burnDown) {
         label = `${label} (${getBurndownLabel(deliverable)})`;
-        state = "onTrack";
+        state = extraData.burnDown;
       }
 
       return {

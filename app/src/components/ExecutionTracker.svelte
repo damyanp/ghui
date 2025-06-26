@@ -211,6 +211,8 @@
         return "background-color: #ff7c80;";
       case "onTrack":
         return "background-color: #c1f0c8;";
+      default:
+        return "background-color: red;";
     }
   }
 
