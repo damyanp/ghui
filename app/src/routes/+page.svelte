@@ -11,16 +11,13 @@
   import SanitizeButton from "../components/SanitizeButton.svelte";
   import { ChartGantt, ListTree } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
-  import WorkItemExecutionTracker from "../components/WorkItemExecutionTracker.svelte";
-  import {
-    ExecutionTrackerContext,
-    setExecutionTrackerContext,
-  } from "../components/ExecutionTrackerContext.svelte";
+  import WorkItemExecutionTracker, {
+    setWorkItemExecutionTrackerContext,
+    WorkItemExecutionTrackerContext,
+  } from "../components/WorkItemExecutionTracker.svelte";
 
   const context = setWorkItemContext(new WorkItemContext());
-  const executionTrackerContext = setExecutionTrackerContext(
-    new ExecutionTrackerContext()
-  );
+  setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
 
   async function onRefreshClicked(): Promise<void> {
     await context.refresh();

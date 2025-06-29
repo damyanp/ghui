@@ -1,3 +1,30 @@
+<script lang="ts" module>
+  import {
+    ExecutionTrackerContext,
+    setExecutionTrackerContext,
+  } from "./ExecutionTrackerContext.svelte";
+  import { getContext, setContext } from "svelte";
+
+  const key = Symbol("WorkItemExecutionTrackerContext");
+
+  export function setWorkItemExecutionTrackerContext(
+    c: WorkItemExecutionTrackerContext
+  ) {
+    setContext(key, c);
+    setExecutionTrackerContext(c.executionTrackerContext);
+    return c;
+  }
+
+  export function getWorkItemExecutionTrackerContext() {
+    return getContext(key) as WorkItemExecutionTrackerContext;
+  }
+
+  export class WorkItemExecutionTrackerContext {
+    executionTrackerContext = new ExecutionTrackerContext();
+    hiddenEpics = new SvelteSet<string>();
+  }
+</script>
+
 <script lang="ts">
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { WorkItem } from "$lib/bindings/WorkItem";
@@ -23,7 +50,8 @@
 
   let context = getWorkItemContext();
 
-  let hiddenEpics = new SvelteSet<string>();
+  let hiddenEpics = getWorkItemExecutionTrackerContext().hiddenEpics;
+
   const startDate = dayjs().subtract(3, "months").format("YYYY-MM-DD");
 
   type Payload = WorkItem;
@@ -91,12 +119,10 @@
         rows = [...rows, ...getRows(scenario)];
 
         if (extraData.burnDown) {
-
           let start = dayjs().subtract(1, "week");
           let end = dayjs().add(1, "week");
 
-          if (extraData.start)
-            start = dayjs(extraData.start);
+          if (extraData.start) start = dayjs(extraData.start);
           else if (extraData.burnDown === "noDates") {
             start = dayjs().add(1, "week");
             end = dayjs(defaultEnd);
