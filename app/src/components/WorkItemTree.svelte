@@ -333,22 +333,20 @@
   }
 </script>
 
-{#key context.data}
-  <TreeTable
-    {rows}
-    bind:columns
-    bind:hiddenColumns
-    bind:expanded
-    bind:visibleRows
-    {getGroup}
-    {getItem}
-    {renderGroup}
-    {getContextMenuItems}
-    {onRowDragDrop}
-    {onRowFirstVisible}
-    {matchesFilter}
-  />
-{/key}
+<TreeTable
+  {rows}
+  bind:columns
+  bind:hiddenColumns
+  bind:expanded
+  bind:visibleRows
+  {getGroup}
+  {getItem}
+  {renderGroup}
+  {getContextMenuItems}
+  {onRowDragDrop}
+  {onRowFirstVisible}
+  {matchesFilter}
+/>
 
 {#snippet renderSingleSelectFieldMenuContent(column: Column<WorkItem>)}
   {@const fieldName = column.name as keyof Fields}
@@ -447,20 +445,24 @@
   {#snippet render(value: FieldOptionId | undefined)}
     {@render renderCustomField(item, field, value)}
   {/snippet}
-  {@render renderDelayLoad(
-    item.projectItem[field as keyof ProjectItem] as DelayLoad<
-      FieldOptionId | undefined
-    >,
-    render
-  )}
+  {#key item.projectItem[field as keyof ProjectItem]}
+    {@render renderDelayLoad(
+      item.projectItem[field as keyof ProjectItem] as DelayLoad<
+        FieldOptionId | undefined
+      >,
+      render
+    )}
+  {/key}
 {/snippet}
 
 {#snippet renderLoadedCustomField(item: WorkItem, field: keyof Fields)}
-  {@render renderCustomField(
-    item,
-    field,
-    item.projectItem[field as keyof ProjectItem] as FieldOptionId | undefined
-  )}
+  {#key item.projectItem[field as keyof ProjectItem]}
+    {@render renderCustomField(
+      item,
+      field,
+      item.projectItem[field as keyof ProjectItem] as FieldOptionId | undefined
+    )}
+  {/key}
 {/snippet}
 
 {#snippet renderCustomField(
