@@ -65,7 +65,15 @@ impl Changes {
 
         for (change_number, (key, change)) in data.into_iter().enumerate() {
             let result = if let SaveMode::Commit = mode {
-                change.save(client, fields, work_items).await
+                let result = change.save(client, fields, work_items).await;
+                if let Ok(changed) = result {
+                    changed.into_iter().for_each(|i| {
+                        changed_work_items.insert(i);
+                    });
+                    Ok(())
+                } else {
+                    result.map(|_| ())
+                }
             } else {
                 Ok(())
             };
@@ -95,9 +103,12 @@ impl Change {
         client: &impl Client,
         fields: &Fields,
         work_items: &WorkItems,
-    ) -> Result<()> {
+    ) -> Result<Vec<WorkItemId>> {
+        let mut changed_items = Vec::new();
+        changed_items.push(self.work_item_id.clone());
+
         match &self.data {
-            ChangeData::IssueType(value) => self.set_issue_type(client, work_items, value).await,
+            ChangeData::IssueType(value) => self.set_issue_type(client, work_items, value).await?,
             ChangeData::Status(value) => {
                 self.save_field(
                     client,
@@ -106,7 +117,7 @@ impl Change {
                     &fields.status,
                     value,
                 )
-                .await
+                .await?
             }
             ChangeData::Blocked(value) => {
                 self.save_field(
@@ -116,11 +127,11 @@ impl Change {
                     &fields.blocked,
                     value,
                 )
-                .await
+                .await?
             }
             ChangeData::Epic(value) => {
                 self.save_field(client, work_items, &fields.project_id, &fields.epic, value)
-                    .await
+                    .await?
             }
             ChangeData::Iteration(value) => {
                 self.save_field(
@@ -130,11 +141,11 @@ impl Change {
                     &fields.iteration,
                     value,
                 )
-                .await
+                .await?
             }
             ChangeData::Kind(value) => {
                 self.save_field(client, work_items, &fields.project_id, &fields.kind, value)
-                    .await
+                    .await?
             }
             ChangeData::Estimate(value) => {
                 self.save_field(
@@ -144,7 +155,7 @@ impl Change {
                     &fields.estimate,
                     value,
                 )
-                .await
+                .await?
             }
             ChangeData::Priority(value) => {
                 self.save_field(
@@ -154,17 +165,28 @@ impl Change {
                     &fields.priority,
                     value,
                 )
-                .await
+                .await?
             }
             ChangeData::SetParent(new_parent) => {
-                add_sub_issue(client, &new_parent.0, &self.work_item_id.0).await
+                add_sub_issue(client, &new_parent.0, &self.work_item_id.0).await?;
+
+                let work_item = work_items.get(&self.work_item_id);
+                if let Some(work_item) = work_item {
+                    if let Some(parent_id) = work_item.get_parent() {
+                        changed_items.push(parent_id.clone());
+                    }
+                }
+
+                changed_items.push(new_parent.clone());
             }
             ChangeData::AddToProject => {
                 add_to_project(client, &fields.project_id, &self.work_item_id.0)
                     .await
-                    .map(|_| ())
+                    .map(|_| ())?
             }
         }
+
+        Ok(changed_items)
     }
 
     async fn save_field<T: SettableProjectFieldValue>(

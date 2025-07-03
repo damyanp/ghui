@@ -32,6 +32,18 @@ impl WorkItem {
         }
     }
 
+    pub fn get_parent(&self) -> Option<&WorkItemId> {
+        if let WorkItem {
+            data: WorkItemData::Issue(Issue { parent_id, .. }),
+            ..
+        } = self
+        {
+            parent_id.as_ref()
+        } else {
+            None
+        }
+    }
+
     pub fn is_closed(&self) -> DelayLoad<bool> {
         match &self.data {
             WorkItemData::DraftIssue => false.into(),
