@@ -380,6 +380,8 @@
   }
 
   function collapseRows(rows: Row<Payload>[]): Row<Payload>[] {
+    if (rows.length === 0) return rows;
+
     let minDate = Number.MAX_VALUE;
     let maxDate = Number.MIN_VALUE;
 
