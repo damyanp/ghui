@@ -453,7 +453,9 @@
       else open++;
     }
 
-    return `${active} active / ${open} open / ${closed} closed`;
+    const total = active + open + closed;
+
+    return `${closed}/${total} - ${active} active / ${open} open / ${closed} closed`;
   }
 
   const iterations: Iteration[] = $derived.by(() => {
