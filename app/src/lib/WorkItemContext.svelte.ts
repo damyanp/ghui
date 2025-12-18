@@ -30,7 +30,16 @@ export class WorkItemContext {
     fields: make_blank_fields(),
     workItems: {},
     nodes: [],
-    filters: { status: [], blocked: [], epic: [], iteration: [], kind: [], estimate: [], priority: [] },
+    filters: {
+      status: [],
+      blocked: [],
+      epic: [],
+      iteration: [],
+      kind: [],
+      workstream: [],
+      estimate: [],
+      priority: [],
+    },
     originalWorkItems: {},
     changes: { data: {} },
   });
@@ -126,6 +135,7 @@ export class WorkItemContext {
       case "epic":
       case "kind":
       case "status":
+      case "workstream":
       case "estimate":
       case "priority":
         return this.data.fields[fieldName];
@@ -185,6 +195,7 @@ export class WorkItemContext {
       case "status":
       case "epic":
       case "kind":
+      case "workstream":
       case "estimate":
       case "priority":
         await this.addChange({
@@ -276,6 +287,7 @@ function make_blank_fields(): Fields {
     epic: blank(),
     iteration: blank(),
     kind: blank(),
+    workstream: blank(),
     estimate: blank(),
     priority: blank(),
   };

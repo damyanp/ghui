@@ -36,6 +36,7 @@ pub struct Filters {
     epic: Vec<Option<FieldOptionId>>,
     iteration: Vec<Option<FieldOptionId>>,
     kind: Vec<Option<FieldOptionId>>,
+    workstream: Vec<Option<FieldOptionId>>,
     estimate: Vec<Option<FieldOptionId>>,
     priority: Vec<Option<FieldOptionId>>,
 }
@@ -49,6 +50,7 @@ impl Filters {
             || self.epic.contains(&p.epic)
             || self.iteration.contains(p.iteration.flatten())
             || self.kind.contains(p.kind.flatten())
+            || self.workstream.contains(p.workstream.flatten())
             || self.estimate.contains(&p.estimate)
             || self.priority.contains(&p.priority))
     }

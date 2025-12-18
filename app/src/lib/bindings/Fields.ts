@@ -10,6 +10,7 @@ export type Fields = {
   epic: Field<SingleSelect>;
   iteration: Field<Iteration>;
   kind: Field<SingleSelect>;
+  workstream: Field<SingleSelect>;
   estimate: Field<SingleSelect>;
   priority: Field<SingleSelect>;
 };

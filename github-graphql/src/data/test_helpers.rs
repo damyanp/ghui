@@ -204,6 +204,7 @@ impl Fields {
             ),
             iteration: Field::test("iteration", &["S1", "S2"]),
             kind: Field::test("Kind", &["Bug", "Task"]),
+            workstream: Field::test("Workstream", &["WS1", "WS2"]),
             estimate: Field::test("Estimate", &["Hours", "Days", "Week", "Sprint"]),
             priority: Field::test("Priority", &["Low", "Medium", "High"]),
         }

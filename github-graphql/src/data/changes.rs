@@ -147,6 +147,16 @@ impl Change {
                 self.save_field(client, work_items, &fields.project_id, &fields.kind, value)
                     .await?
             }
+            ChangeData::Workstream(value) => {
+                self.save_field(
+                    client,
+                    work_items,
+                    &fields.project_id,
+                    &fields.workstream,
+                    value,
+                )
+                .await?
+            }
             ChangeData::Estimate(value) => {
                 self.save_field(
                     client,
@@ -287,6 +297,7 @@ pub enum ChangeData {
     Epic(Option<FieldOptionId>),
     Iteration(Option<FieldOptionId>),
     Kind(Option<FieldOptionId>),
+    Workstream(Option<FieldOptionId>),
     Estimate(Option<FieldOptionId>),
     Priority(Option<FieldOptionId>),
     SetParent(WorkItemId),
@@ -324,6 +335,9 @@ impl Change {
             ChangeData::Kind(_) => fields
                 .iteration
                 .option_name(work_item.project_item.kind.expect_loaded().as_ref()),
+            ChangeData::Workstream(_) => fields
+                .workstream
+                .option_name(work_item.project_item.workstream.expect_loaded().as_ref()),
             ChangeData::Estimate(_) => fields
                 .estimate
                 .option_name(work_item.project_item.kind.expect_loaded().as_ref()),
@@ -345,6 +359,7 @@ impl Change {
             ChangeData::Epic(_) => "Epic",
             ChangeData::Iteration(_) => "Iteration",
             ChangeData::Kind(_) => "Kind",
+            ChangeData::Workstream(_) => "Workstream",
             ChangeData::Estimate(_) => "Estimate",
             ChangeData::Priority(_) => "Priority",
             ChangeData::SetParent(_) => "SetParent",
@@ -358,6 +373,7 @@ impl Change {
             ChangeData::Epic(value) => fields.epic.option_name(value.as_ref()),
             ChangeData::Iteration(value) => fields.iteration.option_name(value.as_ref()),
             ChangeData::Kind(value) => fields.kind.option_name(value.as_ref()),
+            ChangeData::Workstream(value) => fields.workstream.option_name(value.as_ref()),
             ChangeData::Estimate(value) => fields.estimate.option_name(value.as_ref()),
             ChangeData::Priority(value) => fields.priority.option_name(value.as_ref()),
             ChangeData::SetParent(value) => Some(value.0.as_str()),
@@ -413,6 +429,9 @@ impl WorkItems {
                     work_item.project_item.iteration = value.clone().into()
                 }
                 ChangeData::Kind(value) => work_item.project_item.kind = value.clone().into(),
+                ChangeData::Workstream(value) => {
+                    work_item.project_item.workstream = value.clone().into()
+                }
                 ChangeData::Estimate(value) => work_item.project_item.estimate = value.clone(),
                 ChangeData::Priority(value) => work_item.project_item.priority = value.clone(),
                 ChangeData::SetParent(new_parent_id) => {

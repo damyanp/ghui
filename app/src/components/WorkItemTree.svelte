@@ -115,6 +115,7 @@
   let columns = $state<Column<WorkItem>[]>([
     { name: "Title", width: "5fr", disableMenu: true, render: renderTitle },
     singleSelectColumn("kind", renderKind),
+    singleSelectColumn("workstream", renderWorkstream),
     singleSelectColumn("status", renderStatus),
     {
       name: "iteration",
@@ -430,6 +431,9 @@
 {/snippet}
 {#snippet renderKind(item: WorkItem)}
   {@render renderDelayLoadCustomField(item, "kind")}
+{/snippet}
+{#snippet renderWorkstream(item: WorkItem)}
+  {@render renderDelayLoadCustomField(item, "workstream")}
 {/snippet}
 {#snippet renderEpic(item: WorkItem)}
   {@render renderLoadedCustomField(item, "epic")}

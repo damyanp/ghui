@@ -40,6 +40,7 @@ pub struct Fields {
     pub epic: Field<SingleSelect>,
     pub iteration: Field<Iteration>,
     pub kind: Field<SingleSelect>,
+    pub workstream: Field<SingleSelect>,
     pub estimate: Field<SingleSelect>,
     pub priority: Field<SingleSelect>,
 }

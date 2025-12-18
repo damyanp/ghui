@@ -17,6 +17,9 @@ query CustomFieldsQuery {
       Kind: field(name: "Kind") {
         ...FieldConfig
       }
+      Workstream: field(name: "Workstream") {
+        ...FieldConfig
+      }
       Estimate: field(name: "Estimate") {
         ...FieldConfig
       }
