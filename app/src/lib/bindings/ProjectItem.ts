@@ -13,7 +13,6 @@ export type ProjectItem = {
   kind: DelayLoad<FieldOptionId | null>;
   epic: FieldOptionId | null;
   workstream: DelayLoad<FieldOptionId | null>;
-  projectMilestone: DelayLoad<FieldOptionId | null>;
   estimate: FieldOptionId | null;
   priority: FieldOptionId | null;
 };

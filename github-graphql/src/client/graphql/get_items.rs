@@ -136,7 +136,6 @@ fn project_item(item: &ItemOnProjectV2Item) -> ProjectItem {
         kind: field(&item.kind).into(),
         epic: field(&item.epic),
         workstream: field(&item.workstream).into(),
-        project_milestone: field(&item.project_milestone).into(),
         estimate: field(&item.estimate),
         priority: field(&item.priority),
     }

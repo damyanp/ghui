@@ -39,7 +39,6 @@ pub struct Fields {
     pub blocked: Field<SingleSelect>,
     pub epic: Field<SingleSelect>,
     pub iteration: Field<Iteration>,
-    pub project_milestone: Field<SingleSelect>,
     pub kind: Field<SingleSelect>,
     pub estimate: Field<SingleSelect>,
     pub priority: Field<SingleSelect>,

@@ -130,31 +130,6 @@ impl WorkItems {
                 });
             }
 
-            // Map project milestones to epics
-            if item.project_item.epic.is_none() {
-                let project_milestone = item.project_item.project_milestone.expect_loaded();
-
-                let new_epic = match fields
-                    .project_milestone
-                    .option_name(project_milestone.as_ref())
-                {
-                    Some("3: ML preview requirements")
-                    | Some("4: ML preview planning")
-                    | Some("5: ML preview implementation") => Some("DML Demo"),
-                    Some("Graphics preview feature analysis") => Some("MiniEngine Demo"),
-                    Some("DXC: SM 6.9 Preview") => Some("SM 6.9 Preview"),
-                    Some("DXC: SM 6.9 Release") => Some("DXC 2025 Q4"),
-                    _ => None,
-                };
-
-                if let Some(new_epic) = fields.epic.option_id(new_epic).cloned() {
-                    changes.add(Change {
-                        work_item_id: item.id.clone(),
-                        data: ChangeData::Epic(Some(new_epic)),
-                    });
-                }
-            }
-
             // Items that are Bugs shuold set their type to bug
             if let WorkItemData::Issue(issue) = &item.data {
                 let kind = item.project_item.kind.expect_loaded();

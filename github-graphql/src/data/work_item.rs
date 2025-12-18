@@ -167,7 +167,6 @@ pub struct ProjectItem {
     pub kind: FieldValue,
     pub epic: Option<FieldOptionId>,
     pub workstream: FieldValue,
-    pub project_milestone: FieldValue,
     pub estimate: Option<FieldOptionId>,
     pub priority: Option<FieldOptionId>,
 }
@@ -180,7 +179,6 @@ impl ProjectItem {
             kind: None.into(),
             epic: None,
             workstream: None.into(),
-            project_milestone: None.into(),
             ..Default::default()
         }
     }
@@ -190,7 +188,6 @@ impl ProjectItem {
             && self.blocked.is_loaded()
             && self.kind.is_loaded()
             && self.workstream.is_loaded()
-            && self.project_milestone.is_loaded()
     }
 }
 

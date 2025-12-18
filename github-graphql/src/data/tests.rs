@@ -100,53 +100,6 @@ fn test_closed_issues_set_state_to_closed() {
 }
 
 #[test]
-fn test_set_epic_from_project_milestone() {
-    let mappings = [
-        ("3: ML preview requirements", "DML Demo"),
-        ("4: ML preview planning", "DML Demo"),
-        ("5: ML preview implementation", "DML Demo"),
-        ("Graphics preview feature analysis", "MiniEngine Demo"),
-        ("DXC: SM 6.9 Preview", "SM 6.9 Preview"),
-        ("DXC: SM 6.9 Release", "DXC 2025 Q4"),
-    ];
-
-    for (project_milestone, epic) in mappings {
-        let mut data = TestData::default();
-
-        // Existing epics shouldn't be changed
-        data.build()
-            .project_milestone(project_milestone)
-            .epic("Do Not Change")
-            .add();
-
-        // Unrecognized milestones shouldn't change epic
-        data.build()
-            .project_milestone("Another Project Milestone")
-            .add();
-
-        // Already matching ones shouldn't change
-        data.build()
-            .project_milestone(project_milestone)
-            .epic(epic)
-            .add();
-
-        // But when there's a match and no epic is set, we should expect a
-        // change
-        let id = data.build().project_milestone(project_milestone).add();
-
-        let actual_changes = data.work_items.sanitize(&data.fields);
-
-        let mut expected_changes = Changes::default();
-        expected_changes.add(Change {
-            work_item_id: id,
-            data: ChangeData::Epic(data.fields.epic.option_id(epic.into()).cloned()),
-        });
-
-        assert_eq!(actual_changes, expected_changes);
-    }
-}
-
-#[test]
 fn test_set_epic_from_parent() {
     let mut data = TestData::default();
 

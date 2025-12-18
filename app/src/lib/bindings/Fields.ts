@@ -9,7 +9,6 @@ export type Fields = {
   blocked: Field<SingleSelect>;
   epic: Field<SingleSelect>;
   iteration: Field<Iteration>;
-  projectMilestone: Field<SingleSelect>;
   kind: Field<SingleSelect>;
   estimate: Field<SingleSelect>;
   priority: Field<SingleSelect>;

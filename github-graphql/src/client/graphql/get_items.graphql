@@ -28,9 +28,6 @@ fragment Item on Node {
     Workstream: fieldValueByName(name: "Workstream") {
       ...CustomField
     }
-    ProjectMilestone: fieldValueByName(name: "ProjectMilestone") {
-      ...CustomField
-    }
     Estimate: fieldValueByName(name: "Estimate") {
       ...CustomField
     }

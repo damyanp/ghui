@@ -125,7 +125,6 @@ export class WorkItemContext {
       case "blocked":
       case "epic":
       case "kind":
-      case "projectMilestone":
       case "status":
       case "estimate":
       case "priority":
@@ -277,7 +276,6 @@ function make_blank_fields(): Fields {
     epic: blank(),
     iteration: blank(),
     kind: blank(),
-    projectMilestone: blank(),
     estimate: blank(),
     priority: blank(),
   };

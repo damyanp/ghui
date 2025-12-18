@@ -117,17 +117,6 @@ impl TestDataWorkItemBuilder<'_> {
         self
     }
 
-    pub fn project_milestone(mut self, name: &str) -> Self {
-        let id = self
-            .data
-            .fields
-            .project_milestone
-            .option_id(Some(name))
-            .cloned();
-        self.item.project_item.project_milestone = id.into();
-        self
-    }
-
     pub fn epic(mut self, name: &str) -> Self {
         let id = self.data.fields.epic.option_id(Some(name)).cloned();
         assert!(id.is_some());
@@ -214,18 +203,6 @@ impl Fields {
                 ],
             ),
             iteration: Field::test("iteration", &["S1", "S2"]),
-            project_milestone: Field::test(
-                "Project Milestone",
-                &[
-                    "3: ML preview requirements",
-                    "4: ML preview planning",
-                    "5: ML preview implementation",
-                    "Graphics preview feature analysis",
-                    "DXC: SM 6.9 Preview",
-                    "DXC: SM 6.9 Release",
-                    "Another Project Milestone",
-                ],
-            ),
             kind: Field::test("Kind", &["Bug", "Task"]),
             estimate: Field::test("Estimate", &["Hours", "Days", "Week", "Sprint"]),
             priority: Field::test("Priority", &["Low", "Medium", "High"]),
