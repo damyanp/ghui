@@ -19,8 +19,7 @@ pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<String> 
         _ => None,
     }
     .ok_or(Error::GraphQlResponseUnexpected(format!(
-        "Unable to match {} - got {:?}",
-        url, resource
+        "Unable to match {url} - got {resource:?}",
     )))
 }
 

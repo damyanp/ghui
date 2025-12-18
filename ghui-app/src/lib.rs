@@ -325,7 +325,7 @@ impl DataState {
             let client = match state.pat.new_github_client() {
                 Ok(client) => client,
                 Err(e) => {
-                    eprintln!("Failed to create GitHub client: {}", e);
+                    eprintln!("Failed to create GitHub client: {e}");
                     return;
                 }
             };
@@ -338,7 +338,7 @@ impl DataState {
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
                 Err(e) => {
-                    eprintln!("Failed to get items: {}", e);
+                    eprintln!("Failed to get items: {e}");
                     return;
                 }
             };

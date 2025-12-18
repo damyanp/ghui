@@ -27,7 +27,7 @@ impl Changes {
         let old_value = self.data.insert(change.key(), change.clone());
         if let Some(old_value) = old_value {
             if change != old_value {
-                println!("WARNING! {:?} overrides {:?}", change, old_value);
+                println!("WARNING! {change:?} overrides {old_value:?}");
             }
         }
     }
@@ -365,7 +365,7 @@ impl Change {
         }
         .unwrap_or("<>");
 
-        format!("{}({} -> {})", name, old_value, new_value).to_owned()
+        format!("{name}({old_value} -> {new_value})").to_owned()
     }
 }
 

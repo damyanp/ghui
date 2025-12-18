@@ -56,7 +56,7 @@ impl WorkItem {
 
     pub fn describe(&self) -> String {
         match &self.resource_path {
-            Some(resource_path) => format!("https://github.com{}", resource_path),
+            Some(resource_path) => format!("https://github.com{resource_path}"),
             None => format!("[{}]", self.id.0),
         }
     }

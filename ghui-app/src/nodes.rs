@@ -60,8 +60,7 @@ impl<'a> NodeBuilder<'a> {
             for id in &ids {
                 assert!(
                     unique_ids.insert(id.clone()),
-                    "Duplicate node ID found: {}",
-                    id
+                    "Duplicate node ID found: {id}",
                 );
             }
         }
@@ -101,10 +100,10 @@ impl<'a> NodeBuilder<'a> {
                         .option_name(key)
                         .unwrap_or("None")
                         .to_owned();
-                    let id = format!("{}{}", path, name);
+                    let id = format!("{path}{name}");
 
                     current_group = Some(key);
-                    current_path = format!("{}/", id);
+                    current_path = format!("{id}/");
 
                     self.nodes.push(Node {
                         level,

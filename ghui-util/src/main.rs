@@ -58,7 +58,7 @@ async fn run_get_viewer() -> Result {
 
     let info = get_viewer_info(&client).await?;
 
-    println!("{:?}", info);
+    println!("{info:?}");
 
     Ok(())
 }

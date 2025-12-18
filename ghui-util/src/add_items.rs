@@ -68,7 +68,7 @@ async fn add_item(
         )
         .await?;
     }
-    println!("Added {}", issue);
+    println!("Added {issue}");
 
     Ok(())
 }
