@@ -146,7 +146,14 @@ impl WorkItems {
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(fields, self, &mut changes, &root_item_id, &None);
+            sanitize_issue_hierarchy(
+                fields,
+                self,
+                &mut changes,
+                &root_item_id,
+                &None,
+                &None,
+            );
         }
 
         fn sanitize_issue_hierarchy(
@@ -155,6 +162,7 @@ impl WorkItems {
             changes: &mut Changes,
             id: &WorkItemId,
             epic: &Option<FieldOptionId>,
+            parent_workstream: &Option<FieldOptionId>,
         ) {
             if let Some(item) = items.get(id) {
                 let this_item_epic = &item.project_item.epic;
@@ -178,9 +186,33 @@ impl WorkItems {
                     None => this_item_epic,
                 };
 
+                // Workstream rule (minimal):
+                // - Each item must match its parent's workstream.
+                // We only enforce "match parent" when the parent has a value.
+                if let Some(parent_ws) = parent_workstream {
+                    let current_ws = item.project_item.workstream.expect_loaded();
+                    if current_ws.as_ref() != Some(parent_ws) {
+                        changes.add(Change {
+                            work_item_id: id.clone(),
+                            data: ChangeData::Workstream(Some(parent_ws.clone())),
+                        });
+                    }
+                }
+
                 if let WorkItemData::Issue(issue) = &item.data {
+                    // Determine what workstream should be used for children:
+                    // Only propagate an explicit, non-blank workstream.
+                    let this_workstream = item.project_item.workstream.expect_loaded().clone();
+
                     for child_id in &issue.sub_issues {
-                        sanitize_issue_hierarchy(fields, items, changes, child_id, epic);
+                        sanitize_issue_hierarchy(
+                            fields,
+                            items,
+                            changes,
+                            child_id,
+                            epic,
+                            &this_workstream,
+                        );
                     }
                 }
             } else {

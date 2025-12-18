@@ -123,6 +123,13 @@ impl TestDataWorkItemBuilder<'_> {
         self.item.project_item.epic = id;
         self
     }
+
+    pub fn workstream(mut self, name: &str) -> Self {
+        let id = self.data.fields.workstream.option_id(Some(name)).cloned();
+        assert!(id.is_some());
+        self.item.project_item.workstream = id.into();
+        self
+    }
 }
 
 fn to_project_item_ref_vec(ids: &[&WorkItemId]) -> Vec<WorkItemId> {

@@ -165,6 +165,69 @@ fn test_set_epic_from_grandparent() {
 }
 
 #[test]
+fn test_set_workstream_from_parent() {
+    let mut data = TestData::default();
+
+    const WS_PARENT: &str = "WS1";
+    const WS_WRONG: &str = "WS2";
+
+    let child_blank = data.build().add();
+    let child_wrong = data.build().workstream(WS_WRONG).add();
+    let child_right = data.build().workstream(WS_PARENT).add();
+
+    data.build()
+        .workstream(WS_PARENT)
+        .sub_issues(&[&child_blank, &child_wrong, &child_right])
+        .add();
+
+    let ws = ChangeData::Workstream(data.fields.workstream.option_id(WS_PARENT.into()).cloned());
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    let mut expected_changes = Changes::default();
+    expected_changes.add(Change {
+        work_item_id: child_blank,
+        data: ws.clone(),
+    });
+    expected_changes.add(Change {
+        work_item_id: child_wrong,
+        data: ws,
+    });
+
+    assert_eq!(actual_changes, expected_changes);
+}
+
+#[test]
+fn test_set_workstream_on_blank_parent_from_child() {
+    let mut data = TestData::default();
+
+    const WS: &str = "WS1";
+
+    let _child_with_ws = data.build().workstream(WS).add();
+    let _child_blank = data.build().add();
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    // Parent is blank: sanitize does not change workstreams.
+    assert_eq!(actual_changes, Changes::default());
+}
+
+#[test]
+fn test_blank_parent_with_conflicting_children_workstreams_no_change() {
+    let mut data = TestData::default();
+
+    let child_ws1 = data.build().workstream("WS1").add();
+    let child_ws2 = data.build().workstream("WS2").add();
+
+    data.build().sub_issues(&[&child_ws1, &child_ws2]).add();
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    // Parent is blank: sanitize does not change workstreams.
+    assert_eq!(actual_changes, Changes::default());
+}
+
+#[test]
 fn test_apply_changes_no_changes() {
     let mut data = TestData::default();
     data.build().add();
