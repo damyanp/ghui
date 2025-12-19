@@ -3,15 +3,18 @@
     getWorkItemContext,
     makeProgressChannel,
   } from "$lib/WorkItemContext.svelte";
-  import { Eye, EyeOff, Save, Trash2 } from "@lucide/svelte";
+  import { Eye, EyeOff, ReceiptText, Save, Trash2 } from "@lucide/svelte";
   import { scale } from "svelte/transition";
   import AppBarButton from "./AppBarButton.svelte";
+  import PendingChangesDialog from "./PendingChangesDialog.svelte";
 
   const context = getWorkItemContext();
 
   const numChanges = $derived(Object.keys(context.data.changes.data).length);
 
   let saveProgress = $state(0);
+
+  let pendingChangesOpen = $state(false);
 
   async function saveChanges() {
     if (saveProgress !== 0) return;
@@ -47,6 +50,7 @@
     <span class="self-start h-full text-xs border-r pe-1"
       >{numChanges} change{numChanges > 1 ? "s" : ""}</span
     >
+
     <AppBarButton
       icon={Trash2}
       text="Discard"
@@ -62,5 +66,15 @@
         context.setPreviewChanges(!context.previewChanges);
       }}
     />
+
+    <AppBarButton
+      text="Details"
+      icon={ReceiptText}
+      onclick={() => {
+        pendingChangesOpen = true;
+      }}
+    />
+
+    <PendingChangesDialog bind:open={pendingChangesOpen} />
   </div>
 {/if}
