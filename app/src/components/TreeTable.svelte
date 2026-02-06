@@ -311,102 +311,104 @@
 
 <!-- Component Container -->
 <div
-  class="px-5 my-5 overflow-x-auto overflow-y-scroll"
+  class="overflow-x-auto overflow-y-scroll flex-1 min-h-0"
   {@attach rowVisbilityObserverAttachment}
 >
-  {#if props.matchesFilter}
-    <FindDialog bind:text={filterText} />
-  {/if}
+  <div class="px-5 my-5">
+    {#if props.matchesFilter}
+      <FindDialog bind:text={filterText} />
+    {/if}
 
-  <!-- Table container -->
-  <div
-    class="grid w-full"
-    style={`grid-template-columns: ${gridTemplateColumns};`}
-  >
-    <!-- Header Row -->
+    <!-- Table container -->
     <div
-      class="sticky top-0 grid grid-cols-subgrid h-fit"
-      style={`grid-column: ${gridColumn};`}
+      class="grid w-full"
+      style={`grid-template-columns: ${gridTemplateColumns};`}
     >
-      {#each columns as column, index}
-        <div
-          id="column-index-{index}"
-          class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
-          class:bg-secondary-500={index === droppedColumnIndex}
-        >
-          {@render columnHeader(column, index)}
+      <!-- Header Row -->
+      <div
+        class="sticky top-0 grid grid-cols-subgrid h-fit"
+        style={`grid-column: ${gridColumn};`}
+      >
+        {#each columns as column, index}
           <div
-            class="overflow-visible z-10 my-1 border-r border-r-surface-800-200"
+            id="column-index-{index}"
+            class="text-lg font-bold bg-surface-300-700 text-surface-contrast-300-700 pl-1 flex justify-between"
+            class:bg-secondary-500={index === droppedColumnIndex}
           >
+            {@render columnHeader(column, index)}
             <div
-              data-column-index={index}
-              class="w-[10px] left-[5px] h-full relative cursor-col-resize"
-              onpointerdown={handleColumnResizeOnPointerDown}
-              onpointerup={handleColumnResizeOnPointerUp}
-              onpointermove={handleColumnResizeOnPointerMove}
-              ondblclick={handleColumnResizeDoubleClick}
-              ondragenter={handleColumnHeaderDragOver}
-              ondragleave={handleColumnHeaderDragLeave}
-              ondragover={handleColumnHeaderDragOver}
-              ondrop={handleColumnHeaderDrop}
-              role="separator"
-              aria-orientation="vertical"
-            ></div>
-          </div>
-          {#if index === columns.length - 1 && hiddenColumns.length > 0}
-            <div class="left-[100%] absolute flex items-center h-full">
-              <AddColumnButton
-                columns={hiddenColumns}
-                onColumnSelected={(column) => {
-                  columns.push(column);
-                  hiddenColumns = hiddenColumns.filter(
-                    (c) => c.name !== column.name
-                  );
-                }}
-              />
+              class="overflow-visible z-10 my-1 border-r border-r-surface-800-200"
+            >
+              <div
+                data-column-index={index}
+                class="w-[10px] left-[5px] h-full relative cursor-col-resize"
+                onpointerdown={handleColumnResizeOnPointerDown}
+                onpointerup={handleColumnResizeOnPointerUp}
+                onpointermove={handleColumnResizeOnPointerMove}
+                ondblclick={handleColumnResizeDoubleClick}
+                ondragenter={handleColumnHeaderDragOver}
+                ondragleave={handleColumnHeaderDragLeave}
+                ondragover={handleColumnHeaderDragOver}
+                ondrop={handleColumnHeaderDrop}
+                role="separator"
+                aria-orientation="vertical"
+              ></div>
             </div>
-          {/if}
-        </div>
-      {/each}
-    </div>
-
-    <!-- Rows -->
-    {#each rows as row (row.id)}
-      {@const modified = row.isModified}
-      {@const modifiedDescendent = !modified && row.modifiedDescendent}
-      {@const onRowFirstVisible = props.onRowFirstVisible}
-      <TreeTableContextMenu getItems={() => props.getContextMenuItems(row)}>
-        {#snippet trigger({ props }: { props: any })}
-          {@const menuOpen = props["data-state"] === "open"}
-          <div
-            {...props}
-            class={[
-              "grid-cols-subgrid grid overflow-hidden whitespace-nowrap border border-surface-200-800 cursor-default",
-              menuOpen ? "outline-2 bg-primary-500" : getRowClass(row),
-            ]}
-            style={`padding-left: ${1 * row.level}rem; grid-column: ${gridColumn};`}
-            draggable={!row.isGroup}
-            data-row-id={row.id}
-            ondragstart={dragStartHandler}
-            ondragend={dragEndHandler}
-            ondragenter={dragEnterHandler}
-            ondragleave={dragLeaveHandler}
-            ondragover={dragOverHandler}
-            ondrop={dropHandler}
-            {@attach onFirstVisible(row, onRowFirstVisible)}
-            {@attach rowVisibilityChecker}
-          >
-            {#if row.isGroup}
-              {@render groupRow(row)}
-            {:else if visibleRows.has(row.id)}
-              {@render itemRow(row)}
-            {:else}
-              &nbsp;
+            {#if index === columns.length - 1 && hiddenColumns.length > 0}
+              <div class="left-[100%] absolute flex items-center h-full">
+                <AddColumnButton
+                  columns={hiddenColumns}
+                  onColumnSelected={(column) => {
+                    columns.push(column);
+                    hiddenColumns = hiddenColumns.filter(
+                      (c) => c.name !== column.name
+                    );
+                  }}
+                />
+              </div>
             {/if}
           </div>
-        {/snippet}
-      </TreeTableContextMenu>
-    {/each}
+        {/each}
+      </div>
+
+      <!-- Rows -->
+      {#each rows as row (row.id)}
+        {@const modified = row.isModified}
+        {@const modifiedDescendent = !modified && row.modifiedDescendent}
+        {@const onRowFirstVisible = props.onRowFirstVisible}
+        <TreeTableContextMenu getItems={() => props.getContextMenuItems(row)}>
+          {#snippet trigger({ props }: { props: any })}
+            {@const menuOpen = props["data-state"] === "open"}
+            <div
+              {...props}
+              class={[
+                "grid-cols-subgrid grid overflow-hidden whitespace-nowrap border border-surface-200-800 cursor-default",
+                menuOpen ? "outline-2 bg-primary-500" : getRowClass(row),
+              ]}
+              style={`padding-left: ${1 * row.level}rem; grid-column: ${gridColumn};`}
+              draggable={!row.isGroup}
+              data-row-id={row.id}
+              ondragstart={dragStartHandler}
+              ondragend={dragEndHandler}
+              ondragenter={dragEnterHandler}
+              ondragleave={dragLeaveHandler}
+              ondragover={dragOverHandler}
+              ondrop={dropHandler}
+              {@attach onFirstVisible(row, onRowFirstVisible)}
+              {@attach rowVisibilityChecker}
+            >
+              {#if row.isGroup}
+                {@render groupRow(row)}
+              {:else if visibleRows.has(row.id)}
+                {@render itemRow(row)}
+              {:else}
+                &nbsp;
+              {/if}
+            </div>
+          {/snippet}
+        </TreeTableContextMenu>
+      {/each}
+    </div>
   </div>
 </div>
 
