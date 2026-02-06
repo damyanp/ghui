@@ -5,7 +5,8 @@
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import {
     getWorkItemContext,
-    linkHRef,
+    directLinkHRef,
+    projectLinkHRef,
     linkTitle,
   } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
@@ -375,10 +376,20 @@
     <a
       class="text-blue-400 underline whitespace-nowrap shrink-0"
       target="_blank"
-      href={linkHRef(item)}
+      href={directLinkHRef(item)}
     >
       {linkTitle(item)}
     </a>
+    {#if projectLinkHRef(item)}
+      <a
+        class="text-blue-400 whitespace-nowrap shrink-0 ml-1"
+        target="_blank"
+        href={projectLinkHRef(item)}
+        title="View in project"
+      >
+        {@html octicons["table"].toSVG({ width: 14 })}
+      </a>
+    {/if}
   {:else}
     &nbsp;
   {/if}

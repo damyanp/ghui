@@ -30,7 +30,8 @@
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import {
     getWorkItemContext,
-    linkHRef,
+    directLinkHRef,
+    projectLinkHRef,
     linkTitle,
   } from "$lib/WorkItemContext.svelte";
   import dayjs from "dayjs";
@@ -179,7 +180,17 @@
     return {
       type: "link",
       title: linkTitle(workItem),
-      href: linkHRef(workItem),
+      href: directLinkHRef(workItem),
+    };
+  }
+
+  function getOpenInProjectMenuItem(workItem: WorkItem): MenuItem | undefined {
+    const href = projectLinkHRef(workItem);
+    if (!href) return undefined;
+    return {
+      type: "link",
+      title: "Open in project",
+      href,
     };
   }
 
@@ -355,10 +366,12 @@
     workItem: WorkItem,
     extraItems?: MenuItem[]
   ): MenuItem[] {
+    const projectMenuItem = getOpenInProjectMenuItem(workItem);
     return [
       getTitleMenuItem(workItem),
       ...(extraItems ? extraItems : []),
       getOpenMenuItem(workItem),
+      ...(projectMenuItem ? [projectMenuItem] : []),
       getEditMenuItem(workItem),
     ];
   }

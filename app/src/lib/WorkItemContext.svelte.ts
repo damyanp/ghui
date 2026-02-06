@@ -293,7 +293,11 @@ function make_blank_fields(): Fields {
   };
 }
 
-export function linkHRef(item: WorkItem): string {
+export function directLinkHRef(item: WorkItem): string {
+  return `https://github.com${item.resourcePath}`;
+}
+
+export function projectLinkHRef(item: WorkItem): string | undefined {
   const databaseId = item.projectItem.databaseId;
   const owner = item.repoNameWithOwner?.split("/")[0];
   const repo = item.repoNameWithOwner?.split("/")[1];
@@ -308,7 +312,7 @@ export function linkHRef(item: WorkItem): string {
   ) {
     return `https://github.com/orgs/llvm/projects/4?pane=issue&itemId=${databaseId}&issue=${owner}%7C${repo}%7C${number}`;
   }
-  return `https://github.com${item.resourcePath}`;
+  return undefined;
 }
 
 export function linkTitle(item: WorkItem): string {
