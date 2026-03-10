@@ -120,6 +120,7 @@ impl WorkItems {
 
         let closed_option_id = fields.status.option_id("Closed".into()).cloned();
         let bug_kind_id = fields.kind.option_id("Bug".into()).cloned();
+        let planning_option_id = fields.status.option_id("Planning".into()).cloned();
 
         for item in self.work_items.values() {
             // Closed items should have status set to Closed
@@ -140,6 +141,19 @@ impl WorkItems {
                     changes.add(Change {
                         work_item_id: item.id.clone(),
                         data: ChangeData::IssueType(Some("Bug".to_owned())),
+                    });
+                }
+            }
+
+            // Assigned issues with no status should be set to Planning
+            if let WorkItemData::Issue(issue) = &item.data {
+                if !issue.assignees.is_empty()
+                    && item.project_item.status.is_none()
+                    && !*item.is_closed().expect_loaded()
+                {
+                    changes.add(Change {
+                        work_item_id: item.id.clone(),
+                        data: ChangeData::Status(planning_option_id.clone()),
                     });
                 }
             }

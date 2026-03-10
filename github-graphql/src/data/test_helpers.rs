@@ -130,6 +130,11 @@ impl TestDataWorkItemBuilder<'_> {
         self.item.project_item.workstream = id.into();
         self
     }
+
+    pub fn assignees(mut self, names: &[&str]) -> Self {
+        self.get_issue().assignees = names.iter().map(|s| s.to_string()).collect();
+        self
+    }
 }
 
 fn to_project_item_ref_vec(ids: &[&WorkItemId]) -> Vec<WorkItemId> {
@@ -195,7 +200,7 @@ impl Fields {
     pub fn test() -> Self {
         Fields {
             project_id: "project_id".to_owned(),
-            status: Field::test("status", &["Active", "Open", "Closed"]),
+            status: Field::test("status", &["Active", "Open", "Closed", "Planning"]),
             blocked: Field::test("blocked", &["PR"]),
             epic: Field::test(
                 "epic",

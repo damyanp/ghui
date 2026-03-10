@@ -228,6 +228,71 @@ fn test_blank_parent_with_conflicting_children_workstreams_no_change() {
 }
 
 #[test]
+fn test_assigned_issue_with_no_status_gets_planning() {
+    let mut data = TestData::default();
+
+    let assigned_item_id = data.build().assignees(&["user1"]).add();
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    let mut expected_changes = Changes::default();
+    let planning_option = data.fields.status.option_id(Some("Planning")).cloned();
+    expected_changes.add(Change {
+        work_item_id: assigned_item_id,
+        data: ChangeData::Status(planning_option),
+    });
+
+    assert_eq!(actual_changes, expected_changes);
+}
+
+#[test]
+fn test_assigned_issue_with_status_set_no_change() {
+    let mut data = TestData::default();
+
+    data.build()
+        .assignees(&["user1"])
+        .status("Active")
+        .add();
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    assert_eq!(actual_changes, Changes::default());
+}
+
+#[test]
+fn test_unassigned_issue_with_no_status_no_change() {
+    let mut data = TestData::default();
+
+    data.build().add();
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    assert_eq!(actual_changes, Changes::default());
+}
+
+#[test]
+fn test_closed_assigned_issue_gets_closed_not_planning() {
+    let mut data = TestData::default();
+
+    let closed_assigned_id = data
+        .build()
+        .issue_state(IssueState::CLOSED)
+        .assignees(&["user1"])
+        .add();
+
+    let actual_changes = data.work_items.sanitize(&data.fields);
+
+    let mut expected_changes = Changes::default();
+    let closed_option = data.fields.status.option_id(Some("Closed")).cloned();
+    expected_changes.add(Change {
+        work_item_id: closed_assigned_id,
+        data: ChangeData::Status(closed_option),
+    });
+
+    assert_eq!(actual_changes, expected_changes);
+}
+
+#[test]
 fn test_apply_changes_no_changes() {
     let mut data = TestData::default();
     data.build().add();
