@@ -16,7 +16,7 @@
   <MyIcon class={iconClass} />
   {#if badge !== undefined}
     <span
-      class="absolute -top-1 -right-1 bg-primary-500 text-white text-[0.6rem] leading-none min-w-3.5 h-3.5 flex items-center justify-center rounded-full px-0.5"
+      class="absolute -bottom-1 -right-1 bg-primary-500 text-white text-[0.6rem] leading-none min-w-3.5 h-3.5 flex items-center justify-center rounded-full px-0.5"
       aria-label="{badge} pending change{badge !== 1 ? 's' : ''}"
       >{badge}</span
     >
