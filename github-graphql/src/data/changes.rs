@@ -15,16 +15,52 @@ use std::{
 };
 use ts_rs::TS;
 
-#[derive(Default, Debug, Eq, PartialEq, Serialize, TS, Clone)]
+/// Represents the reverse of an editing operation, used for undo/redo.
+#[derive(Debug, Clone)]
+enum UndoAction {
+    /// Reverse of adding a change: remove the change and optionally restore the
+    /// previous value that was overwritten.
+    RemoveOrRestore {
+        key: ChangeKey,
+        previous: Option<Change>,
+    },
+    /// Reverse of removing a change: re-insert the change that was removed.
+    Insert(Change),
+    /// Reverse of clearing all changes: restore the full set of changes.
+    RestoreAll(HashMap<ChangeKey, Change>),
+    /// A batch of undo actions (e.g. from add_changes).
+    Batch(Vec<UndoAction>),
+}
+
+#[derive(Default, Debug, Serialize, TS, Clone)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Changes {
     data: HashMap<ChangeKey, Change>,
+    #[serde(skip)]
+    #[ts(skip)]
+    undo_stack: Vec<UndoAction>,
+    #[serde(skip)]
+    #[ts(skip)]
+    redo_stack: Vec<UndoAction>,
 }
+
+impl PartialEq for Changes {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
+impl Eq for Changes {}
 
 impl Changes {
     pub fn add(&mut self, change: Change) {
         let old_value = self.data.insert(change.key(), change.clone());
+        self.undo_stack.push(UndoAction::RemoveOrRestore {
+            key: change.key(),
+            previous: old_value.clone(),
+        });
+        self.redo_stack.clear();
         if let Some(old_value) = old_value {
             if change != old_value {
                 println!("WARNING! {change:?} overrides {old_value:?}");
@@ -33,12 +69,111 @@ impl Changes {
     }
 
     pub fn remove(&mut self, change: Change) {
-        self.data.remove(&change.key());
+        let removed = self.data.remove(&change.key());
+        if let Some(removed) = removed {
+            self.undo_stack.push(UndoAction::Insert(removed));
+            self.redo_stack.clear();
+        }
     }
 
     pub fn add_changes(&mut self, changes: Changes) {
+        let mut batch = Vec::new();
         for change in changes.data.into_values() {
-            self.add(change);
+            let old_value = self.data.insert(change.key(), change.clone());
+            batch.push(UndoAction::RemoveOrRestore {
+                key: change.key(),
+                previous: old_value,
+            });
+        }
+        if !batch.is_empty() {
+            self.undo_stack.push(UndoAction::Batch(batch));
+            self.redo_stack.clear();
+        }
+    }
+
+    pub fn clear(&mut self) {
+        let old_data = take(&mut self.data);
+        if !old_data.is_empty() {
+            self.undo_stack.push(UndoAction::RestoreAll(old_data));
+            self.redo_stack.clear();
+        }
+    }
+
+    pub fn can_undo(&self) -> bool {
+        !self.undo_stack.is_empty()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        !self.redo_stack.is_empty()
+    }
+
+    pub fn undo(&mut self) -> bool {
+        if let Some(action) = self.undo_stack.pop() {
+            let redo_action = self.apply_undo_action(&action);
+            self.redo_stack.push(redo_action);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn redo(&mut self) -> bool {
+        if let Some(action) = self.redo_stack.pop() {
+            let undo_action = self.apply_undo_action(&action);
+            self.undo_stack.push(undo_action);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Applies an undo action and returns the reverse action (for redo, or for
+    /// undoing a redo).
+    fn apply_undo_action(&mut self, action: &UndoAction) -> UndoAction {
+        match action {
+            UndoAction::RemoveOrRestore { key, previous } => {
+                // The original operation was an insert. To undo, we remove it
+                // (or restore the previous value).
+                let current = if let Some(prev) = previous {
+                    self.data.insert(key.clone(), prev.clone())
+                } else {
+                    self.data.remove(key)
+                };
+                // The reverse: re-insert what was there (current), removing
+                // any restored previous.
+                UndoAction::RemoveOrRestore {
+                    key: key.clone(),
+                    previous: current,
+                }
+            }
+            UndoAction::Insert(change) => {
+                // The original operation was a remove. To undo, re-insert.
+                let previous = self.data.insert(change.key(), change.clone());
+                // The reverse: remove it again (or restore what was overwritten).
+                UndoAction::RemoveOrRestore {
+                    key: change.key(),
+                    previous,
+                }
+            }
+            UndoAction::RestoreAll(old_data) => {
+                // The original operation was a clear. To undo, restore the old
+                // data and save the current data as the reverse.
+                let current_data = take(&mut self.data);
+                self.data = old_data.clone();
+                UndoAction::RestoreAll(current_data)
+            }
+            UndoAction::Batch(actions) => {
+                // Undo each action in reverse order.
+                let reverse_actions: Vec<UndoAction> = actions
+                    .iter()
+                    .rev()
+                    .map(|a| self.apply_undo_action(a))
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                    .collect();
+                UndoAction::Batch(reverse_actions)
+            }
         }
     }
 

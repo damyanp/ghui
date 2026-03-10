@@ -71,6 +71,8 @@ pub struct Data {
 
     filters: Filters,
     changes: Changes,
+    can_undo: bool,
+    can_redo: bool,
 }
 
 #[derive(Serialize, TS, Debug)]
@@ -158,6 +160,8 @@ impl AppState {
             original_work_items,
             filters: self.filters.clone(),
             changes: self.changes.clone(),
+            can_undo: self.changes.can_undo(),
+            can_redo: self.changes.can_redo(),
         })));
         Ok(())
     }
@@ -274,7 +278,17 @@ impl AppState {
     }
 
     pub async fn clear_changes(&mut self) -> Result<()> {
-        self.changes = Changes::default();
+        self.changes.clear();
+        self.refresh(false).await
+    }
+
+    pub async fn undo_change(&mut self) -> Result<()> {
+        self.changes.undo();
+        self.refresh(false).await
+    }
+
+    pub async fn redo_change(&mut self) -> Result<()> {
+        self.changes.redo();
         self.refresh(false).await
     }
 

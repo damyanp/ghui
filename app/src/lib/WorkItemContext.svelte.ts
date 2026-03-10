@@ -42,6 +42,8 @@ export class WorkItemContext {
     },
     originalWorkItems: {},
     changes: { data: {} },
+    canUndo: false,
+    canRedo: false,
   });
 
   workItemTreeExpandedItems = $state<string[]>([]);
@@ -236,6 +238,14 @@ export class WorkItemContext {
 
   public async removeChange(change: Change) {
     await invoke("remove_change", { change });
+  }
+
+  public async undoChange() {
+    await invoke("undo_change");
+  }
+
+  public async redoChange() {
+    await invoke("redo_change");
   }
 
   // #endregion

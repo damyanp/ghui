@@ -416,3 +416,186 @@ fn test_apply_changes_item_not_found() {
     assert_eq!(expected_original_work_items, actual_original_work_items);
     assert_eq!(work_items_before, data.work_items.work_items);
 }
+
+#[test]
+fn test_undo_add_change() {
+    let mut changes = Changes::default();
+    let change = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("status1".to_owned()))),
+    };
+
+    changes.add(change.clone());
+    assert_eq!(changes.len(), 1);
+    assert!(changes.can_undo());
+    assert!(!changes.can_redo());
+
+    changes.undo();
+    assert_eq!(changes.len(), 0);
+    assert!(!changes.can_undo());
+    assert!(changes.can_redo());
+
+    changes.redo();
+    assert_eq!(changes.len(), 1);
+    assert!(changes.can_undo());
+    assert!(!changes.can_redo());
+}
+
+#[test]
+fn test_undo_remove_change() {
+    let mut changes = Changes::default();
+    let change = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("status1".to_owned()))),
+    };
+
+    changes.add(change.clone());
+    changes.remove(change.clone());
+    assert_eq!(changes.len(), 0);
+
+    // Undo the remove - should restore the change
+    changes.undo();
+    assert_eq!(changes.len(), 1);
+
+    // Undo the add - should be empty again
+    changes.undo();
+    assert_eq!(changes.len(), 0);
+    assert!(!changes.can_undo());
+}
+
+#[test]
+fn test_undo_clear_changes() {
+    let mut changes = Changes::default();
+    changes.add(Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    });
+    changes.add(Change {
+        work_item_id: WorkItemId("item2".to_owned()),
+        data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+    });
+
+    assert_eq!(changes.len(), 2);
+
+    changes.clear();
+    assert_eq!(changes.len(), 0);
+    assert!(changes.can_undo());
+
+    changes.undo();
+    assert_eq!(changes.len(), 2);
+    assert!(changes.can_redo());
+
+    changes.redo();
+    assert_eq!(changes.len(), 0);
+}
+
+#[test]
+fn test_undo_overwrite_change() {
+    let mut changes = Changes::default();
+    let change1 = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("status1".to_owned()))),
+    };
+    let change2 = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("status2".to_owned()))),
+    };
+
+    changes.add(change1.clone());
+    changes.add(change2.clone());
+    assert_eq!(changes.len(), 1);
+
+    // Undo the second add - should restore the first change value
+    changes.undo();
+    assert_eq!(changes.len(), 1);
+    // Verify the first change is back by checking it's iterable and matches
+    let current: Vec<&Change> = changes.into_iter().collect();
+    assert_eq!(current.len(), 1);
+    assert_eq!(current[0], &change1);
+
+    // Undo the first add - should be empty
+    changes.undo();
+    assert_eq!(changes.len(), 0);
+}
+
+#[test]
+fn test_multiple_undo_redo() {
+    let mut changes = Changes::default();
+    let c1 = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    };
+    let c2 = Change {
+        work_item_id: WorkItemId("item2".to_owned()),
+        data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+    };
+
+    changes.add(c1.clone());
+    changes.add(c2.clone());
+    assert_eq!(changes.len(), 2);
+
+    changes.undo();
+    assert_eq!(changes.len(), 1);
+
+    changes.undo();
+    assert_eq!(changes.len(), 0);
+
+    changes.redo();
+    assert_eq!(changes.len(), 1);
+
+    changes.redo();
+    assert_eq!(changes.len(), 2);
+}
+
+#[test]
+fn test_new_change_clears_redo_stack() {
+    let mut changes = Changes::default();
+    let c1 = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    };
+    let c2 = Change {
+        work_item_id: WorkItemId("item2".to_owned()),
+        data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+    };
+
+    changes.add(c1.clone());
+    changes.undo();
+    assert!(changes.can_redo());
+
+    changes.add(c2.clone());
+    assert!(!changes.can_redo());
+}
+
+#[test]
+fn test_undo_add_changes_batch() {
+    let mut changes = Changes::default();
+
+    // Pre-populate with a change to add first
+    changes.add(Change {
+        work_item_id: WorkItemId("item0".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s0".to_owned()))),
+    });
+    assert_eq!(changes.len(), 1);
+
+    let mut batch = Changes::default();
+    batch.add(Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    });
+    batch.add(Change {
+        work_item_id: WorkItemId("item2".to_owned()),
+        data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+    });
+
+    changes.add_changes(batch);
+    assert_eq!(changes.len(), 3);
+
+    // Undo should reverse the entire batch at once
+    changes.undo();
+    assert_eq!(changes.len(), 1);
+
+    // Redo should restore the entire batch at once
+    changes.redo();
+    assert_eq!(changes.len(), 3);
+}
