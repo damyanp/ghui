@@ -30,6 +30,10 @@ pub fn run() {
         .setup(|app| {
             app.manage(DataState::default());
 
+            // The window starts invisible (visible: false in tauri.conf.json) to
+            // prevent a flash of white background at the default position before
+            // tauri-plugin-window-state restores the saved position/size and the
+            // dark-mode CSS loads. We show it here, after setup is complete.
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
             }
