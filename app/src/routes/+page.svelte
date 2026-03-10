@@ -1,16 +1,27 @@
 <script lang="ts">
-  import { AppBar, Switch } from "@skeletonlabs/skeleton-svelte";
+  import { AppBar } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
-  import ChangesToolbarButton from "../components/ChangesToolbarButton.svelte";
   import {
     setWorkItemContext,
     WorkItemContext,
+    makeProgressChannel,
   } from "$lib/WorkItemContext.svelte";
   import SanitizeButton from "../components/SanitizeButton.svelte";
-  import { ChartGantt, ListTree } from "@lucide/svelte";
+  import {
+    ChartGantt,
+    Eye,
+    EyeOff,
+    ListTree,
+    Redo2,
+    ReceiptText,
+    Save,
+    Trash2,
+    Undo2,
+  } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
+  import PendingChangesDialog from "../components/PendingChangesDialog.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
     WorkItemExecutionTrackerContext,
@@ -30,10 +41,33 @@
   const xtrackerIconClass = $derived(
     mode === "xtracker" ? "bg-primary-500" : ""
   );
+
+  // Changes toolbar state
+  const numChanges = $derived(Object.keys(context.data.changes.data).length);
+  const canUndo = $derived(context.data.canUndo);
+  const canRedo = $derived(context.data.canRedo);
+
+  let saveProgress = $state(0);
+  let pendingChangesOpen = $state(false);
+
+  async function saveChanges() {
+    if (saveProgress !== 0) return;
+    const progress = makeProgressChannel((value) => (saveProgress = value));
+    await context.saveChanges(progress);
+    saveProgress = 0;
+  }
+
+  let saveStyle = $derived.by(() => {
+    if (saveProgress === 0) return "";
+    let percent = `${(1 - saveProgress) * 100}%`;
+    let bg = "transparent";
+    let fg = "blue";
+    return `background-image: linear-gradient(90deg,${bg},${percent},${bg},${percent},${fg})`;
+  });
 </script>
 
 <div class="flex flex-col gap-1 h-full w-full fixed">
-  <AppBar centerClasses="flex gap-1" padding="px-4 py-1">
+  <AppBar padding="px-4 py-1">
     {#snippet lead()}
       <div
         class="content-center h-full text-lg font-black border-r rounded-2xl pe-1"
@@ -44,10 +78,64 @@
         progress={context.loadProgress}
         onclick={onRefreshClicked}
       />
-    {/snippet}
 
-    {#snippet children()}
+      <div class="w-3"></div>
+
+      <AppBarButton
+        icon={Save}
+        text="Save"
+        disabled={!numChanges}
+        style={saveStyle}
+        onclick={saveChanges}
+      />
+      <AppBarButton
+        icon={Trash2}
+        text="Discard"
+        disabled={!numChanges}
+        onclick={async () => await context.deleteChanges()}
+      />
+
+      <div class="w-3"></div>
+
+      <AppBarButton
+        text="Details"
+        icon={ReceiptText}
+        disabled={!numChanges}
+        badge={numChanges > 0 ? numChanges : undefined}
+        onclick={() => {
+          pendingChangesOpen = true;
+        }}
+      />
+      <AppBarButton
+        text="Preview"
+        icon={context.previewChanges ? Eye : EyeOff}
+        disabled={!numChanges}
+        onclick={() => {
+          context.setPreviewChanges(!context.previewChanges);
+        }}
+      />
+
+      <div class="w-3"></div>
+
       <SanitizeButton />
+
+      <div class="w-3"></div>
+
+      <AppBarButton
+        icon={Undo2}
+        text="Undo"
+        disabled={!canUndo}
+        onclick={async () => await context.undoChange()}
+      />
+      <AppBarButton
+        icon={Redo2}
+        text="Redo"
+        disabled={!canRedo}
+        onclick={async () => await context.redoChange()}
+      />
+
+      <div class="w-3"></div>
+
       <AppBarButton
         text="Items"
         icon={ListTree}
@@ -67,10 +155,11 @@
     {/snippet}
 
     {#snippet trail()}
-      <ChangesToolbarButton />
       <Pat />
     {/snippet}
   </AppBar>
+
+  <PendingChangesDialog bind:open={pendingChangesOpen} />
 
   {#if mode === "items"}
     <WorkItemTree />

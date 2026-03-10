@@ -3,8 +3,8 @@ use dirs::home_dir;
 use github_graphql::{
     client::graphql::{custom_fields_query::get_fields, get_all_items, get_items::get_items},
     data::{
-        Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, UpdateType, WorkItem,
-        WorkItemId, WorkItems,
+        Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, UndoHistory, UpdateType,
+        WorkItem, WorkItemId, WorkItems,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -71,6 +71,8 @@ pub struct Data {
 
     filters: Filters,
     changes: Changes,
+    can_undo: bool,
+    can_redo: bool,
 }
 
 #[derive(Serialize, TS, Debug)]
@@ -110,6 +112,7 @@ pub struct AppState {
     work_items: Option<WorkItems>,
     filters: Filters,
     changes: Changes,
+    undo_history: UndoHistory,
     preview_changes: bool,
 }
 
@@ -130,6 +133,7 @@ impl AppState {
             work_items: None,
             filters: Filters::default(),
             changes: Changes::default(),
+            undo_history: UndoHistory::default(),
             preview_changes: true,
         }
     }
@@ -158,6 +162,8 @@ impl AppState {
             original_work_items,
             filters: self.filters.clone(),
             changes: self.changes.clone(),
+            can_undo: self.undo_history.can_undo(),
+            can_redo: self.undo_history.can_redo(),
         })));
         Ok(())
     }
@@ -259,22 +265,33 @@ impl AppState {
     }
 
     pub async fn add_changes(&mut self, changes: Changes) -> Result<()> {
-        self.changes.add_changes(changes);
+        self.undo_history
+            .track_add_changes(&mut self.changes, changes);
         self.refresh(false).await
     }
 
     pub async fn add_change(&mut self, change: Change) -> Result<()> {
-        self.changes.add(change);
+        self.undo_history.track_add(&mut self.changes, change);
         self.refresh(false).await
     }
 
     pub async fn remove_change(&mut self, change: Change) -> Result<()> {
-        self.changes.remove(change);
+        self.undo_history.track_remove(&mut self.changes, change);
         self.refresh(false).await
     }
 
     pub async fn clear_changes(&mut self) -> Result<()> {
-        self.changes = Changes::default();
+        self.undo_history.track_clear(&mut self.changes);
+        self.refresh(false).await
+    }
+
+    pub async fn undo_change(&mut self) -> Result<()> {
+        self.undo_history.undo(&mut self.changes);
+        self.refresh(false).await
+    }
+
+    pub async fn redo_change(&mut self) -> Result<()> {
+        self.undo_history.redo(&mut self.changes);
         self.refresh(false).await
     }
 

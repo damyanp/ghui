@@ -39,7 +39,7 @@ impl TestData {
         self.work_items.add(item);
     }
 
-    pub fn build(&mut self) -> TestDataWorkItemBuilder {
+    pub fn build(&mut self) -> TestDataWorkItemBuilder<'_> {
         let id = self.next_id();
 
         TestDataWorkItemBuilder {

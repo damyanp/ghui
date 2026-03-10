@@ -47,6 +47,8 @@ pub fn run() {
             actions::sanitize,
             actions::add_change,
             actions::remove_change,
+            actions::undo_change,
+            actions::redo_change,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

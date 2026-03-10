@@ -38,3 +38,15 @@ pub async fn remove_change(
     data_state.lock().await.remove_change(change).await?;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn undo_change(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
+    data_state.lock().await.undo_change().await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn redo_change(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
+    data_state.lock().await.redo_change().await?;
+    Ok(())
+}

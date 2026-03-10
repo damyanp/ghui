@@ -13,4 +13,6 @@ export type Data = {
   originalWorkItems: { [key in WorkItemId]?: WorkItem };
   filters: Filters;
   changes: Changes;
+  canUndo: boolean;
+  canRedo: boolean;
 };
