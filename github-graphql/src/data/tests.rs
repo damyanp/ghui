@@ -509,9 +509,9 @@ fn test_undo_overwrite_change() {
     changes.undo();
     assert_eq!(changes.len(), 1);
     // Verify the first change is back by checking it's iterable and matches
-    let current: Vec<&Change> = changes.into_iter().collect();
-    assert_eq!(current.len(), 1);
-    assert_eq!(current[0], &change1);
+    let restored_changes: Vec<&Change> = changes.into_iter().collect();
+    assert_eq!(restored_changes.len(), 1);
+    assert_eq!(restored_changes[0], &change1);
 
     // Undo the first add - should be empty
     changes.undo();

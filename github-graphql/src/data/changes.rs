@@ -45,6 +45,9 @@ pub struct Changes {
     redo_stack: Vec<UndoAction>,
 }
 
+// Equality comparison intentionally only considers the `data` field (the
+// actual pending changes), not the undo/redo stacks, because the stacks are
+// internal history and should not affect logical equality of two Changes sets.
 impl PartialEq for Changes {
     fn eq(&self, other: &Self) -> bool {
         self.data == other.data
@@ -56,16 +59,16 @@ impl Eq for Changes {}
 impl Changes {
     pub fn add(&mut self, change: Change) {
         let old_value = self.data.insert(change.key(), change.clone());
-        self.undo_stack.push(UndoAction::RemoveOrRestore {
-            key: change.key(),
-            previous: old_value.clone(),
-        });
-        self.redo_stack.clear();
-        if let Some(old_value) = old_value {
-            if change != old_value {
+        if let Some(ref old_value) = old_value {
+            if change != *old_value {
                 println!("WARNING! {change:?} overrides {old_value:?}");
             }
         }
+        self.undo_stack.push(UndoAction::RemoveOrRestore {
+            key: change.key(),
+            previous: old_value,
+        });
+        self.redo_stack.clear();
     }
 
     pub fn remove(&mut self, change: Change) {
