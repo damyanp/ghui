@@ -4,7 +4,6 @@
     makeProgressChannel,
   } from "$lib/WorkItemContext.svelte";
   import { Eye, EyeOff, ReceiptText, Save, Trash2, Undo2, Redo2 } from "@lucide/svelte";
-  import { scale } from "svelte/transition";
   import AppBarButton from "./AppBarButton.svelte";
   import PendingChangesDialog from "./PendingChangesDialog.svelte";
 
@@ -43,58 +42,59 @@
   });
 </script>
 
-{#if numChanges || canUndo || canRedo}
-  <div
-    class="cursor-default rounded-2xl w-fit text-xs h-full flex flex-row p-1 px-2 mx-2 border items-center bg-linear-[90deg,transparent,20%,transparent,20%,blue"
-    style={progressStyle}
-    transition:scale
+<div
+  class="cursor-default rounded-2xl w-fit text-xs h-full flex flex-row p-1 px-2 mx-2 border items-center bg-linear-[90deg,transparent,20%,transparent,20%,blue"
+  style={progressStyle}
+>
+  <span class="self-start h-full text-xs border-r pe-1"
+    >{numChanges} change{numChanges !== 1 ? "s" : ""}</span
   >
-    {#if numChanges}
-      <span class="self-start h-full text-xs border-r pe-1"
-        >{numChanges} change{numChanges > 1 ? "s" : ""}</span
-      >
-    {/if}
 
-    <AppBarButton
-      icon={Undo2}
-      text="Undo"
-      disabled={!canUndo}
-      onclick={async () => await context.undoChange()}
-    />
+  <AppBarButton
+    icon={Undo2}
+    text="Undo"
+    disabled={!canUndo}
+    onclick={async () => await context.undoChange()}
+  />
 
-    <AppBarButton
-      icon={Redo2}
-      text="Redo"
-      disabled={!canRedo}
-      onclick={async () => await context.redoChange()}
-    />
+  <AppBarButton
+    icon={Redo2}
+    text="Redo"
+    disabled={!canRedo}
+    onclick={async () => await context.redoChange()}
+  />
 
-    {#if numChanges}
-      <AppBarButton
-        icon={Trash2}
-        text="Discard"
-        onclick={async () => await context.deleteChanges()}
-      />
+  <AppBarButton
+    icon={Trash2}
+    text="Discard"
+    disabled={!numChanges}
+    onclick={async () => await context.deleteChanges()}
+  />
 
-      <AppBarButton icon={Save} text="Save" onclick={saveChanges} />
+  <AppBarButton
+    icon={Save}
+    text="Save"
+    disabled={!numChanges}
+    onclick={saveChanges}
+  />
 
-      <AppBarButton
-        text="Preview"
-        icon={context.previewChanges ? Eye : EyeOff}
-        onclick={() => {
-          context.setPreviewChanges(!context.previewChanges);
-        }}
-      />
+  <AppBarButton
+    text="Preview"
+    icon={context.previewChanges ? Eye : EyeOff}
+    disabled={!numChanges}
+    onclick={() => {
+      context.setPreviewChanges(!context.previewChanges);
+    }}
+  />
 
-      <AppBarButton
-        text="Details"
-        icon={ReceiptText}
-        onclick={() => {
-          pendingChangesOpen = true;
-        }}
-      />
-    {/if}
+  <AppBarButton
+    text="Details"
+    icon={ReceiptText}
+    disabled={!numChanges}
+    onclick={() => {
+      pendingChangesOpen = true;
+    }}
+  />
 
-    <PendingChangesDialog bind:open={pendingChangesOpen} />
-  </div>
-{/if}
+  <PendingChangesDialog bind:open={pendingChangesOpen} />
+</div>
