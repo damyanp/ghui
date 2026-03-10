@@ -94,12 +94,24 @@
         disabled={!numChanges}
         onclick={async () => await context.deleteChanges()}
       />
+
+      <div class="w-3"></div>
+
       <AppBarButton
         text="Details"
         icon={ReceiptText}
+        disabled={!numChanges}
         badge={numChanges > 0 ? numChanges : undefined}
         onclick={() => {
           pendingChangesOpen = true;
+        }}
+      />
+      <AppBarButton
+        text="Preview"
+        icon={context.previewChanges ? Eye : EyeOff}
+        disabled={!numChanges}
+        onclick={() => {
+          context.setPreviewChanges(!context.previewChanges);
         }}
       />
 
@@ -120,17 +132,6 @@
         text="Redo"
         disabled={!canRedo}
         onclick={async () => await context.redoChange()}
-      />
-
-      <div class="w-3"></div>
-
-      <AppBarButton
-        text="Preview"
-        icon={context.previewChanges ? Eye : EyeOff}
-        disabled={!numChanges}
-        onclick={() => {
-          context.setPreviewChanges(!context.previewChanges);
-        }}
       />
 
       <div class="w-3"></div>
