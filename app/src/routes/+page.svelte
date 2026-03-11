@@ -66,7 +66,7 @@
   });
 </script>
 
-<div class="flex flex-col gap-1 h-full w-full fixed">
+<div class="flex flex-col h-full w-full fixed">
   <AppBar padding="px-4 py-1">
     {#snippet lead()}
       <div
