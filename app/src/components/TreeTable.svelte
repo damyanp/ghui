@@ -332,7 +332,7 @@
         {#each columns as column, index}
           <div
             id="column-index-{index}"
-            class="text-lg font-bold bg-header-tinted text-header-tinted pl-1 flex justify-between"
+            class="text-lg font-bold bg-primary-100-900 text-primary-contrast-100-900 pl-1 flex justify-between"
             class:bg-secondary-500={index === droppedColumnIndex}
           >
             {@render columnHeader(column, index)}
