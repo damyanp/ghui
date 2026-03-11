@@ -615,3 +615,139 @@ fn test_undo_add_changes_batch() {
     history.redo(&mut changes);
     assert_eq!(changes.len(), 3);
 }
+
+#[test]
+fn test_undo_save_changes() {
+    let mut changes = Changes::default();
+    let mut history = UndoHistory::default();
+
+    // Add two changes
+    history.track_add(
+        &mut changes,
+        Change {
+            work_item_id: WorkItemId("item1".to_owned()),
+            data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+        },
+    );
+    history.track_add(
+        &mut changes,
+        Change {
+            work_item_id: WorkItemId("item2".to_owned()),
+            data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+        },
+    );
+    assert_eq!(changes.len(), 2);
+
+    // Simulate a successful save: snapshot, then clear data (as save() does)
+    let pre_save = changes.clone();
+    changes = Changes::default(); // all changes saved successfully
+    history.track_save(&changes, pre_save);
+
+    assert_eq!(changes.len(), 0);
+    assert!(history.can_undo());
+
+    // Undo the save: restores all changes as unsaved local changes
+    history.undo(&mut changes);
+    assert_eq!(changes.len(), 2);
+    assert!(history.can_redo());
+
+    // Redo the save: changes are cleared again
+    history.redo(&mut changes);
+    assert_eq!(changes.len(), 0);
+}
+
+#[test]
+fn test_undo_save_with_partial_failure() {
+    let mut changes = Changes::default();
+    let mut history = UndoHistory::default();
+
+    let change1 = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    };
+    let change2 = Change {
+        work_item_id: WorkItemId("item2".to_owned()),
+        data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+    };
+
+    history.track_add(&mut changes, change1.clone());
+    history.track_add(&mut changes, change2.clone());
+    assert_eq!(changes.len(), 2);
+
+    // Simulate partial save: item1 saved, item2 failed (remains in changes)
+    let pre_save = changes.clone();
+    changes = Changes::default();
+    changes.add(change2.clone()); // item2 failed, stays in changes
+    history.track_save(&changes, pre_save);
+
+    assert_eq!(changes.len(), 1);
+    assert!(history.can_undo());
+
+    // Undo the save: restores all original changes
+    history.undo(&mut changes);
+    assert_eq!(changes.len(), 2);
+
+    // Redo: goes back to only the failed change
+    history.redo(&mut changes);
+    assert_eq!(changes.len(), 1);
+    let remaining: Vec<&Change> = changes.into_iter().collect();
+    assert_eq!(remaining[0], &change2);
+}
+
+#[test]
+fn test_save_empty_changes_no_undo() {
+    let changes = Changes::default();
+    let mut history = UndoHistory::default();
+    let pre_save = changes.clone();
+    history.track_save(&changes, pre_save);
+
+    assert!(!history.can_undo());
+}
+
+#[test]
+fn test_save_all_failed_no_undo() {
+    let mut changes = Changes::default();
+    let mut history = UndoHistory::default();
+
+    let change = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    };
+
+    history.track_add(&mut changes, change.clone());
+
+    // Simulate all saves failing: changes are unchanged after save attempt
+    let pre_save = changes.clone();
+    // changes remains the same (all failed)
+    history.track_save(&changes, pre_save);
+
+    // Should only have the undo for the original add, not for the no-op save
+    assert!(history.can_undo());
+    history.undo(&mut changes);
+    assert_eq!(changes.len(), 0);
+    assert!(!history.can_undo()); // No more undo entries
+}
+
+#[test]
+fn test_save_clears_redo_stack() {
+    let mut changes = Changes::default();
+    let mut history = UndoHistory::default();
+
+    let change = Change {
+        work_item_id: WorkItemId("item1".to_owned()),
+        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+    };
+
+    history.track_add(&mut changes, change.clone());
+    history.undo(&mut changes);
+    assert!(history.can_redo());
+
+    // Re-add and save
+    history.track_add(&mut changes, change.clone());
+    let pre_save = changes.clone();
+    changes = Changes::default();
+    history.track_save(&changes, pre_save);
+
+    // Save should have cleared the redo stack
+    assert!(!history.can_redo());
+}
