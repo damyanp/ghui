@@ -160,14 +160,7 @@ impl WorkItems {
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(
-                fields,
-                self,
-                &mut changes,
-                &root_item_id,
-                &None,
-                &None,
-            );
+            sanitize_issue_hierarchy(fields, self, &mut changes, &root_item_id, &None, &None);
         }
 
         fn sanitize_issue_hierarchy(
