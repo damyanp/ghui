@@ -139,6 +139,20 @@ pub async fn my_command(
 - Use `assert_eq!` and `assert!` for assertions.
 - Snapshot testing with `insta` is available in `github-graphql`.
 - Tests live in `github-graphql/src/data/tests.rs` with helpers in `test_helpers.rs`.
+- NodeBuilder tests live in `ghui-app/src/nodes.rs` (run with `cargo test -p ghui-app`, requires `libdbus-1-dev` on Linux).
+
+### WorkItems::update() and UpdateType
+
+The `WorkItems::update()` method handles incremental updates when items change on GitHub. It returns an `UpdateType` that drives the refresh behavior:
+
+- `NoUpdate` — nothing changed, no UI refresh needed.
+- `SimpleChange` — only non-hierarchy fields changed (e.g., title); the item is pushed directly to the frontend via `DataUpdate::WorkItem`.
+- `ChangesHierarchy` — structural changes occurred (e.g., assignees, status, sub-issues, parent); triggers a full `refresh(false)` to rebuild the node tree.
+
+When modifying `update()` or `get_work_item_update_type()`:
+1. **New items must be added to `ordered_items`** — the HashMap alone isn't enough; `get_roots()` and `iter()` depend on `ordered_items`.
+2. **Add tests** for any new `UpdateType` classification logic in `github-graphql/src/data/tests.rs`.
+3. **Add a NodeBuilder test** in `ghui-app/src/nodes.rs` to verify that items appear correctly in the node tree after updates.
 
 ### Sanitize Rules
 
