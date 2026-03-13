@@ -372,6 +372,7 @@ impl DataState {
                 }
 
                 if update_type == UpdateType::ChangesHierarchy {
+                    // Drop the work_items borrow before calling refresh
                     let r = state.refresh(false).await;
                     if let Err(r) = r {
                         eprintln!("Refresh failed: {r:?}");
@@ -383,7 +384,12 @@ impl DataState {
                 }
             }
 
-            // TODO: save the updated work items!
+            // Persist updated work items to disk cache
+            if let Some(work_items) = &state.work_items
+                && let Err(e) = save_workitems_to_appdata(work_items)
+            {
+                eprintln!("WARNING: failed to save cached work items: {e}");
+            }
         })
     }
 
