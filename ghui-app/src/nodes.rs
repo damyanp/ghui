@@ -338,13 +338,20 @@ mod nodebuilder_tests {
             ..WorkItem::default_loaded()
         };
         let update_type = data.work_items.update(new_item.clone());
-        assert_eq!(update_type, github_graphql::data::UpdateType::ChangesHierarchy);
+        assert_eq!(
+            update_type,
+            github_graphql::data::UpdateType::ChangesHierarchy
+        );
 
         // After update, building nodes should include the new item
         let filters = Filters::default();
         let original_work_items = HashMap::new();
-        let mut builder =
-            NodeBuilder::new(&data.fields, &data.work_items, &filters, &original_work_items);
+        let mut builder = NodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+        );
         let nodes = builder.build();
 
         assert!(
