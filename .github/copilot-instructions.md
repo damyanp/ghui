@@ -95,6 +95,23 @@ pub struct MyType { ... }
 - Tauri commands return `TauriCommandResult<T>` (wraps `anyhow::Error` for serialization).
 - Use the `?` operator for propagation.
 
+### Idiomatic Patterns
+
+- **Use let chains** for multiple `if let` conditions — prefer `if let ... && let ...` over tuple destructuring:
+  ```rust
+  // Good: let chains
+  if let Some(a) = x.as_ref()
+      && let Some(b) = y.as_ref()
+  {
+      // ...
+  }
+
+  // Bad: tuple pattern match
+  if let (Some(a), Some(b)) = (x.as_ref(), y.as_ref()) {
+      // ...
+  }
+  ```
+
 ### Tauri Command Pattern
 
 ```rust
