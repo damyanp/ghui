@@ -249,10 +249,7 @@ fn test_assigned_issue_with_no_status_gets_planning() {
 fn test_assigned_issue_with_status_set_no_change() {
     let mut data = TestData::default();
 
-    data.build()
-        .assignees(&["user1"])
-        .status("Active")
-        .add();
+    data.build().assignees(&["user1"]).status("Active").add();
 
     let actual_changes = data.work_items.sanitize(&data.fields);
 

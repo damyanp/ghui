@@ -36,8 +36,11 @@ cargo test --verbose
 # Run just the core library tests (fastest, no system deps needed)
 cargo test -p github-graphql
 
-# Clippy (treat warnings as errors)
-cargo clippy -- -D warnings
+# Format (must pass before merge)
+cargo fmt --all -- --check
+
+# Clippy (treat warnings as errors, must pass before merge)
+cargo clippy --all -- -D warnings
 ```
 
 ### Frontend (Svelte/TypeScript)
@@ -69,7 +72,7 @@ npx tauri build   # Release build (produces MSI + NSIS installers)
 - **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, and `npm run check` on `windows-latest` for push/PR to main.
 - **build-installer.yml**: Builds Windows installer on push to main.
 
-The CI runs on Windows. If you can't run a full `cargo build` locally (missing system deps on Linux), validate with `cargo test -p github-graphql` and `cd app && npm run check`.
+The CI runs on Windows. If you can't run a full `cargo build` locally (missing system deps on Linux), validate with `cargo fmt --all -- --check`, `cargo clippy --all -- -D warnings`, `cargo test -p github-graphql` and `cd app && npm run check`.
 
 ## Rust Conventions
 
@@ -91,6 +94,23 @@ pub struct MyType { ... }
 - Use `anyhow::Result<T>` for internal operations.
 - Tauri commands return `TauriCommandResult<T>` (wraps `anyhow::Error` for serialization).
 - Use the `?` operator for propagation.
+
+### Idiomatic Patterns
+
+- **Use let chains** for multiple `if let` conditions — prefer `if let ... && let ...` over tuple destructuring:
+  ```rust
+  // Good: let chains
+  if let Some(a) = x.as_ref()
+      && let Some(b) = y.as_ref()
+  {
+      // ...
+  }
+
+  // Bad: tuple pattern match
+  if let (Some(a), Some(b)) = (x.as_ref(), y.as_ref()) {
+      // ...
+  }
+  ```
 
 ### Tauri Command Pattern
 
@@ -181,7 +201,7 @@ let { columns = $bindable() } = $props();   // Two-way bindable props
 - **Reuse existing patterns** — look at how similar things are done elsewhere in the codebase before introducing new approaches.
 - **Keep `Changes` and `UndoHistory` separate** — this was a deliberate architectural decision.
 - **Add comments for non-obvious behavior** (e.g., why the window starts invisible).
-- **Run validation before submitting**: `cargo test -p github-graphql`, `cargo clippy -- -D warnings`, `cd app && npm run check`.
+- **Run validation before submitting**: `cargo fmt --all -- --check`, `cargo test -p github-graphql`, `cargo clippy --all -- -D warnings`, `cd app && npm run check`.
 - **Think independently** about suggestions — evaluate whether a proposed change actually makes sense before implementing it.
 - **Remove unnecessary code/config** — don't add things "just in case" (e.g., don't add `center: true` if the window starts hidden).
 
@@ -191,7 +211,7 @@ let { columns = $bindable() } = $props();   // Two-way bindable props
 - Don't introduce custom CSS color definitions when theme tokens exist.
 - Don't put undo/redo state inside the `Changes` struct.
 - Don't conditionally show/hide toolbar buttons — keep them visible and disable them instead.
-- Don't skip clippy or test validation.
+- Don't skip clippy, fmt, or test validation.
 
 ### Environment Notes
 
