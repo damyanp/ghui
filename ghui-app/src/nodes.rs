@@ -320,4 +320,47 @@ mod nodebuilder_tests {
         assert!(nodes.iter().any(|n| n.id == child3_id.0));
         assert!(nodes.iter().any(|n| n.id == parent2_id.0));
     }
+
+    #[test]
+    fn test_node_builder_new_item_after_update_appears() {
+        let mut data = TestData::default();
+        let existing_id = data.build().epic("EpicA").add();
+
+        // Simulate a new item arriving via update()
+        let new_item = WorkItem {
+            id: WorkItemId("new-item".to_owned()),
+            project_item: {
+                let mut pi = github_graphql::data::ProjectItem::default_loaded();
+                pi.epic = data.fields.epic.option_id(Some("EpicA")).cloned();
+                pi
+            },
+            data: WorkItemData::Issue(github_graphql::data::Issue::default_loaded()),
+            ..WorkItem::default_loaded()
+        };
+        let update_type = data.work_items.update(new_item.clone());
+        assert_eq!(
+            update_type,
+            github_graphql::data::UpdateType::ChangesHierarchy
+        );
+
+        // After update, building nodes should include the new item
+        let filters = Filters::default();
+        let original_work_items = HashMap::new();
+        let mut builder = NodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+        );
+        let nodes = builder.build();
+
+        assert!(
+            nodes.iter().any(|n| n.id == existing_id.0),
+            "Existing item should still be in nodes"
+        );
+        assert!(
+            nodes.iter().any(|n| n.id == "new-item"),
+            "New item added via update() should appear in nodes"
+        );
+    }
 }

@@ -327,8 +327,7 @@ impl AppState {
             )
             .await?;
 
-        self.undo_history
-            .track_save(&self.changes, pre_save);
+        self.undo_history.track_save(&self.changes, pre_save);
 
         Ok(result)
     }
@@ -390,7 +389,12 @@ impl DataState {
                 }
             }
 
-            // TODO: save the updated work items!
+            // Persist updated work items to disk cache
+            if let Some(work_items) = &state.work_items
+                && let Err(e) = save_workitems_to_appdata(work_items)
+            {
+                eprintln!("WARNING: failed to save cached work items: {e}");
+            }
         })
     }
 
@@ -417,13 +421,13 @@ impl DataState {
         self.load_all_work_items(false).await?;
 
         let mut app_state = self.lock().await;
-        if let Some(work_items) = app_state.work_items.as_ref() {
-            if let Some(fields) = app_state.fields.as_ref() {
-                let changes = work_items.sanitize(fields);
-                let num_changes = changes.len();
-                app_state.add_changes(changes).await?;
-                return Ok(num_changes);
-            }
+        if let Some(work_items) = app_state.work_items.as_ref()
+            && let Some(fields) = app_state.fields.as_ref()
+        {
+            let changes = work_items.sanitize(fields);
+            let num_changes = changes.len();
+            app_state.add_changes(changes).await?;
+            return Ok(num_changes);
         }
         Ok(0)
     }
