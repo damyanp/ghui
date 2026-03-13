@@ -383,7 +383,12 @@ impl DataState {
                 }
             }
 
-            // TODO: save the updated work items!
+            // Persist updated work items to disk cache
+            if let Some(work_items) = &state.work_items
+                && let Err(e) = save_workitems_to_appdata(work_items)
+            {
+                eprintln!("WARNING: failed to save cached work items: {e}");
+            }
         })
     }
 
