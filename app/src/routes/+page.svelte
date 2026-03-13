@@ -30,10 +30,6 @@
   const context = setWorkItemContext(new WorkItemContext());
   setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
 
-  async function onRefreshClicked(): Promise<void> {
-    await context.refresh();
-  }
-
   type Mode = "items" | "xtracker";
   let mode = $state<Mode>("items");
 
@@ -49,14 +45,27 @@
 
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
+  let busy = $state(false);
 
-  const busy = $derived(saveProgress > 0 || context.loadProgress > 0);
+  async function onRefreshClicked(): Promise<void> {
+    busy = true;
+    try {
+      await context.refresh();
+    } finally {
+      busy = false;
+    }
+  }
 
   async function saveChanges() {
-    if (saveProgress !== 0) return;
-    const progress = makeProgressChannel((value) => (saveProgress = value));
-    await context.saveChanges(progress);
-    saveProgress = 0;
+    if (busy) return;
+    busy = true;
+    try {
+      const progress = makeProgressChannel((value) => (saveProgress = value));
+      await context.saveChanges(progress);
+      saveProgress = 0;
+    } finally {
+      busy = false;
+    }
   }
 
   let saveStyle = $derived.by(() => {
