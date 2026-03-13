@@ -415,13 +415,13 @@ impl DataState {
         self.load_all_work_items(false).await?;
 
         let mut app_state = self.lock().await;
-        if let Some(work_items) = app_state.work_items.as_ref() {
-            if let Some(fields) = app_state.fields.as_ref() {
-                let changes = work_items.sanitize(fields);
-                let num_changes = changes.len();
-                app_state.add_changes(changes).await?;
-                return Ok(num_changes);
-            }
+        if let Some(work_items) = app_state.work_items.as_ref()
+            && let Some(fields) = app_state.fields.as_ref()
+        {
+            let changes = work_items.sanitize(fields);
+            let num_changes = changes.len();
+            app_state.add_changes(changes).await?;
+            return Ok(num_changes);
         }
         Ok(0)
     }
