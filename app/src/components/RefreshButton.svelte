@@ -5,6 +5,7 @@
   let props: {
     onclick: (e: MouseEvent) => void;
     progress: number; // 0 = not refreshing, otherwise counts towards 0
+    disabled?: boolean;
   } = $props();
 
   let iconClass = $derived.by(() => {
@@ -26,5 +27,6 @@
   {iconClass}
   style={buttonStyle}
   text="Refresh"
+  disabled={props.disabled}
   onclick={props.onclick}
 />

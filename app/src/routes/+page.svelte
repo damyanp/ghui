@@ -50,6 +50,8 @@
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
 
+  const busy = $derived(saveProgress > 0 || context.loadProgress > 0);
+
   async function saveChanges() {
     if (saveProgress !== 0) return;
     const progress = makeProgressChannel((value) => (saveProgress = value));
@@ -76,6 +78,7 @@
       </div>
       <RefreshButton
         progress={context.loadProgress}
+        disabled={busy}
         onclick={onRefreshClicked}
       />
 
@@ -84,14 +87,14 @@
       <AppBarButton
         icon={Save}
         text="Save"
-        disabled={!numChanges}
+        disabled={!numChanges || busy}
         style={saveStyle}
         onclick={saveChanges}
       />
       <AppBarButton
         icon={Trash2}
         text="Discard"
-        disabled={!numChanges}
+        disabled={!numChanges || busy}
         onclick={async () => await context.deleteChanges()}
       />
 
@@ -100,7 +103,7 @@
       <AppBarButton
         text="Details"
         icon={ReceiptText}
-        disabled={!numChanges}
+        disabled={!numChanges || busy}
         badge={numChanges > 0 ? numChanges : undefined}
         onclick={() => {
           pendingChangesOpen = true;
@@ -109,7 +112,7 @@
       <AppBarButton
         text="Preview"
         icon={context.previewChanges ? Eye : EyeOff}
-        disabled={!numChanges}
+        disabled={!numChanges || busy}
         onclick={() => {
           context.setPreviewChanges(!context.previewChanges);
         }}
@@ -117,20 +120,20 @@
 
       <div class="w-3"></div>
 
-      <SanitizeButton />
+      <SanitizeButton disabled={busy} />
 
       <div class="w-3"></div>
 
       <AppBarButton
         icon={Undo2}
         text="Undo"
-        disabled={!canUndo}
+        disabled={!canUndo || busy}
         onclick={async () => await context.undoChange()}
       />
       <AppBarButton
         icon={Redo2}
         text="Redo"
-        disabled={!canRedo}
+        disabled={!canRedo || busy}
         onclick={async () => await context.redoChange()}
       />
 
@@ -140,6 +143,7 @@
         text="Items"
         icon={ListTree}
         iconClass={itemsIconClass}
+        disabled={busy}
         onclick={() => {
           mode = "items";
         }}
@@ -148,6 +152,7 @@
         text="X-tracker"
         icon={ChartGantt}
         iconClass={xtrackerIconClass}
+        disabled={busy}
         onclick={() => {
           mode = "xtracker";
         }}
