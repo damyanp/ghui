@@ -314,7 +314,9 @@ impl AppState {
 
         let fields = self.refresh_fields(false).await?;
 
-        Ok(self
+        let pre_save = self.changes.clone();
+
+        let result = self
             .changes
             .save(
                 &client,
@@ -323,7 +325,11 @@ impl AppState {
                 SaveMode::Commit,
                 &|_, a, b| report_progress(a, b),
             )
-            .await?)
+            .await?;
+
+        self.undo_history.track_save(&self.changes, pre_save);
+
+        Ok(result)
     }
 
     pub async fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) -> Result<()> {
