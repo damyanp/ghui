@@ -579,10 +579,6 @@ fn test_new_change_clears_redo_stack() {
     assert!(!history.can_redo());
 }
 
-// ============================================================================
-// WorkItems::update() tests
-// ============================================================================
-
 #[test]
 fn test_update_existing_item_no_change() {
     let mut data = TestData::default();
@@ -614,6 +610,7 @@ fn test_update_existing_item_assignees_change() {
         issue.assignees = vec!["user2".to_owned()];
     }
 
+    // Assignees changes trigger ChangesHierarchy (see get_issue_update_type)
     let update_type = data.work_items.update(item);
     assert_eq!(update_type, UpdateType::ChangesHierarchy);
 }
@@ -625,6 +622,8 @@ fn test_update_existing_item_status_change() {
     let mut item = data.work_items.get(&id).unwrap().clone();
     item.project_item.status = data.fields.status.option_id(Some("Closed")).cloned();
 
+    // Status is a project_item field that may be used for grouping/filtering
+    // (see get_project_item_update_type)
     let update_type = data.work_items.update(item);
     assert_eq!(update_type, UpdateType::ChangesHierarchy);
 }
@@ -636,6 +635,8 @@ fn test_update_existing_item_epic_change() {
     let mut item = data.work_items.get(&id).unwrap().clone();
     item.project_item.epic = data.fields.epic.option_id(Some("EpicB")).cloned();
 
+    // Epic is used for grouping in NodeBuilder, so changing it affects
+    // the hierarchy
     let update_type = data.work_items.update(item);
     assert_eq!(update_type, UpdateType::ChangesHierarchy);
 }

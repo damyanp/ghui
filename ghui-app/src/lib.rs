@@ -372,7 +372,6 @@ impl DataState {
                 }
 
                 if update_type == UpdateType::ChangesHierarchy {
-                    // Drop the work_items borrow before calling refresh
                     let r = state.refresh(false).await;
                     if let Err(r) = r {
                         eprintln!("Refresh failed: {r:?}");
