@@ -66,7 +66,7 @@ npx tauri build   # Release build (produces MSI + NSIS installers)
 
 ### CI
 
-- **rust.yml**: Runs `cargo build` and `cargo test` on `windows-latest` for push/PR to main.
+- **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, and `npm run check` on `windows-latest` for push/PR to main.
 - **build-installer.yml**: Builds Windows installer on push to main.
 
 The CI runs on Windows. If you can't run a full `cargo build` locally (missing system deps on Linux), validate with `cargo test -p github-graphql` and `cd app && npm run check`.
