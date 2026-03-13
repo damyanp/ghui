@@ -318,21 +318,29 @@ fn test_save_clears_redo_stack() {
     let mut changes = Changes::default();
     let mut history = UndoHistory::default();
 
-    let change = Change {
-        work_item_id: WorkItemId("item1".to_owned()),
-        data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
-    };
-
-    history.track_add(&mut changes, change.clone());
+    // Add two changes, then undo one so redo stack is populated
+    history.track_add(
+        &mut changes,
+        Change {
+            work_item_id: WorkItemId("item1".to_owned()),
+            data: ChangeData::Status(Some(FieldOptionId("s1".to_owned()))),
+        },
+    );
+    history.track_add(
+        &mut changes,
+        Change {
+            work_item_id: WorkItemId("item2".to_owned()),
+            data: ChangeData::Epic(Some(FieldOptionId("e1".to_owned()))),
+        },
+    );
     history.undo(&mut changes);
+    assert_eq!(changes.len(), 1);
     assert!(history.can_redo());
 
-    // Re-add and save
-    history.track_add(&mut changes, change.clone());
+    // Save the remaining change — track_save should clear redo stack
     let pre_save = changes.clone();
     changes = Changes::default();
     history.track_save(&changes, pre_save);
 
-    // Save should have cleared the redo stack
     assert!(!history.can_redo());
 }
