@@ -119,10 +119,7 @@ impl UndoHistory {
     }
 
     /// Applies an undo action to the data and returns the reverse action.
-    fn apply_action(
-        data: &mut HashMap<ChangeKey, Change>,
-        action: &UndoAction,
-    ) -> UndoAction {
+    fn apply_action(data: &mut HashMap<ChangeKey, Change>, action: &UndoAction) -> UndoAction {
         match action {
             UndoAction::RemoveOrRestore { key, previous } => {
                 let current = if let Some(prev) = previous {
