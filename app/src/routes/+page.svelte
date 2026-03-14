@@ -46,27 +46,33 @@
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
   let busy = $state(false);
+  const disabled = $derived(busy || context.loadProgress > 0);
 
-  async function onRefreshClicked(): Promise<void> {
+  async function runBusy(action: () => Promise<void>): Promise<void> {
     if (busy) return;
     busy = true;
     try {
-      await context.refresh();
+      await action();
     } finally {
       busy = false;
     }
   }
 
+  async function onRefreshClicked(): Promise<void> {
+    await runBusy(() => context.refresh());
+  }
+
   async function saveChanges() {
-    if (busy) return;
-    busy = true;
-    try {
-      const progress = makeProgressChannel((value) => (saveProgress = value));
-      await context.saveChanges(progress);
-      saveProgress = 0;
-    } finally {
-      busy = false;
-    }
+    await runBusy(async () => {
+      try {
+        const progress = makeProgressChannel(
+          (value) => (saveProgress = value)
+        );
+        await context.saveChanges(progress);
+      } finally {
+        saveProgress = 0;
+      }
+    });
   }
 
   let saveStyle = $derived.by(() => {
@@ -88,7 +94,7 @@
       </div>
       <RefreshButton
         progress={context.loadProgress}
-        disabled={busy}
+        disabled={disabled}
         onclick={onRefreshClicked}
       />
 
@@ -97,15 +103,15 @@
       <AppBarButton
         icon={Save}
         text="Save"
-        disabled={!numChanges || busy}
+        disabled={!numChanges || disabled}
         style={saveStyle}
         onclick={saveChanges}
       />
       <AppBarButton
         icon={Trash2}
         text="Discard"
-        disabled={!numChanges || busy}
-        onclick={async () => await context.deleteChanges()}
+        disabled={!numChanges || disabled}
+        onclick={() => runBusy(() => context.deleteChanges())}
       />
 
       <div class="w-3"></div>
@@ -113,7 +119,7 @@
       <AppBarButton
         text="Details"
         icon={ReceiptText}
-        disabled={!numChanges || busy}
+        disabled={!numChanges || disabled}
         badge={numChanges > 0 ? numChanges : undefined}
         onclick={() => {
           pendingChangesOpen = true;
@@ -122,7 +128,7 @@
       <AppBarButton
         text="Preview"
         icon={context.previewChanges ? Eye : EyeOff}
-        disabled={!numChanges || busy}
+        disabled={!numChanges || disabled}
         onclick={() => {
           context.setPreviewChanges(!context.previewChanges);
         }}
@@ -130,21 +136,24 @@
 
       <div class="w-3"></div>
 
-      <SanitizeButton disabled={busy} />
+      <SanitizeButton
+        disabled={disabled}
+        onclick={() => runBusy(() => context.sanitize())}
+      />
 
       <div class="w-3"></div>
 
       <AppBarButton
         icon={Undo2}
         text="Undo"
-        disabled={!canUndo || busy}
-        onclick={async () => await context.undoChange()}
+        disabled={!canUndo || disabled}
+        onclick={() => runBusy(() => context.undoChange())}
       />
       <AppBarButton
         icon={Redo2}
         text="Redo"
-        disabled={!canRedo || busy}
-        onclick={async () => await context.redoChange()}
+        disabled={!canRedo || disabled}
+        onclick={() => runBusy(() => context.redoChange())}
       />
 
       <div class="w-3"></div>
@@ -153,7 +162,7 @@
         text="Items"
         icon={ListTree}
         iconClass={itemsIconClass}
-        disabled={busy}
+        disabled={disabled}
         onclick={() => {
           mode = "items";
         }}
@@ -162,7 +171,7 @@
         text="X-tracker"
         icon={ChartGantt}
         iconClass={xtrackerIconClass}
-        disabled={busy}
+        disabled={disabled}
         onclick={() => {
           mode = "xtracker";
         }}
