@@ -1,5 +1,6 @@
 use super::{
-    Field, FieldOptionId, Fields, Issue, Result, WorkItem, WorkItemData, WorkItemId, WorkItems,
+    Field, FieldOptionId, Fields, Issue, ProjectItemId, Result, WorkItem, WorkItemData, WorkItemId,
+    WorkItems,
 };
 use crate::client::{
     graphql::{
@@ -212,15 +213,18 @@ impl Changes {
         work_items: &WorkItems,
         mode: SaveMode,
         report_progress: &impl Fn(&Change, usize, usize),
-    ) -> Result<Vec<WorkItemId>> {
+    ) -> Result<SaveResult> {
         let data = take(&mut self.data);
         let mut changed_work_items = HashSet::new();
+        let mut added_to_project = Vec::new();
 
         let change_count = data.len();
 
         for (change_number, (key, change)) in data.into_iter().enumerate() {
             let result = if let SaveMode::Commit = mode {
-                let result = change.save(client, fields, work_items).await;
+                let result = change
+                    .save(client, fields, work_items, &mut added_to_project)
+                    .await;
                 if let Ok(changed) = result {
                     changed.into_iter().for_each(|i| {
                         changed_work_items.insert(i);
@@ -243,8 +247,16 @@ impl Changes {
             }
         }
 
-        Ok(changed_work_items.into_iter().collect())
+        Ok(SaveResult {
+            changed_work_items: changed_work_items.into_iter().collect(),
+            added_to_project,
+        })
     }
+}
+
+pub struct SaveResult {
+    pub changed_work_items: Vec<WorkItemId>,
+    pub added_to_project: Vec<ProjectItemId>,
 }
 
 pub enum SaveMode {
@@ -258,6 +270,7 @@ impl Change {
         client: &impl Client,
         fields: &Fields,
         work_items: &WorkItems,
+        added_to_project: &mut Vec<ProjectItemId>,
     ) -> Result<Vec<WorkItemId>> {
         let mut changed_items = Vec::new();
         changed_items.push(self.work_item_id.clone());
@@ -345,9 +358,9 @@ impl Change {
                 changed_items.push(new_parent.clone());
             }
             ChangeData::AddToProject => {
-                add_to_project(client, &fields.project_id, &self.work_item_id.0)
-                    .await
-                    .map(|_| ())?
+                let project_item_id =
+                    add_to_project(client, &fields.project_id, &self.work_item_id.0).await?;
+                added_to_project.push(project_item_id);
             }
         }
 
