@@ -98,6 +98,17 @@ impl UndoHistory {
         }
     }
 
+    /// Tracks a save operation. `pre_save` is the snapshot of changes taken
+    /// before the save. After save, `changes` contains only the items that
+    /// failed to save. Undoing a save restores all changes as unsaved local
+    /// changes.
+    pub fn track_save(&mut self, changes: &Changes, pre_save: Changes) {
+        if !pre_save.is_empty() && pre_save != *changes {
+            self.undo_stack.push(UndoAction::RestoreAll(pre_save.data));
+            self.redo_stack.clear();
+        }
+    }
+
     pub fn undo(&mut self, changes: &mut Changes) -> bool {
         if let Some(action) = self.undo_stack.pop() {
             let redo_action = Self::apply_action(&mut changes.data, &action);
@@ -119,10 +130,7 @@ impl UndoHistory {
     }
 
     /// Applies an undo action to the data and returns the reverse action.
-    fn apply_action(
-        data: &mut HashMap<ChangeKey, Change>,
-        action: &UndoAction,
-    ) -> UndoAction {
+    fn apply_action(data: &mut HashMap<ChangeKey, Change>, action: &UndoAction) -> UndoAction {
         match action {
             UndoAction::RemoveOrRestore { key, previous } => {
                 let current = if let Some(prev) = previous {

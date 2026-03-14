@@ -24,7 +24,7 @@ impl FromIterator<WorkItem> for WorkItems {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Ord, Eq)]
+#[derive(Debug, PartialEq, PartialOrd, Ord, Eq)]
 pub enum UpdateType {
     NoUpdate,
     SimpleChange,
@@ -40,12 +40,14 @@ impl WorkItems {
     }
 
     pub fn update(&mut self, item: WorkItem) -> UpdateType {
-        let old_item = self.work_items.insert(item.id.clone(), item.clone());
+        let id = item.id.clone();
+        let old_item = self.work_items.insert(id.clone(), item.clone());
 
         if let Some(old_item) = old_item {
             get_work_item_update_type(&old_item, &item)
         } else {
-            // Adding a new item changes the hiearchy
+            // Adding a new item changes the hierarchy
+            self.ordered_items.push(id);
             UpdateType::ChangesHierarchy
         }
     }
@@ -160,14 +162,7 @@ impl WorkItems {
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(
-                fields,
-                self,
-                &mut changes,
-                &root_item_id,
-                &None,
-                &None,
-            );
+            sanitize_issue_hierarchy(fields, self, &mut changes, &root_item_id, &None, &None);
         }
 
         fn sanitize_issue_hierarchy(
