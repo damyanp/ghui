@@ -48,6 +48,7 @@
   let busy = $state(false);
 
   async function onRefreshClicked(): Promise<void> {
+    if (busy) return;
     busy = true;
     try {
       await context.refresh();
