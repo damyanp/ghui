@@ -8,8 +8,8 @@
     WorkItemContext,
     makeProgressChannel,
   } from "$lib/WorkItemContext.svelte";
-  import SanitizeButton from "../components/SanitizeButton.svelte";
   import {
+    Bubbles,
     ChartGantt,
     Eye,
     EyeOff,
@@ -136,7 +136,9 @@
 
       <div class="w-3"></div>
 
-      <SanitizeButton
+      <AppBarButton
+        icon={Bubbles}
+        text="Sanitize"
         disabled={disabled}
         onclick={() => runBusy(() => context.sanitize())}
       />
