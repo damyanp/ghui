@@ -254,6 +254,7 @@ impl Changes {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct SaveResult {
     pub changed_work_items: Vec<WorkItemId>,
     pub added_to_project: Vec<ProjectItemId>,
