@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Proposal 1D: "The Octoboard" - Minimalist: card shape with abstract connected-dot pattern -->
+
+  <!-- Rounded square background -->
+  <rect x="48" y="48" width="416" height="416" rx="56" ry="56" fill="#1C1C30"/>
+
+  <!-- Abstract connected graph pattern - suggests both a network and the letter G -->
+  <!-- This version is more abstract and geometric -->
+
+  <!-- Connections -->
+  <!-- Outer arc -->
+  <path d="M 340 150 Q 220 100, 140 200 Q 80 300, 150 390 Q 220 440, 340 400"
+        stroke="#3CC8DB" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+  <!-- Inner bar -->
+  <line x1="340" y1="400" x2="340" y2="275" stroke="#F5B731" stroke-width="10" stroke-linecap="round"/>
+  <line x1="340" y1="275" x2="240" y2="275" stroke="#F5B731" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Branch from center node going up-right -->
+  <line x1="240" y1="275" x2="240" y2="200" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+  <circle cx="240" cy="192" r="8" fill="white" opacity="0.35"/>
+
+  <!-- Nodes -->
+  <circle cx="340" cy="150" r="22" fill="#3CC8DB"/>
+  <circle cx="140" cy="200" r="18" fill="#3CC8DB" opacity="0.8"/>
+  <circle cx="110" cy="300" r="16" fill="#3CC8DB" opacity="0.6"/>
+  <circle cx="150" cy="390" r="18" fill="#3CC8DB" opacity="0.8"/>
+  <circle cx="340" cy="400" r="18" fill="#3CC8DB"/>
+  <circle cx="340" cy="275" r="20" fill="#F5B731"/>
+
+  <!-- Center/end of bar - hero node -->
+  <circle cx="240" cy="275" r="28" fill="#F5B731"/>
+  <circle cx="240" cy="275" r="13" fill="#1C1C30"/>
+</svg>

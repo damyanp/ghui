@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Proposal 1B: "The Octoboard" - Network/constellation style G with board columns -->
+
+  <!-- Card background -->
+  <rect x="40" y="40" width="432" height="432" rx="60" ry="60" fill="#1C1C30"/>
+  <rect x="40" y="40" width="432" height="432" rx="60" ry="60"
+        fill="none" stroke="#3CC8DB" stroke-width="6" opacity="0.25"/>
+
+  <!-- Three kanban column hints -->
+  <rect x="80"  y="90" width="100" height="16" rx="8" fill="#3CC8DB" opacity="0.15"/>
+  <rect x="206" y="90" width="100" height="16" rx="8" fill="#3CC8DB" opacity="0.15"/>
+  <rect x="332" y="90" width="100" height="16" rx="8" fill="#3CC8DB" opacity="0.15"/>
+
+  <!-- Card items in columns suggesting a project board -->
+  <!-- Column 1 -->
+  <rect x="80"  y="120" width="100" height="52" rx="10" fill="#3CC8DB" opacity="0.2"/>
+  <rect x="80"  y="184" width="100" height="52" rx="10" fill="#3CC8DB" opacity="0.2"/>
+  <rect x="80"  y="248" width="100" height="52" rx="10" fill="#3CC8DB" opacity="0.2"/>
+
+  <!-- Column 2 -->
+  <rect x="206" y="120" width="100" height="52" rx="10" fill="#F5B731" opacity="0.2"/>
+  <rect x="206" y="184" width="100" height="52" rx="10" fill="#F5B731" opacity="0.2"/>
+
+  <!-- Column 3 -->
+  <rect x="332" y="120" width="100" height="52" rx="10" fill="#3CC8DB" opacity="0.15"/>
+
+  <!-- Network overlay: connected nodes forming a "G" path -->
+  <!-- Connections -->
+  <line x1="356" y1="340" x2="280" y2="340" stroke="#F5B731" stroke-width="5" stroke-linecap="round"/>
+  <line x1="280" y1="340" x2="200" y2="340" stroke="#F5B731" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="200" y1="340" x2="140" y2="380" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round"/>
+  <line x1="140" y1="380" x2="200" y2="420" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round"/>
+  <line x1="200" y1="420" x2="320" y2="420" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round"/>
+  <line x1="320" y1="420" x2="380" y2="380" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round"/>
+  <line x1="380" y1="380" x2="356" y2="340" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Nodes -->
+  <circle cx="356" cy="340" r="14" fill="#F5B731"/>
+  <circle cx="280" cy="340" r="16" fill="#F5B731"/>
+  <circle cx="200" cy="340" r="12" fill="#3CC8DB"/>
+  <circle cx="140" cy="380" r="12" fill="#3CC8DB"/>
+  <circle cx="200" cy="420" r="12" fill="#3CC8DB"/>
+  <circle cx="320" cy="420" r="12" fill="#3CC8DB"/>
+  <circle cx="380" cy="380" r="12" fill="#3CC8DB"/>
+</svg>

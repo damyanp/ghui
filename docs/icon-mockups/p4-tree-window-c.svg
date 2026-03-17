@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Variant C: Clean, bold, no chrome - just a rounded square with tree -->
+
+  <!-- Background -->
+  <rect x="32" y="32" width="448" height="448" rx="64" ry="64" fill="#1A1A2E"/>
+
+  <!-- Outer glow ring -->
+  <rect x="32" y="32" width="448" height="448" rx="64" ry="64"
+        fill="none" stroke="#3CC8DB" stroke-width="8" opacity="0.3"/>
+
+  <!-- Tree connections drawn FIRST (behind nodes) -->
+  <!-- Root to Level 2 -->
+  <path d="M 256 180 L 152 268" stroke="#F5B731" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <path d="M 256 180 L 360 268" stroke="#F5B731" stroke-width="7" stroke-linecap="round" fill="none"/>
+
+  <!-- Level 2 to Level 3 -->
+  <path d="M 152 296 L 104 370" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M 152 296 L 200 370" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M 360 296 L 312 370" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M 360 296 L 408 370" stroke="#3CC8DB" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.8"/>
+
+  <!-- Nodes -->
+  <!-- Root node - golden, larger -->
+  <circle cx="256" cy="160" r="30" fill="#F5B731"/>
+  <circle cx="256" cy="160" r="14" fill="#1A1A2E"/>
+
+  <!-- Level 2 nodes -->
+  <circle cx="152" cy="280" r="24" fill="#3CC8DB"/>
+  <circle cx="152" cy="280" r="10" fill="#1A1A2E"/>
+  <circle cx="360" cy="280" r="24" fill="#3CC8DB"/>
+  <circle cx="360" cy="280" r="10" fill="#1A1A2E"/>
+
+  <!-- Level 3 leaf nodes (solid, smaller) -->
+  <circle cx="104" cy="384" r="16" fill="#3CC8DB" opacity="0.8"/>
+  <circle cx="200" cy="384" r="16" fill="#F5B731" opacity="0.8"/>
+  <circle cx="312" cy="384" r="16" fill="#3CC8DB" opacity="0.8"/>
+  <circle cx="408" cy="384" r="16" fill="#F5B731" opacity="0.8"/>
+</svg>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2A2A3A"/>
+      <stop offset="100%" stop-color="#1A1A2A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App window frame -->
+  <rect x="56" y="56" width="400" height="400" rx="48" ry="48"
+        fill="url(#bgGrad)" stroke="#3CC8DB" stroke-width="16"/>
+
+  <!-- Title bar dots -->
+  <circle cx="120" cy="112" r="12" fill="#F5B731" opacity="0.9"/>
+  <circle cx="156" cy="112" r="12" fill="#3CC8DB" opacity="0.6"/>
+  <circle cx="192" cy="112" r="12" fill="#3CC8DB" opacity="0.3"/>
+
+  <!-- Divider line under title bar -->
+  <line x1="80" y1="144" x2="432" y2="144" stroke="#3CC8DB" stroke-width="2" opacity="0.3"/>
+
+  <!-- Tree structure -->
+  <!-- Root node (golden) -->
+  <circle cx="256" cy="200" r="24" fill="#F5B731"/>
+
+  <!-- Lines from root to children -->
+  <line x1="256" y1="224" x2="160" y2="296" stroke="#3CC8DB" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <line x1="256" y1="224" x2="352" y2="296" stroke="#3CC8DB" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Child nodes (cyan) -->
+  <circle cx="160" cy="308" r="20" fill="#3CC8DB"/>
+  <circle cx="352" cy="308" r="20" fill="#3CC8DB"/>
+
+  <!-- Lines from left child to grandchildren -->
+  <line x1="160" y1="328" x2="120" y2="388" stroke="#3CC8DB" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  <line x1="160" y1="328" x2="208" y2="388" stroke="#3CC8DB" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Grandchild nodes -->
+  <circle cx="120" cy="398" r="14" fill="#3CC8DB" opacity="0.7"/>
+  <circle cx="208" cy="398" r="14" fill="#F5B731" opacity="0.7"/>
+
+  <!-- Line from right child to grandchild -->
+  <line x1="352" y1="328" x2="352" y2="388" stroke="#3CC8DB" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Right grandchild -->
+  <circle cx="352" cy="398" r="14" fill="#3CC8DB" opacity="0.7"/>
+</svg>
