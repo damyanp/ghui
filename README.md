@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/icon-mockups/p4-tree-window-h.svg" width="128" height="128" alt="ghui icon">
+  <img src="app/static/icon.svg" width="128" height="128" alt="ghui icon">
 </p>
 
 <h1 align="center">ghui</h1>
