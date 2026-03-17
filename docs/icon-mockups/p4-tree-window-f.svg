@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Variant F: Minimal rounded square, tree-table with vertical indent guides -->
+
+  <!-- Background -->
+  <rect x="40" y="40" width="432" height="432" rx="56" ry="56" fill="#1A1A2E"/>
+  <rect x="40" y="40" width="432" height="432" rx="56" ry="56"
+        fill="none" stroke="#3CC8DB" stroke-width="6" opacity="0.2"/>
+
+  <!-- Vertical indent guide lines (subtle, like VS Code / tree views) -->
+  <line x1="120" y1="100" x2="120" y2="420" stroke="#3CC8DB" stroke-width="2" opacity="0.12"/>
+  <line x1="176" y1="170" x2="176" y2="340" stroke="#3CC8DB" stroke-width="2" opacity="0.10"/>
+  <line x1="232" y1="220" x2="232" y2="310" stroke="#3CC8DB" stroke-width="2" opacity="0.08"/>
+
+  <!-- === Tree Table Rows === -->
+  <!-- Row 1: Root — expanded ▼, golden -->
+  <polygon points="82,118 100,118 91,134" fill="#F5B731"/>
+  <rect x="112" y="110" width="320" height="32" rx="8" fill="#F5B731" opacity="0.3"/>
+  <!-- Title text hint -->
+  <rect x="122" y="120" width="140" height="12" rx="4" fill="#F5B731" opacity="0.6"/>
+
+  <!-- Row 2: Child — expanded ▼, indented 1 -->
+  <polygon points="138,174 156,174 147,190" fill="#3CC8DB" opacity="0.9"/>
+  <rect x="168" y="166" width="264" height="32" rx="8" fill="#3CC8DB" opacity="0.2"/>
+  <rect x="178" y="176" width="100" height="12" rx="4" fill="#3CC8DB" opacity="0.5"/>
+
+  <!-- Row 3: Grandchild leaf, indented 2 -->
+  <circle cx="207" cy="232" r="5" fill="#3CC8DB" opacity="0.5"/>
+  <rect x="224" y="218" width="208" height="28" rx="7" fill="#3CC8DB" opacity="0.12"/>
+  <rect x="234" y="226" width="80" height="10" rx="3" fill="#3CC8DB" opacity="0.4"/>
+
+  <!-- Row 4: Grandchild leaf, indented 2 -->
+  <circle cx="207" cy="270" r="5" fill="#F5B731" opacity="0.5"/>
+  <rect x="224" y="256" width="208" height="28" rx="7" fill="#F5B731" opacity="0.10"/>
+  <rect x="234" y="264" width="60" height="10" rx="3" fill="#F5B731" opacity="0.4"/>
+
+  <!-- Row 5: Grandchild leaf, indented 2 -->
+  <circle cx="207" cy="308" r="5" fill="#3CC8DB" opacity="0.5"/>
+  <rect x="224" y="294" width="208" height="28" rx="7" fill="#3CC8DB" opacity="0.12"/>
+  <rect x="234" y="302" width="110" height="10" rx="3" fill="#3CC8DB" opacity="0.4"/>
+
+  <!-- Row 6: Child — collapsed ▶, indented 1 -->
+  <polygon points="138,354 154,363 138,372" fill="#3CC8DB" opacity="0.9"/>
+  <rect x="168" y="348" width="264" height="32" rx="8" fill="#3CC8DB" opacity="0.2"/>
+  <rect x="178" y="358" width="120" height="12" rx="4" fill="#3CC8DB" opacity="0.5"/>
+
+  <!-- Row 7: Root — collapsed ▶ -->
+  <polygon points="82,408 98,417 82,426" fill="#F5B731" opacity="0.7"/>
+  <rect x="112" y="402" width="320" height="32" rx="8" fill="#F5B731" opacity="0.15"/>
+  <rect x="122" y="412" width="100" height="12" rx="4" fill="#F5B731" opacity="0.4"/>
+</svg>

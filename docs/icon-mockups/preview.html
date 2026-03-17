@@ -203,6 +203,95 @@
   </div>
 </div>
 
+<!-- Proposal 4 Iteration 2: Tree-Table Style -->
+<div class="section">
+  <h2>Proposal 4 — Iteration 2: Tree-Table Style</h2>
+  <p class="proposal-desc">
+    Revised to look like the app's actual UI: a table with expandable tree rows.
+    Horizontal bars represent items, indentation shows hierarchy depth, and chevron
+    arrows (▼ expanded, ▶ collapsed) indicate expand/collapse state. Each variant
+    explores a different level of detail vs. boldness for small-size readability.
+  </p>
+  <div class="grid">
+
+    <div class="card">
+      <h3>4E — Window Chrome + Detailed Rows</h3>
+      <p>Full window frame, 7 rows across 3 indent levels. Two-tone row bars suggest a title column and data columns. Most detailed variant.</p>
+      <div class="icon-display">
+        <div class="icon-wrap">
+          <img src="p4-tree-window-e.svg" width="200" height="200" alt="Variant 4E at 200px"/>
+          <span class="size-label">200px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-e.svg" width="64" height="64" alt="Variant 4E at 64px"/>
+          <span class="size-label">64px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-e.svg" width="32" height="32" alt="Variant 4E at 32px"/>
+          <span class="size-label">32px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>4F — Indent Guides + Leaf Dots</h3>
+      <p>No window chrome. Vertical indent guide lines (VS Code-style). Leaf items use small dots instead of chevrons. Rounded text-hint bars.</p>
+      <div class="icon-display">
+        <div class="icon-wrap">
+          <img src="p4-tree-window-f.svg" width="200" height="200" alt="Variant 4F at 200px"/>
+          <span class="size-label">200px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-f.svg" width="64" height="64" alt="Variant 4F at 64px"/>
+          <span class="size-label">64px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-f.svg" width="32" height="32" alt="Variant 4F at 32px"/>
+          <span class="size-label">32px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>4G — Bold Simplified</h3>
+      <p>Window chrome with accent bar. 6 thick rows, clear chevrons, leaf dots. Designed to read clearly at taskbar sizes.</p>
+      <div class="icon-display">
+        <div class="icon-wrap">
+          <img src="p4-tree-window-g.svg" width="200" height="200" alt="Variant 4G at 200px"/>
+          <span class="size-label">200px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-g.svg" width="64" height="64" alt="Variant 4G at 64px"/>
+          <span class="size-label">64px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-g.svg" width="32" height="32" alt="Variant 4G at 32px"/>
+          <span class="size-label">32px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>4H — Ultra-Bold (4 Rows)</h3>
+      <p>Maximum simplification: only 4 rows with extra-thick bars and large chevrons. Strongest at 32px. Two-tone bars hint at columns.</p>
+      <div class="icon-display">
+        <div class="icon-wrap">
+          <img src="p4-tree-window-h.svg" width="200" height="200" alt="Variant 4H at 200px"/>
+          <span class="size-label">200px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-h.svg" width="64" height="64" alt="Variant 4H at 64px"/>
+          <span class="size-label">64px</span>
+        </div>
+        <div class="icon-wrap">
+          <img src="p4-tree-window-h.svg" width="32" height="32" alt="Variant 4H at 32px"/>
+          <span class="size-label">32px</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Proposal 1 -->
 <div class="section">
   <h2>Proposal 1: "The Octoboard"</h2>
@@ -300,6 +389,11 @@
     <div class="icon-wrap"><img src="p4-tree-window-b.svg" width="32" height="32"/><span class="size-label">4B</span></div>
     <div class="icon-wrap"><img src="p4-tree-window-c.svg" width="32" height="32"/><span class="size-label">4C</span></div>
     <div class="icon-wrap"><img src="p4-tree-window-d.svg" width="32" height="32"/><span class="size-label">4D</span></div>
+    <div style="width:16px; border-left:1px solid #333"></div>
+    <div class="icon-wrap"><img src="p4-tree-window-e.svg" width="32" height="32"/><span class="size-label">4E</span></div>
+    <div class="icon-wrap"><img src="p4-tree-window-f.svg" width="32" height="32"/><span class="size-label">4F</span></div>
+    <div class="icon-wrap"><img src="p4-tree-window-g.svg" width="32" height="32"/><span class="size-label">4G</span></div>
+    <div class="icon-wrap"><img src="p4-tree-window-h.svg" width="32" height="32"/><span class="size-label">4H</span></div>
     <div style="width:32px"></div>
     <div class="icon-wrap"><img src="p1-octoboard-a.svg" width="32" height="32"/><span class="size-label">1A</span></div>
     <div class="icon-wrap"><img src="p1-octoboard-b.svg" width="32" height="32"/><span class="size-label">1B</span></div>
@@ -314,6 +408,11 @@
     <div class="icon-wrap"><img src="p4-tree-window-b.svg" width="64" height="64"/><span class="size-label" style="color:#666">4B</span></div>
     <div class="icon-wrap"><img src="p4-tree-window-c.svg" width="64" height="64"/><span class="size-label" style="color:#666">4C</span></div>
     <div class="icon-wrap"><img src="p4-tree-window-d.svg" width="64" height="64"/><span class="size-label" style="color:#666">4D</span></div>
+    <div style="width:8px; border-left:1px solid #ccc"></div>
+    <div class="icon-wrap"><img src="p4-tree-window-e.svg" width="64" height="64"/><span class="size-label" style="color:#666">4E</span></div>
+    <div class="icon-wrap"><img src="p4-tree-window-f.svg" width="64" height="64"/><span class="size-label" style="color:#666">4F</span></div>
+    <div class="icon-wrap"><img src="p4-tree-window-g.svg" width="64" height="64"/><span class="size-label" style="color:#666">4G</span></div>
+    <div class="icon-wrap"><img src="p4-tree-window-h.svg" width="64" height="64"/><span class="size-label" style="color:#666">4H</span></div>
     <div style="width:16px"></div>
     <div class="icon-wrap"><img src="p1-octoboard-a.svg" width="64" height="64"/><span class="size-label" style="color:#666">1A</span></div>
     <div class="icon-wrap"><img src="p1-octoboard-b.svg" width="64" height="64"/><span class="size-label" style="color:#666">1B</span></div>
