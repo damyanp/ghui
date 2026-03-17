@@ -3,8 +3,8 @@ use dirs::home_dir;
 use github_graphql::{
     client::graphql::{custom_fields_query::get_fields, get_all_items, get_items::get_items},
     data::{
-        Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, SaveResult, UndoHistory,
-        UpdateType, WorkItem, WorkItemId, WorkItems,
+        Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, UndoHistory, UpdateType,
+        WorkItem, WorkItemId, WorkItems,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -309,7 +309,7 @@ impl AppState {
     async fn save_changes(
         &mut self,
         report_progress: &impl Fn(usize, usize),
-    ) -> Result<SaveResult> {
+    ) -> Result<Vec<ProjectItemId>> {
         let client = self.pat.new_github_client()?;
 
         let fields = self.refresh_fields(false).await?;
@@ -398,36 +398,69 @@ impl DataState {
         })
     }
 
-    pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
-        let save_result = self.lock().await.save_changes(report_progress).await?;
-
-        if !save_result.changed_work_items.is_empty() {
-            self.request_update_items(
-                save_result
-                    .changed_work_items
-                    .into_iter()
-                    .map(|id| ItemToUpdate {
-                        work_item_id: id,
-                        force: true,
-                    })
-                    .collect(),
-            )
-            .await?;
-        }
-
-        if !save_result.added_to_project.is_empty() {
-            let state = self.lock().await;
-            let client = state.pat.new_github_client()?;
+    pub fn request_update_project_items(
+        &self,
+        project_item_ids: Vec<ProjectItemId>,
+    ) -> JoinHandle<()> {
+        let app_state = Arc::clone(&self.0);
+        tokio::spawn(async move {
+            let state = app_state.lock().await;
+            let client = match state.pat.new_github_client() {
+                Ok(client) => client,
+                Err(e) => {
+                    eprintln!("Failed to create GitHub client: {e}");
+                    return;
+                }
+            };
             drop(state);
 
-            let new_items = get_items(&client, save_result.added_to_project).await?;
+            if project_item_ids.is_empty() {
+                return;
+            }
 
-            let mut state = self.lock().await;
+            let updated_work_items = match get_items(&client, project_item_ids).await {
+                Ok(items) => items,
+                Err(e) => {
+                    eprintln!("Failed to get items: {e}");
+                    return;
+                }
+            };
+
+            let mut state = app_state.lock().await;
+            let watcher = state.watcher.clone();
             if let Some(work_items) = &mut state.work_items {
-                for item in new_items {
-                    work_items.update(item);
+                let mut update_type = UpdateType::NoUpdate;
+
+                for item in &updated_work_items {
+                    update_type = std::cmp::max(update_type, work_items.update(item.clone()));
+                }
+
+                if update_type == UpdateType::ChangesHierarchy {
+                    let r = state.refresh(false).await;
+                    if let Err(r) = r {
+                        eprintln!("Refresh failed: {r:?}");
+                    }
+                } else if update_type == UpdateType::SimpleChange {
+                    for item in updated_work_items {
+                        (watcher)(DataUpdate::WorkItem(Box::new(item)));
+                    }
                 }
             }
+
+            // Persist updated work items to disk cache
+            if let Some(work_items) = &state.work_items
+                && let Err(e) = save_workitems_to_appdata(work_items)
+            {
+                eprintln!("WARNING: failed to save cached work items: {e}");
+            }
+        })
+    }
+
+    pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
+        let project_item_ids = self.lock().await.save_changes(report_progress).await?;
+
+        if !project_item_ids.is_empty() {
+            self.request_update_project_items(project_item_ids).await?;
         }
 
         self.lock().await.refresh(false).await
