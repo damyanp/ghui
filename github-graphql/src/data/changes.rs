@@ -1,5 +1,6 @@
 use super::{
-    Field, FieldOptionId, Fields, Issue, Result, WorkItem, WorkItemData, WorkItemId, WorkItems,
+    Field, FieldOptionId, Fields, Issue, ProjectItemId, Result, WorkItem, WorkItemData, WorkItemId,
+    WorkItems,
 };
 use crate::client::{
     graphql::{
@@ -205,6 +206,12 @@ impl Changes {
         self.data.is_empty()
     }
 
+    /// Saves all pending changes via the GitHub API.
+    ///
+    /// Returns a list of `ProjectItemId`s that need to be re-fetched from GitHub
+    /// to update the local state. This includes both items that were modified
+    /// in-place (looked up from `work_items`) and items that were newly added
+    /// to the project (captured directly from the `add_to_project` mutation).
     pub async fn save(
         &mut self,
         client: &impl Client,
@@ -212,15 +219,18 @@ impl Changes {
         work_items: &WorkItems,
         mode: SaveMode,
         report_progress: &impl Fn(&Change, usize, usize),
-    ) -> Result<Vec<WorkItemId>> {
+    ) -> Result<Vec<ProjectItemId>> {
         let data = take(&mut self.data);
         let mut changed_work_items = HashSet::new();
+        let mut project_item_ids = Vec::new();
 
         let change_count = data.len();
 
         for (change_number, (key, change)) in data.into_iter().enumerate() {
             let result = if let SaveMode::Commit = mode {
-                let result = change.save(client, fields, work_items).await;
+                let result = change
+                    .save(client, fields, work_items, &mut project_item_ids)
+                    .await;
                 if let Ok(changed) = result {
                     changed.into_iter().for_each(|i| {
                         changed_work_items.insert(i);
@@ -243,7 +253,19 @@ impl Changes {
             }
         }
 
-        Ok(changed_work_items.into_iter().collect())
+        // Convert changed WorkItemIds to ProjectItemIds for items already in
+        // the project. Items from AddToProject mutations are already captured
+        // directly in project_item_ids by Change::save().
+        for work_item_id in changed_work_items {
+            if let Some(work_item) = work_items.get(&work_item_id) {
+                project_item_ids.push(work_item.project_item.id.clone());
+            }
+        }
+
+        // Deduplicate to avoid redundant fetches when multiple changes touch
+        // the same item or an AddToProject item is also resolvable via work_items.
+        let unique: HashSet<ProjectItemId> = project_item_ids.into_iter().collect();
+        Ok(unique.into_iter().collect())
     }
 }
 
@@ -258,6 +280,7 @@ impl Change {
         client: &impl Client,
         fields: &Fields,
         work_items: &WorkItems,
+        project_item_ids: &mut Vec<ProjectItemId>,
     ) -> Result<Vec<WorkItemId>> {
         let mut changed_items = Vec::new();
         changed_items.push(self.work_item_id.clone());
@@ -345,9 +368,9 @@ impl Change {
                 changed_items.push(new_parent.clone());
             }
             ChangeData::AddToProject => {
-                add_to_project(client, &fields.project_id, &self.work_item_id.0)
-                    .await
-                    .map(|_| ())?
+                let project_item_id =
+                    add_to_project(client, &fields.project_id, &self.work_item_id.0).await?;
+                project_item_ids.push(project_item_id);
             }
         }
 

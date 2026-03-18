@@ -309,7 +309,7 @@ impl AppState {
     async fn save_changes(
         &mut self,
         report_progress: &impl Fn(usize, usize),
-    ) -> Result<Vec<WorkItemId>> {
+    ) -> Result<Vec<ProjectItemId>> {
         let client = self.pat.new_github_client()?;
 
         let fields = self.refresh_fields(false).await?;
@@ -342,11 +342,14 @@ impl AppState {
 }
 
 impl DataState {
-    pub fn request_update_items(&self, items: Vec<ItemToUpdate>) -> JoinHandle<()> {
+    pub fn request_update_items(&self, project_item_ids: Vec<ProjectItemId>) -> JoinHandle<()> {
+        if project_item_ids.is_empty() {
+            return tokio::spawn(async {});
+        }
+
         let app_state = Arc::clone(&self.0);
         tokio::spawn(async move {
             let state = app_state.lock().await;
-            let project_item_ids = state.get_project_ids_to_update(items.as_slice());
             let client = match state.pat.new_github_client() {
                 Ok(client) => client,
                 Err(e) => {
@@ -355,10 +358,6 @@ impl DataState {
                 }
             };
             drop(state);
-
-            if project_item_ids.is_empty() {
-                return;
-            }
 
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
@@ -399,19 +398,10 @@ impl DataState {
     }
 
     pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
-        let items = self.lock().await.save_changes(report_progress).await?;
+        let project_item_ids = self.lock().await.save_changes(report_progress).await?;
 
-        if !items.is_empty() {
-            self.request_update_items(
-                items
-                    .into_iter()
-                    .map(|id| ItemToUpdate {
-                        work_item_id: id,
-                        force: true,
-                    })
-                    .collect(),
-            )
-            .await?;
+        if !project_item_ids.is_empty() {
+            self.request_update_items(project_item_ids).await?;
         }
 
         self.lock().await.refresh(false).await
@@ -435,27 +425,21 @@ impl DataState {
     pub async fn load_all_work_items(&self, force: bool) -> Result<()> {
         let app_state = self.lock().await;
         if let Some(work_items) = &app_state.work_items {
-            let unloaded: Vec<_> = work_items
+            let project_item_ids: Vec<_> = work_items
                 .work_items
                 .values()
-                .filter(|w| !w.is_loaded())
-                .map(|w| w.id.clone())
+                .filter(|w| force || !w.is_loaded())
+                .map(|w| w.project_item.id.clone())
                 .collect();
             drop(app_state);
 
-            println!("Loading {} items....", unloaded.len());
+            println!("Loading {} items....", project_item_ids.len());
 
-            let join_handles = JoinSet::from_iter(unloaded.chunks(50).map(|chunk| {
-                self.request_update_items(
-                    chunk
-                        .iter()
-                        .map(|id| ItemToUpdate {
-                            work_item_id: id.clone(),
-                            force,
-                        })
-                        .collect(),
-                )
-            }));
+            let join_handles = JoinSet::from_iter(
+                project_item_ids
+                    .chunks(50)
+                    .map(|chunk| self.request_update_items(chunk.to_vec())),
+            );
 
             join_handles.join_all().await;
             println!("Done");
@@ -532,4 +516,75 @@ fn get_appdata_path(name: &str) -> PathBuf {
     let mut path = home_dir().unwrap();
     path.push(format!("{name}.ghui.json"));
     path
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use github_graphql::data::test_helpers::TestData;
+
+    #[test]
+    fn test_get_project_ids_to_update_returns_ids_when_force_is_true() {
+        let mut data = TestData::default();
+        let id = data.build().status("Active").add();
+        let expected_project_item_id = data.work_items.get(&id).unwrap().project_item.id.clone();
+
+        let mut state = AppState::new();
+        state.work_items = Some(data.work_items);
+
+        let items = vec![ItemToUpdate {
+            work_item_id: id,
+            force: true,
+        }];
+        let result = state.get_project_ids_to_update(&items);
+
+        assert_eq!(result, vec![expected_project_item_id]);
+    }
+
+    #[test]
+    fn test_get_project_ids_to_update_skips_loaded_items_without_force() {
+        let mut data = TestData::default();
+        let id = data.build().status("Active").add();
+
+        let mut state = AppState::new();
+        state.work_items = Some(data.work_items);
+
+        let items = vec![ItemToUpdate {
+            work_item_id: id,
+            force: false,
+        }];
+        let result = state.get_project_ids_to_update(&items);
+
+        // TestData items are loaded by default, so without force they are skipped.
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_get_project_ids_to_update_skips_nonexistent_items() {
+        let data = TestData::default();
+
+        let mut state = AppState::new();
+        state.work_items = Some(data.work_items);
+
+        let items = vec![ItemToUpdate {
+            work_item_id: "nonexistent".to_string().into(),
+            force: true,
+        }];
+        let result = state.get_project_ids_to_update(&items);
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_get_project_ids_to_update_returns_empty_when_no_work_items() {
+        let state = AppState::new();
+
+        let items = vec![ItemToUpdate {
+            work_item_id: "any".to_string().into(),
+            force: true,
+        }];
+        let result = state.get_project_ids_to_update(&items);
+
+        assert!(result.is_empty());
+    }
 }

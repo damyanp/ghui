@@ -45,6 +45,10 @@ impl TestData {
         TestDataWorkItemBuilder {
             data: self,
             item: WorkItem {
+                project_item: ProjectItem {
+                    id: ProjectItemId(format!("project_item_{}", id.0)),
+                    ..ProjectItem::default_loaded()
+                },
                 id,
                 ..WorkItem::default_loaded()
             },
