@@ -32,7 +32,8 @@ pub async fn update_items(
     data_state: State<'_, DataState>,
     items: Vec<ItemToUpdate>,
 ) -> TauriCommandResult<()> {
-    data_state.request_update_items(items);
+    let project_item_ids = data_state.lock().await.get_project_ids_to_update(&items);
+    data_state.request_update_items(project_item_ids);
     Ok(())
 }
 
