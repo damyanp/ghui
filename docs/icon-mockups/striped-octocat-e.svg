@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Striped Octocat E: High-contrast neon stripes on black, thick bands -->
+  <defs>
+    <clipPath id="octoE">
+      <path d="M64 8C30 8 8 34 8 64c0 24 15 45 36 52 0-4-1-14-1-14s-15 3-18-7c-2-6-5-10-9-12 -4-2-1-2 2-2 6 1 10 6 12 9 6 10 16 8 20 6 1-4 3-7 6-9-20-2-38-10-38-42 0-10 3-17 9-23-1-2-4-11 1-23 0 0 7-2 24 9 7-2 14-3 22-3s15 1 22 3c16-11 24-9 24-9 5 12 2 21 1 23 6 6 9 13 9 23 0 32-18 40-38 42 3 3 6 8 6 16v22c21-7 36-28 36-52C120 34 98 8 64 8z"/>
+    </clipPath>
+  </defs>
+  <rect width="128" height="128" rx="16" fill="#000000"/>
+  <g clip-path="url(#octoE)">
+    <rect y="0"   width="128" height="16" fill="#00ff88"/>
+    <rect y="16"  width="128" height="16" fill="#0088ff"/>
+    <rect y="32"  width="128" height="16" fill="#ff4488"/>
+    <rect y="48"  width="128" height="16" fill="#ffbb00"/>
+    <rect y="64"  width="128" height="16" fill="#00ff88"/>
+    <rect y="80"  width="128" height="16" fill="#0088ff"/>
+    <rect y="96"  width="128" height="16" fill="#ff4488"/>
+    <rect y="112" width="128" height="16" fill="#ffbb00"/>
+  </g>
+</svg>
