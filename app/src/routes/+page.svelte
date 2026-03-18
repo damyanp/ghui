@@ -88,9 +88,9 @@
   <AppBar padding="px-4 py-1">
     {#snippet lead()}
       <div
-        class="content-center h-full border-r rounded-2xl pe-1"
+        class="content-center h-full pe-1"
       >
-        <img src="/icon.svg" alt="ghui" class="h-6 w-6" />
+        <img src="/icon.svg" alt="ghui" class="h-12" />
       </div>
       <RefreshButton
         progress={context.loadProgress}
