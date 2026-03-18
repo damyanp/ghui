@@ -262,7 +262,10 @@ impl Changes {
             }
         }
 
-        Ok(project_item_ids)
+        // Deduplicate to avoid redundant fetches when multiple changes touch
+        // the same item or an AddToProject item is also resolvable via work_items.
+        let unique: HashSet<ProjectItemId> = project_item_ids.into_iter().collect();
+        Ok(unique.into_iter().collect())
     }
 }
 

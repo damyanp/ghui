@@ -343,6 +343,10 @@ impl AppState {
 
 impl DataState {
     pub fn request_update_items(&self, project_item_ids: Vec<ProjectItemId>) -> JoinHandle<()> {
+        if project_item_ids.is_empty() {
+            return tokio::spawn(async {});
+        }
+
         let app_state = Arc::clone(&self.0);
         tokio::spawn(async move {
             let state = app_state.lock().await;
@@ -354,10 +358,6 @@ impl DataState {
                 }
             };
             drop(state);
-
-            if project_item_ids.is_empty() {
-                return;
-            }
 
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
@@ -524,7 +524,7 @@ mod tests {
     use github_graphql::data::test_helpers::TestData;
 
     #[test]
-    fn test_get_project_ids_to_update_returns_ids_for_unloaded_items() {
+    fn test_get_project_ids_to_update_returns_ids_when_force_is_true() {
         let mut data = TestData::default();
         let id = data.build().status("Active").add();
         let expected_project_item_id = data.work_items.get(&id).unwrap().project_item.id.clone();
