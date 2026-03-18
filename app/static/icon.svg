@@ -1,28 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Variant H: Ultra-bold, maximum simplification — 4 thick rows, clear chevrons, strong at all sizes -->
-
-  <!-- Background rounded square -->
-  <rect x="40" y="40" width="432" height="432" rx="56" ry="56" fill="#1A1A2E"/>
-
-  <!-- === 4 Bold Tree Rows === -->
-
-  <!-- Row 1: Root — expanded chevron ▼ (golden) -->
-  <polygon points="80,132 112,132 96,156" fill="#F5B731"/>
-  <rect x="128" y="120" width="300" height="48" rx="14" fill="#F5B731" opacity="0.35"/>
-  <!-- Inner highlight bar (title) -->
-  <rect x="140" y="132" width="160" height="24" rx="8" fill="#F5B731" opacity="0.5"/>
-
-  <!-- Row 2: Child — expanded chevron ▼ (cyan), indented -->
-  <polygon points="128,222 160,222 144,246" fill="#3CC8DB"/>
-  <rect x="176" y="210" width="252" height="48" rx="14" fill="#3CC8DB" opacity="0.25"/>
-  <rect x="188" y="222" width="120" height="24" rx="8" fill="#3CC8DB" opacity="0.45"/>
-
-  <!-- Row 3: Grandchild — leaf (no chevron), indented 2 -->
-  <rect x="224" y="296" width="204" height="40" rx="12" fill="#3CC8DB" opacity="0.18"/>
-  <rect x="236" y="306" width="80" height="20" rx="6" fill="#3CC8DB" opacity="0.4"/>
-
-  <!-- Row 4: Child — collapsed chevron ▶ (cyan), indented -->
-  <polygon points="128,394 152,412 128,430" fill="#3CC8DB"/>
-  <rect x="176" y="396" width="252" height="48" rx="14" fill="#3CC8DB" opacity="0.25"/>
-  <rect x="188" y="408" width="140" height="24" rx="8" fill="#3CC8DB" opacity="0.45"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512">
+  <!-- H3: Blue/Green/Purple striped octocat — 4 stripes with accurate GitHub octocat shape -->
+  <defs>
+    <clipPath id="octo">
+      <path d="M128.001 0C57.317 0 0 57.307 0 128.001c0 56.554 36.676 104.535 87.535 121.46 6.397 1.185 8.746-2.777 8.746-6.158 0-3.052-.12-13.135-.174-23.83-35.61 7.742-43.124-15.103-43.124-15.103-5.823-14.795-14.213-18.73-14.213-18.73-11.613-7.944.876-7.78.876-7.78 12.853.902 19.621 13.19 19.621 13.19 11.417 19.568 29.945 13.911 37.249 10.64 1.149-8.272 4.466-13.92 8.127-17.116-28.431-3.236-58.318-14.212-58.318-63.258 0-13.975 5-25.394 13.188-34.358-1.329-3.224-5.71-16.242 1.24-33.874 0 0 10.749-3.44 35.21 13.121 10.21-2.836 21.16-4.258 32.038-4.307 10.878.049 21.837 1.47 32.066 4.307 24.431-16.56 35.165-13.12 35.165-13.12 6.967 17.63 2.584 30.65 1.255 33.873 8.207 8.964 13.173 20.383 13.173 34.358 0 49.163-29.944 59.988-58.447 63.157 4.591 3.972 8.682 11.762 8.682 23.704 0 17.126-.148 30.91-.148 35.126 0 3.407 2.304 7.398 8.792 6.14C219.37 232.5 256 184.537 256 128.002 256 57.307 198.691 0 128.001 0z"/>
+    </clipPath>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0d1117"/>
+  <g clip-path="url(#octo)">
+    <rect y="0"   width="256" height="58" fill="#1f6feb"/>
+    <rect y="58"  width="256" height="8"  fill="#0d1117"/>
+    <rect y="66"  width="256" height="56" fill="#2ea44f"/>
+    <rect y="122" width="256" height="8"  fill="#0d1117"/>
+    <rect y="130" width="256" height="56" fill="#a371f7"/>
+    <rect y="186" width="256" height="8"  fill="#0d1117"/>
+    <rect y="194" width="256" height="62" fill="#1f6feb"/>
+  </g>
 </svg>
