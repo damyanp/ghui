@@ -75,6 +75,25 @@ pub struct Data {
     can_redo: bool,
 }
 
+#[derive(Default, Serialize, TS, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum LogLevel {
+    Error,
+    Warning,
+    #[default]
+    Info,
+}
+
+#[derive(Default, Serialize, TS, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LogEntry {
+    pub timestamp: String,
+    pub level: LogLevel,
+    pub message: String,
+}
+
 #[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase", tag = "type", content = "value")]
 #[ts(export)]
@@ -82,6 +101,7 @@ pub enum DataUpdate {
     Progress { done: usize, total: usize },
     WorkItem(Box<WorkItem>),
     Data(Box<Data>),
+    Log(LogEntry),
 }
 
 #[derive(Deserialize, Serialize, TS, Debug)]
