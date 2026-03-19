@@ -9,6 +9,7 @@ use crate::client::{
     },
     transport::Client,
 };
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -58,7 +59,7 @@ impl UndoHistory {
         let old_value = changes.data.insert(key.clone(), change.clone());
         if let Some(ref old_value) = old_value {
             if change != *old_value {
-                println!("WARNING! {change:?} overrides {old_value:?}");
+                warn!("{change:?} overrides {old_value:?}");
             }
         }
         self.undo_stack.push(UndoAction::RemoveOrRestore {
@@ -183,7 +184,7 @@ impl Changes {
         let old_value = self.data.insert(change.key(), change.clone());
         if let Some(old_value) = old_value {
             if change != old_value {
-                println!("WARNING! {change:?} overrides {old_value:?}");
+                warn!("{change:?} overrides {old_value:?}");
             }
         }
     }
@@ -246,7 +247,7 @@ impl Changes {
             report_progress(&change, change_number, change_count);
 
             if result.is_err() {
-                println!("WARNING: save for {:?} failed {result:?}", change.key());
+                warn!("save for {:?} failed {result:?}", change.key());
                 self.data.insert(key, change);
             } else {
                 changed_work_items.insert(change.work_item_id);
@@ -413,7 +414,7 @@ impl Change {
     ) -> Result<()> {
         if let Some(work_item) = work_items.get(&self.work_item_id) {
             if let Some((owner, name)) = work_item.get_repository_info() {
-                println!("TODO: cache issue types somehow, don't request for each change!");
+                debug!("TODO: cache issue types somehow, don't request for each change!");
                 let issue_types =
                     get_issue_types::get_repo_issue_types(client, &owner, &name).await?;
 
@@ -583,8 +584,8 @@ impl WorkItems {
 
             let work_item = self.get_mut(&change.work_item_id);
             if work_item.is_none() {
-                println!(
-                    "WARNING: change for '{0}' - work item not found",
+                warn!(
+                    "change for '{0}' - work item not found",
                     change.work_item_id.0
                 );
                 continue;
@@ -631,10 +632,10 @@ impl WorkItems {
                             if let WorkItemData::Issue(issue) = &mut old_parent.data {
                                 issue.sub_issues.retain(|i| i != child_id);
                             } else {
-                                println!("WARNING: old parent '{0}' not an issue", old_parent_id.0);
+                                warn!("old parent '{0}' not an issue", old_parent_id.0);
                             }
                         } else {
-                            println!("WARNING: old parent '{0}' not found", old_parent_id.0);
+                            warn!("old parent '{0}' not found", old_parent_id.0);
                         }
                     }
 
@@ -642,20 +643,20 @@ impl WorkItems {
                         if let WorkItemData::Issue(issue) = &mut child.data {
                             issue.parent_id = Some(new_parent_id.clone());
                         } else {
-                            println!("WARNING: child '{0}' not an issue", child_id.0);
+                            warn!("child '{0}' not an issue", child_id.0);
                         }
                     } else {
-                        println!("WARNING: child '{0}' not found", child_id.0);
+                        warn!("child '{0}' not found", child_id.0);
                     }
 
                     if let Some(parent) = self.get_mut(new_parent_id) {
                         if let WorkItemData::Issue(issue) = &mut parent.data {
                             issue.sub_issues.push(child_id.clone());
                         } else {
-                            println!("WARNING: new parent '{0}' not an issue", new_parent_id.0);
+                            warn!("new parent '{0}' not an issue", new_parent_id.0);
                         }
                     } else {
-                        println!("WARNING: new parent '{0}' not found", new_parent_id.0);
+                        warn!("new parent '{0}' not found", new_parent_id.0);
                     }
                 }
                 ChangeData::AddToProject => {

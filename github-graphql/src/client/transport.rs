@@ -1,4 +1,5 @@
 use crate::Result;
+use log::error;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -55,7 +56,7 @@ impl Client for GithubClient {
         let json_res = serde_json::from_str(result.as_str());
 
         if let Err(e) = &json_res {
-            println!("{e:?}: {result}");
+            error!("{e:?}: {result}");
         }
 
         json_res.map_err(|e| crate::Error::GraphQlResponseUnexpected(e.to_string()))

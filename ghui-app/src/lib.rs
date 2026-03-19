@@ -7,6 +7,7 @@ use github_graphql::{
         WorkItem, WorkItemId, WorkItems,
     },
 };
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -147,7 +148,7 @@ impl AppState {
         Self {
             pat: PATState::default(),
             watcher: Arc::new(Box::new(|_| {
-                println!("No watcher set!");
+                warn!("No watcher set!");
             })),
             fields: None,
             work_items: None,
@@ -199,8 +200,8 @@ impl AppState {
                 self.fields = Some(fields.clone());
                 return Ok(fields);
             } else {
-                println!(
-                    "WARNING: failed to load cached fields: {}",
+                warn!(
+                    "failed to load cached fields: {}",
                     load_result.err().unwrap()
                 );
             }
@@ -210,7 +211,7 @@ impl AppState {
         let fields = get_fields(&client).await?;
         let save_result = save_fields_to_appdata(&fields);
         if let Err(error) = save_result {
-            println!("WARNING: failed to save cached fields: {error}");
+            warn!("failed to save cached fields: {error}");
         }
 
         self.fields = Some(fields.clone());
@@ -230,8 +231,8 @@ impl AppState {
                 self.work_items = Some(work_items.clone());
                 return Ok(work_items);
             } else {
-                println!(
-                    "WARNING: failed to load cached work items: {}",
+                warn!(
+                    "failed to load cached work items: {}",
                     load_result.err().unwrap()
                 );
             }
@@ -251,7 +252,7 @@ impl AppState {
 
         let save_result = save_workitems_to_appdata(&work_items);
         if let Err(error) = save_result {
-            println!("WARNING: failed to save cached work items: {error}");
+            warn!("failed to save cached work items: {error}");
         }
 
         report_progress(0, 0);
@@ -373,7 +374,7 @@ impl DataState {
             let client = match state.pat.new_github_client() {
                 Ok(client) => client,
                 Err(e) => {
-                    eprintln!("Failed to create GitHub client: {e}");
+                    error!("Failed to create GitHub client: {e}");
                     return;
                 }
             };
@@ -382,7 +383,7 @@ impl DataState {
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
                 Err(e) => {
-                    eprintln!("Failed to get items: {e}");
+                    error!("Failed to get items: {e}");
                     return;
                 }
             };
@@ -399,7 +400,7 @@ impl DataState {
                 if update_type == UpdateType::ChangesHierarchy {
                     let r = state.refresh(false).await;
                     if let Err(r) = r {
-                        eprintln!("Refresh failed: {r:?}");
+                        error!("Refresh failed: {r:?}");
                     }
                 } else if update_type == UpdateType::SimpleChange {
                     for item in updated_work_items {
@@ -412,7 +413,7 @@ impl DataState {
             if let Some(work_items) = &state.work_items
                 && let Err(e) = save_workitems_to_appdata(work_items)
             {
-                eprintln!("WARNING: failed to save cached work items: {e}");
+                error!("failed to save cached work items: {e}");
             }
         })
     }
@@ -453,7 +454,7 @@ impl DataState {
                 .collect();
             drop(app_state);
 
-            println!("Loading {} items....", project_item_ids.len());
+            info!("Loading {} items....", project_item_ids.len());
 
             let join_handles = JoinSet::from_iter(
                 project_item_ids
@@ -462,7 +463,7 @@ impl DataState {
             );
 
             join_handles.join_all().await;
-            println!("Done");
+            info!("Done");
         }
         Ok(())
     }
@@ -472,7 +473,7 @@ const FIELDS_FILENAME: &str = "fields";
 
 fn load_fields_from_appdata() -> anyhow::Result<Fields> {
     let path = get_appdata_path(FIELDS_FILENAME);
-    println!("Attempting to load fields cache from {path:?}");
+    info!("Attempting to load fields cache from {path:?}");
 
     let reader = fs::File::open(path)?;
     Ok(serde_json::from_reader(BufReader::new(reader))?)
@@ -480,7 +481,7 @@ fn load_fields_from_appdata() -> anyhow::Result<Fields> {
 
 fn save_fields_to_appdata(fields: &Fields) -> anyhow::Result<()> {
     let path = get_appdata_path(FIELDS_FILENAME);
-    println!("Attempting to save fields cache to {path:?}");
+    info!("Attempting to save fields cache to {path:?}");
 
     let writer = fs::File::create(path)?;
     Ok(serde_json::to_writer_pretty(
@@ -493,7 +494,7 @@ const WORK_ITEMS_FILENAME: &str = "work_items";
 
 fn load_workitems_from_appdata() -> anyhow::Result<WorkItems> {
     let path = get_appdata_path(WORK_ITEMS_FILENAME);
-    println!("Attempting to load work item cache from {path:?}");
+    info!("Attempting to load work item cache from {path:?}");
 
     let reader = fs::File::open(path)?;
     Ok(serde_json::from_reader(BufReader::new(reader))?)
@@ -501,7 +502,7 @@ fn load_workitems_from_appdata() -> anyhow::Result<WorkItems> {
 
 fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
     let path = get_appdata_path(WORK_ITEMS_FILENAME);
-    println!("Attempting to save work item cache to {path:?}");
+    info!("Attempting to save work item cache to {path:?}");
 
     let writer = fs::File::create(path)?;
     Ok(serde_json::to_writer_pretty(
@@ -514,7 +515,7 @@ const WORK_ITEMS_EXTRA_DATA: &str = "work_items_extra_data";
 
 pub fn save_work_items_extra_data(data: &str) -> anyhow::Result<()> {
     let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
-    println!("Saving work items extra data to {path:?}");
+    info!("Saving work items extra data to {path:?}");
 
     let mut writer = fs::File::create(path)?;
     writer.write_all(data.as_bytes())?;
@@ -523,7 +524,7 @@ pub fn save_work_items_extra_data(data: &str) -> anyhow::Result<()> {
 
 pub fn load_work_items_extra_data() -> anyhow::Result<String> {
     let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
-    println!("Loading work items extra data from {path:?}");
+    info!("Loading work items extra data from {path:?}");
 
     let mut reader = fs::File::open(path)?;
 
