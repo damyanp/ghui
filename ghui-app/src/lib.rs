@@ -413,7 +413,7 @@ impl DataState {
             if let Some(work_items) = &state.work_items
                 && let Err(e) = save_workitems_to_appdata(work_items)
             {
-                error!("failed to save cached work items: {e}");
+                warn!("failed to save cached work items: {e}");
             }
         })
     }
