@@ -220,8 +220,8 @@ mod nodebuilder_tests {
             NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);
         let nodes = builder.build();
         // Should have two groups and two work items, in order: Group(EpicA), WorkItem(1), Group(EpicB), WorkItem(2)
-        println!("{:?}", work_items.work_items.values());
-        println!("{nodes:?}");
+        log::debug!("{:?}", work_items.work_items.values());
+        log::debug!("{nodes:?}");
         assert_eq!(nodes.len(), 4);
         assert!(matches!(nodes[0].data, NodeData::Group { ref name, .. } if name == "EpicA"));
         assert!(matches!(nodes[1].data, NodeData::WorkItem));

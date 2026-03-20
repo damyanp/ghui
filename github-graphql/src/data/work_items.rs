@@ -4,6 +4,7 @@ use crate::data::{
 };
 
 use super::{Change, ChangeData, Changes, Fields, WorkItem, WorkItemData, WorkItemId};
+use log::warn;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use structdiff::StructDiff;
@@ -178,10 +179,12 @@ impl WorkItems {
 
                 if epic.is_some() && item.project_item.epic != *epic {
                     if this_item_epic.is_some() {
-                        println!("WARNING: {} - epic is '{}', should be '{}' - but not changing non-blank value",
+                        warn!(
+                            "{} - epic is '{}', should be '{}' - but not changing non-blank value",
                             item.describe(),
                             fields.epic.option_name(this_item_epic.as_ref()).unwrap(),
-                            fields.epic.option_name(epic.as_ref()).unwrap());
+                            fields.epic.option_name(epic.as_ref()).unwrap()
+                        );
                     } else {
                         changes.add(Change {
                             work_item_id: id.clone(),
