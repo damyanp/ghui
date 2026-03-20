@@ -78,7 +78,7 @@ pub struct Data {
     can_redo: bool,
 }
 
-#[derive(Default, Serialize, TS, Debug, Clone)]
+#[derive(Default, Serialize, TS, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum LogLevel {

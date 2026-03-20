@@ -79,6 +79,9 @@ impl Log for AppLogger {
         {
             let entry = LogEntry {
                 timestamp,
+                // Debug and Trace are collapsed to Info because the frontend
+                // LogLevel enum intentionally has only three variants
+                // (Error / Warning / Info) to keep the UI simple.
                 level: match record.level() {
                     Level::Error => LogLevel::Error,
                     Level::Warn => LogLevel::Warning,
@@ -109,13 +112,12 @@ mod tests {
 
     #[test]
     fn test_log_level_mapping() {
-        // Verify the mapping from log::Level to LogLevel
         let cases = [
-            (Level::Error, "Error"),
-            (Level::Warn, "Warning"),
-            (Level::Info, "Info"),
-            (Level::Debug, "Info"),
-            (Level::Trace, "Info"),
+            (Level::Error, LogLevel::Error),
+            (Level::Warn, LogLevel::Warning),
+            (Level::Info, LogLevel::Info),
+            (Level::Debug, LogLevel::Info),
+            (Level::Trace, LogLevel::Info),
         ];
 
         for (level, expected) in cases {
@@ -124,7 +126,7 @@ mod tests {
                 Level::Warn => LogLevel::Warning,
                 _ => LogLevel::Info,
             };
-            assert_eq!(format!("{log_level:?}"), expected);
+            assert_eq!(log_level, expected);
         }
     }
 }
