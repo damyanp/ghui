@@ -23,6 +23,8 @@ use tokio::{
 };
 use ts_rs::TS;
 
+pub mod logger;
+
 mod nodes;
 use nodes::*;
 
@@ -161,6 +163,11 @@ impl AppState {
 
     pub async fn set_watcher(&mut self, watcher: SendDataUpdate) -> Result<()> {
         self.watcher = Arc::new(watcher);
+
+        // Connect the logger so it can forward messages to the frontend.
+        let w = self.watcher.clone();
+        logger::set_watcher(Arc::new(move |d| w(d)));
+
         self.refresh(false).await
     }
 
