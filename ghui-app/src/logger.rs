@@ -13,8 +13,12 @@ struct AppLogger {
 }
 
 /// Initializes the global logger.  Call once at application startup (replaces
-/// `env_logger::init()`).  Respects the `RUST_LOG` environment variable for
-/// level filtering; defaults to `Info` when unset.
+/// `env_logger::init()`).  Reads the `RUST_LOG` environment variable as a
+/// simple `LevelFilter` value (e.g. `info`, `debug`, `trace`); per-crate
+/// filters like `crate=debug` are **not** supported.  Defaults to `Info` when
+/// `RUST_LOG` is unset or cannot be parsed.
+///
+/// Safe to call more than once — subsequent calls are no-ops.
 pub fn init() {
     WATCHER.get_or_init(|| Mutex::new(None));
 
@@ -25,16 +29,19 @@ pub fn init() {
 
     let logger = Box::new(AppLogger { level });
     log::set_max_level(level);
-    log::set_logger(Box::leak(logger)).expect("Failed to set logger");
+    // Ignore the error — it just means a logger was already installed.
+    let _ = log::set_logger(Box::leak(logger));
 }
 
 /// Connects the logger to the DataUpdate watcher so that log messages are
 /// forwarded to the frontend as `DataUpdate::Log(LogEntry)`.
 pub fn set_watcher(watcher: Watcher) {
-    if let Some(lock) = WATCHER.get()
-        && let Ok(mut guard) = lock.lock()
-    {
-        *guard = Some(watcher);
+    let lock = WATCHER.get_or_init(|| Mutex::new(None));
+    // Use into_inner on a poisoned mutex to recover rather than silently
+    // dropping the watcher.
+    match lock.lock() {
+        Ok(mut guard) => *guard = Some(watcher),
+        Err(poisoned) => *poisoned.into_inner() = Some(watcher),
     }
 }
 
@@ -73,10 +80,14 @@ impl Log for AppLogger {
         );
 
         // Forward to the frontend if a watcher is connected.
-        if let Some(lock) = WATCHER.get()
-            && let Ok(guard) = lock.lock()
-            && let Some(watcher) = guard.as_ref()
-        {
+        // Clone the Arc and drop the lock before invoking the watcher to avoid
+        // deadlocking if the watcher path triggers another log call.
+        let watcher = WATCHER
+            .get()
+            .and_then(|lock| lock.lock().ok())
+            .and_then(|guard| guard.as_ref().cloned());
+
+        if let Some(watcher) = watcher {
             let entry = LogEntry {
                 timestamp,
                 // Debug and Trace are collapsed to Info because the frontend
