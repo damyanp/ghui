@@ -27,6 +27,7 @@ type Result<T = ()> = core::result::Result<T, anyhow::Error>;
 
 #[tokio::main]
 async fn main() -> Result {
+    env_logger::init();
     dotenv().ok();
 
     let arg = Args::parse();
