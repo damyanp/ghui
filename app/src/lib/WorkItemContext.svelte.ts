@@ -13,6 +13,7 @@ import type { Filters } from "./bindings/Filters";
 import type { SingleSelect } from "./bindings/SingleSelect";
 import type { Iteration } from "./bindings/Iteration";
 import type { ProjectItem } from "./bindings/ProjectItem";
+import type { LogEntry } from "./bindings/LogEntry";
 
 const key = Symbol("WorkItemContext");
 
@@ -47,6 +48,9 @@ export class WorkItemContext {
   });
 
   workItemTreeExpandedItems = $state<string[]>([]);
+
+  logs = $state<LogEntry[]>([]);
+  unreadErrorCount = $state<number>(0);
 
   loadProgress = $state<number>(0);
 
@@ -83,6 +87,10 @@ export class WorkItemContext {
         break;
       case "workItem":
         this.onDataUpdateWorkItem(dataUpdate.value);
+        break;
+      case "log":
+        this.onDataUpdateLog(dataUpdate.value);
+        break;
     }
   }
 
@@ -96,6 +104,17 @@ export class WorkItemContext {
 
   onDataUpdateProgress({ done, total }: { done: number; total: number }) {
     this.loadProgress = total === 0 ? 0 : 1 - done / total;
+  }
+
+  onDataUpdateLog(entry: LogEntry) {
+    this.logs.push(entry);
+    if (entry.level === "error") {
+      this.unreadErrorCount++;
+    }
+  }
+
+  clearUnreadErrorCount() {
+    this.unreadErrorCount = 0;
   }
 
   public async refresh(): Promise<void> {
