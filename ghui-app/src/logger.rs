@@ -1,14 +1,14 @@
 use crate::{DataUpdate, LogEntry, LogLevel};
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use std::fs::{File, OpenOptions};
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
 
 type Watcher = Arc<dyn Fn(DataUpdate) + Send + Sync>;
 
 static WATCHER: OnceLock<Mutex<Option<Watcher>>> = OnceLock::new();
-static LOG_FILE: OnceLock<Mutex<BufWriter<File>>> = OnceLock::new();
+static LOG_FILE: OnceLock<Mutex<File>> = OnceLock::new();
 
 /// Custom logger that writes to stderr and dispatches `DataUpdate::Log` to the
 /// frontend when a watcher is connected.
@@ -32,20 +32,18 @@ pub fn init() {
 
     LOG_FILE.get_or_init(|| {
         let path = get_log_file_path();
-        let file = OpenOptions::new()
+        let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&path)
             .unwrap_or_else(|e| panic!("failed to open log file {path:?}: {e}"));
 
-        let mut writer = BufWriter::new(file);
         let _ = writeln!(
-            writer,
+            file,
             "\n--- session started at {} ---",
             format_session_timestamp()
         );
-        let _ = writer.flush();
-        Mutex::new(writer)
+        Mutex::new(file)
     });
 
     let level = std::env::var("RUST_LOG")
@@ -149,9 +147,9 @@ impl Log for AppLogger {
 
         // Append to the persistent log file.
         if let Some(lock) = LOG_FILE.get()
-            && let Ok(mut writer) = lock.lock()
+            && let Ok(mut file) = lock.lock()
         {
-            let _ = writeln!(writer, "{formatted}");
+            let _ = writeln!(file, "{formatted}");
         }
 
         // Forward to the frontend if a watcher is connected.
@@ -181,9 +179,9 @@ impl Log for AppLogger {
 
     fn flush(&self) {
         if let Some(lock) = LOG_FILE.get()
-            && let Ok(mut writer) = lock.lock()
+            && let Ok(mut file) = lock.lock()
         {
-            let _ = writer.flush();
+            let _ = file.flush();
         }
     }
 }
