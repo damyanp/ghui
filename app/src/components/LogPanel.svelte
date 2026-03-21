@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Modal } from "@skeletonlabs/skeleton-svelte";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
-  import { CircleX, OctagonAlert, Info, Trash2 } from "@lucide/svelte";
+  import { Trash2 } from "@lucide/svelte";
   import { tick } from "svelte";
 
   type Props = {
