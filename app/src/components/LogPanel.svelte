@@ -31,13 +31,13 @@
 
   function onOpenChange(details: { open: boolean }) {
     open = details.open;
-    if (!details.open) {
+    if (details.open) {
       context.markErrorsAsRead();
     }
   }
 
   function clearLogs() {
-    context.logs.length = 0;
+    context.logs = [];
     context.markErrorsAsRead();
   }
 

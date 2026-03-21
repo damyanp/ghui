@@ -192,9 +192,6 @@
           : undefined}
         onclick={() => {
           logPanelOpen = !logPanelOpen;
-          if (logPanelOpen) {
-            context.markErrorsAsRead();
-          }
         }}
       />
     {/snippet}
