@@ -108,12 +108,15 @@ export class WorkItemContext {
 
   onDataUpdateLog(entry: LogEntry) {
     this.logs.push(entry);
+    if (this.logs.length > 1000) {
+      this.logs = this.logs.slice(-1000);
+    }
     if (entry.level === "error") {
       this.unreadErrorCount++;
     }
   }
 
-  clearUnreadErrorCount() {
+  markErrorsAsRead() {
     this.unreadErrorCount = 0;
   }
 

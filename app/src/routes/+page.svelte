@@ -192,7 +192,7 @@
         onclick={() => {
           logPanelOpen = !logPanelOpen;
           if (logPanelOpen) {
-            context.clearUnreadErrorCount();
+            context.markErrorsAsRead();
           }
         }}
       />
