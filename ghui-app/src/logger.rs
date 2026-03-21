@@ -4,6 +4,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
+use time::OffsetDateTime;
 
 type Watcher = Arc<dyn Fn(DataUpdate) + Send + Sync>;
 
@@ -77,48 +78,28 @@ pub fn get_log_file_path() -> PathBuf {
 }
 
 fn format_session_timestamp() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let total_secs = now.as_secs();
-    let millis = now.subsec_millis();
-    let secs = total_secs % 60;
-    let mins = (total_secs / 60) % 60;
-    let hours = (total_secs / 3600) % 24;
-
-    // Days since epoch — good enough for a log separator.
-    let days = total_secs / 86400;
-    let (year, month, day) = days_to_ymd(days);
-
-    format!("{year:04}-{month:02}-{day:02} {hours:02}:{mins:02}:{secs:02}.{millis:03}")
-}
-
-/// Converts days since Unix epoch (1970-01-01) to (year, month, day).
-fn days_to_ymd(days_since_epoch: u64) -> (u64, u64, u64) {
-    // Algorithm from https://howardhinnant.github.io/date_algorithms.html#civil_from_days
-    let z = days_since_epoch + 719_468;
-    let era = z / 146_097;
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    (y, m, d)
+    let now = OffsetDateTime::now_utc();
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
+        now.year(),
+        now.month() as u8,
+        now.day(),
+        now.hour(),
+        now.minute(),
+        now.second(),
+        now.millisecond()
+    )
 }
 
 fn format_timestamp() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let total_secs = now.as_secs();
-    let millis = now.subsec_millis();
-    let secs = total_secs % 60;
-    let mins = (total_secs / 60) % 60;
-    let hours = (total_secs / 3600) % 24;
-    format!("{hours:02}:{mins:02}:{secs:02}.{millis:03}")
+    let now = OffsetDateTime::now_utc();
+    format!(
+        "{:02}:{:02}:{:02}.{:03}",
+        now.hour(),
+        now.minute(),
+        now.second(),
+        now.millisecond()
+    )
 }
 
 impl Log for AppLogger {
@@ -231,17 +212,6 @@ mod tests {
         assert_eq!(&ts[13..14], ":");
         assert_eq!(&ts[16..17], ":");
         assert_eq!(&ts[19..20], ".");
-    }
-
-    #[test]
-    fn test_days_to_ymd_epoch() {
-        assert_eq!(days_to_ymd(0), (1970, 1, 1));
-    }
-
-    #[test]
-    fn test_days_to_ymd_known_date() {
-        // 2024-01-01 is 19723 days after epoch
-        assert_eq!(days_to_ymd(19723), (2024, 1, 1));
     }
 
     #[test]
