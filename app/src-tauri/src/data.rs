@@ -85,8 +85,8 @@ pub async fn get_work_items_extra_data() -> TauriCommandResult<String> {
 }
 
 #[tauri::command]
-pub async fn get_log_file_path() -> String {
-    ghui_app::logger::get_log_file_path()
+pub async fn get_log_file_path() -> TauriCommandResult<String> {
+    Ok(ghui_app::logger::get_log_file_path()
         .to_string_lossy()
-        .into_owned()
+        .into_owned())
 }

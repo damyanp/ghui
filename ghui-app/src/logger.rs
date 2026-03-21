@@ -31,21 +31,22 @@ struct AppLogger {
 pub fn init() {
     WATCHER.get_or_init(|| Mutex::new(None));
 
-    LOG_FILE.get_or_init(|| {
+    if LOG_FILE.get().is_none() {
         let path = get_log_file_path();
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-            .unwrap_or_else(|e| panic!("failed to open log file {path:?}: {e}"));
-
-        let _ = writeln!(
-            file,
-            "\n--- session started at {} ---",
-            format_session_timestamp()
-        );
-        Mutex::new(file)
-    });
+        match OpenOptions::new().create(true).append(true).open(&path) {
+            Ok(mut file) => {
+                let _ = writeln!(
+                    file,
+                    "\n--- session started at {} ---",
+                    format_session_timestamp()
+                );
+                let _ = LOG_FILE.set(Mutex::new(file));
+            }
+            Err(e) => {
+                eprintln!("ghui: failed to open log file {path:?}: {e}");
+            }
+        }
+    }
 
     let level = std::env::var("RUST_LOG")
         .ok()
@@ -71,8 +72,12 @@ pub fn set_watcher(watcher: Watcher) {
 }
 
 /// Returns the path to the persistent log file (`~/ghui.log`).
+///
+/// Falls back to the current working directory (or `./ghui.log` as a last
+/// resort) when no home directory can be determined, so callers never panic.
 pub fn get_log_file_path() -> PathBuf {
-    let mut path = dirs::home_dir().expect("could not determine home directory");
+    let base = dirs::home_dir().or_else(|| std::env::current_dir().ok());
+    let mut path = base.unwrap_or_else(|| PathBuf::from("."));
     path.push("ghui.log");
     path
 }
