@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
-  import { Trash2 } from "@lucide/svelte";
+  import { Trash2, X } from "@lucide/svelte";
   import { tick } from "svelte";
 
   type Props = {
@@ -108,8 +108,8 @@
       >
         <Trash2 class="size-3.5" />
       </button>
-      <button type="button" class="btn p-1 text-xs" onclick={onclose}>
-        Close
+      <button type="button" class="btn p-1" title="Close" onclick={onclose}>
+        <X class="size-3.5" />
       </button>
     </div>
   </header>
