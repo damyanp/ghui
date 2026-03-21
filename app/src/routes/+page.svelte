@@ -17,7 +17,6 @@
     Redo2,
     ReceiptText,
     Save,
-    ScrollText,
     Trash2,
     Undo2,
   } from "@lucide/svelte";
@@ -46,7 +45,6 @@
 
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
-  let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
 
@@ -178,22 +176,6 @@
         disabled={disabled}
         onclick={() => {
           mode = "xtracker";
-        }}
-      />
-
-      <div class="w-3"></div>
-
-      <AppBarButton
-        text="Output"
-        icon={ScrollText}
-        badge={context.unreadErrorCount > 0
-          ? context.unreadErrorCount
-          : undefined}
-        onclick={() => {
-          logPanelOpen = !logPanelOpen;
-          if (logPanelOpen) {
-            context.markErrorsAsRead();
-          }
         }}
       />
     {/snippet}
