@@ -192,6 +192,9 @@
           : undefined}
         onclick={() => {
           logPanelOpen = !logPanelOpen;
+          if (logPanelOpen) {
+            context.markErrorsAsRead();
+          }
         }}
       />
     {/snippet}
@@ -202,13 +205,22 @@
   </AppBar>
 
   <PendingChangesDialog bind:open={pendingChangesOpen} />
-  <LogPanel bind:open={logPanelOpen} />
 
-  {#if mode === "items"}
-    <WorkItemTree />
-  {:else if mode === "xtracker"}
-    <WorkItemExecutionTracker />
-  {:else}
-    <h1>Unknown mode {mode}</h1>
+  <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
+    {#if mode === "items"}
+      <WorkItemTree />
+    {:else if mode === "xtracker"}
+      <WorkItemExecutionTracker />
+    {:else}
+      <h1>Unknown mode {mode}</h1>
+    {/if}
+  </div>
+
+  {#if logPanelOpen}
+    <LogPanel
+      onclose={() => {
+        logPanelOpen = false;
+      }}
+    />
   {/if}
 </div>
