@@ -42,7 +42,7 @@ pub fn init() {
         let _ = writeln!(
             writer,
             "\n--- session started at {} ---",
-            format_date_timestamp()
+            format_session_timestamp()
         );
         let _ = writer.flush();
         Mutex::new(writer)
@@ -78,7 +78,7 @@ pub fn get_log_file_path() -> PathBuf {
     path
 }
 
-fn format_date_timestamp() -> String {
+fn format_session_timestamp() -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
@@ -223,8 +223,8 @@ mod tests {
     }
 
     #[test]
-    fn test_format_date_timestamp_has_expected_format() {
-        let ts = format_date_timestamp();
+    fn test_format_session_timestamp_has_expected_format() {
+        let ts = format_session_timestamp();
         // Expected format: YYYY-MM-DD HH:MM:SS.mmm
         assert_eq!(ts.len(), 23);
         assert_eq!(&ts[4..5], "-");
