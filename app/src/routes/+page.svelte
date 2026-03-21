@@ -17,10 +17,12 @@
     Redo2,
     ReceiptText,
     Save,
+    ScrollText,
     Trash2,
     Undo2,
   } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
+  import LogPanel from "../components/LogPanel.svelte";
   import PendingChangesDialog from "../components/PendingChangesDialog.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
@@ -45,6 +47,7 @@
 
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
+  let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
 
@@ -178,6 +181,22 @@
           mode = "xtracker";
         }}
       />
+
+      <div class="w-3"></div>
+
+      <AppBarButton
+        text="Output"
+        icon={ScrollText}
+        badge={context.unreadErrorCount > 0
+          ? context.unreadErrorCount
+          : undefined}
+        onclick={() => {
+          logPanelOpen = !logPanelOpen;
+          if (logPanelOpen) {
+            context.markErrorsAsRead();
+          }
+        }}
+      />
     {/snippet}
 
     {#snippet trail()}
@@ -187,11 +206,21 @@
 
   <PendingChangesDialog bind:open={pendingChangesOpen} />
 
-  {#if mode === "items"}
-    <WorkItemTree />
-  {:else if mode === "xtracker"}
-    <WorkItemExecutionTracker />
-  {:else}
-    <h1>Unknown mode {mode}</h1>
+  <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
+    {#if mode === "items"}
+      <WorkItemTree />
+    {:else if mode === "xtracker"}
+      <WorkItemExecutionTracker />
+    {:else}
+      <h1>Unknown mode {mode}</h1>
+    {/if}
+  </div>
+
+  {#if logPanelOpen}
+    <LogPanel
+      onclose={() => {
+        logPanelOpen = false;
+      }}
+    />
   {/if}
 </div>
