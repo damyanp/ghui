@@ -83,3 +83,10 @@ pub async fn set_work_items_extra_data(extra_data: String) -> TauriCommandResult
 pub async fn get_work_items_extra_data() -> TauriCommandResult<String> {
     Ok(load_work_items_extra_data()?)
 }
+
+#[tauri::command]
+pub async fn get_log_file_path() -> String {
+    ghui_app::logger::get_log_file_path()
+        .to_string_lossy()
+        .into_owned()
+}

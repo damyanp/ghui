@@ -1,6 +1,8 @@
 <script lang="ts">
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
-  import { Trash2, X } from "@lucide/svelte";
+  import { FolderOpen, Trash2, X } from "@lucide/svelte";
+  import { revealItemInDir } from "@tauri-apps/plugin-opener";
+  import { invoke } from "@tauri-apps/api/core";
   import { tick } from "svelte";
 
   type Props = {
@@ -36,6 +38,11 @@
   function clearLogs() {
     context.logs = [];
     context.markErrorsAsRead();
+  }
+
+  async function revealLogFile() {
+    const path = await invoke<string>("get_log_file_path");
+    await revealItemInDir(path);
   }
 
   function levelClass(level: string): string {
@@ -100,6 +107,14 @@
   >
     <div class="font-bold text-sm">Output ({logs.length})</div>
     <div class="flex items-center gap-1">
+      <button
+        type="button"
+        class="btn p-1"
+        title="Reveal log file"
+        onclick={revealLogFile}
+      >
+        <FolderOpen class="size-3.5" />
+      </button>
       <button
         type="button"
         class="btn p-1"
