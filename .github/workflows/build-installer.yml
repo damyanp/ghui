@@ -26,7 +26,31 @@ jobs:
       working-directory: app
       run: npm ci
 
-    - name: Build Tauri app
+    - name: Import code signing certificate
+      if: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 != '' }}
+      env:
+        CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+        CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      run: |
+        $pfxBytes = [Convert]::FromBase64String($env:CERTIFICATE_BASE64)
+        $pfxPath = Join-Path $env:RUNNER_TEMP "certificate.pfx"
+        [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+        $password = ConvertTo-SecureString -String $env:CERTIFICATE_PASSWORD -AsPlainText -Force
+        $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
+        echo "CERTIFICATE_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
+        Remove-Item $pfxPath
+      shell: pwsh
+
+    - name: Build Tauri app (signed)
+      if: env.CERTIFICATE_THUMBPRINT != ''
+      working-directory: app
+      run: >-
+        npx tauri build
+        --config
+        '{"bundle":{"windows":{"certificateThumbprint":"${{ env.CERTIFICATE_THUMBPRINT }}","digestAlgorithm":"sha256","timestampUrl":"http://timestamp.digicert.com"}}}'
+
+    - name: Build Tauri app (unsigned)
+      if: env.CERTIFICATE_THUMBPRINT == ''
       working-directory: app
       run: npx tauri build
 
