@@ -1,10 +1,15 @@
 use crate::{DataUpdate, LogEntry, LogLevel};
 use log::{Level, LevelFilter, Log, Metadata, Record};
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
+use time::OffsetDateTime;
 
 type Watcher = Arc<dyn Fn(DataUpdate) + Send + Sync>;
 
 static WATCHER: OnceLock<Mutex<Option<Watcher>>> = OnceLock::new();
+static LOG_FILE: OnceLock<Mutex<File>> = OnceLock::new();
 
 /// Custom logger that writes to stderr and dispatches `DataUpdate::Log` to the
 /// frontend when a watcher is connected.
@@ -18,9 +23,30 @@ struct AppLogger {
 /// filters like `crate=debug` are **not** supported.  Defaults to `Info` when
 /// `RUST_LOG` is unset or cannot be parsed.
 ///
+/// Opens (or creates) a persistent log file at [`get_log_file_path()`] in
+/// append mode.  Each session writes a separator line so successive runs are
+/// easy to distinguish.
+///
 /// Safe to call more than once — subsequent calls are no-ops.
 pub fn init() {
     WATCHER.get_or_init(|| Mutex::new(None));
+
+    if LOG_FILE.get().is_none() {
+        let path = get_log_file_path();
+        match OpenOptions::new().create(true).append(true).open(&path) {
+            Ok(mut file) => {
+                let _ = writeln!(
+                    file,
+                    "\n--- session started at {} ---",
+                    format_session_timestamp()
+                );
+                let _ = LOG_FILE.set(Mutex::new(file));
+            }
+            Err(e) => {
+                eprintln!("ghui: failed to open log file {path:?}: {e}");
+            }
+        }
+    }
 
     let level = std::env::var("RUST_LOG")
         .ok()
@@ -45,16 +71,40 @@ pub fn set_watcher(watcher: Watcher) {
     }
 }
 
+/// Returns the path to the persistent log file (`~/ghui.log`).
+///
+/// Falls back to the current working directory (or `./ghui.log` as a last
+/// resort) when no home directory can be determined, so callers never panic.
+pub fn get_log_file_path() -> PathBuf {
+    let base = dirs::home_dir().or_else(|| std::env::current_dir().ok());
+    let mut path = base.unwrap_or_else(|| PathBuf::from("."));
+    path.push("ghui.log");
+    path
+}
+
+fn format_session_timestamp() -> String {
+    let now = OffsetDateTime::now_utc();
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
+        now.year(),
+        now.month() as u8,
+        now.day(),
+        now.hour(),
+        now.minute(),
+        now.second(),
+        now.millisecond()
+    )
+}
+
 fn format_timestamp() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let total_secs = now.as_secs();
-    let millis = now.subsec_millis();
-    let secs = total_secs % 60;
-    let mins = (total_secs / 60) % 60;
-    let hours = (total_secs / 3600) % 24;
-    format!("{hours:02}:{mins:02}:{secs:02}.{millis:03}")
+    let now = OffsetDateTime::now_utc();
+    format!(
+        "{:02}:{:02}:{:02}.{:03}",
+        now.hour(),
+        now.minute(),
+        now.second(),
+        now.millisecond()
+    )
 }
 
 impl Log for AppLogger {
@@ -70,14 +120,23 @@ impl Log for AppLogger {
         let timestamp = format_timestamp();
         let message = format!("{}", record.args());
 
-        // Always write to stderr so messages are visible during development.
-        eprintln!(
+        let formatted = format!(
             "{} [{:<5} {}] {}",
             timestamp,
             record.level(),
             record.target(),
             message
         );
+
+        // Always write to stderr so messages are visible during development.
+        eprintln!("{formatted}");
+
+        // Append to the persistent log file.
+        if let Some(lock) = LOG_FILE.get()
+            && let Ok(mut file) = lock.lock()
+        {
+            let _ = writeln!(file, "{formatted}");
+        }
 
         // Forward to the frontend if a watcher is connected.
         // Clone the Arc and drop the lock before invoking the watcher to avoid
@@ -104,7 +163,13 @@ impl Log for AppLogger {
         }
     }
 
-    fn flush(&self) {}
+    fn flush(&self) {
+        if let Some(lock) = LOG_FILE.get()
+            && let Ok(mut file) = lock.lock()
+        {
+            let _ = file.flush();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -139,5 +204,24 @@ mod tests {
             };
             assert_eq!(log_level, expected);
         }
+    }
+
+    #[test]
+    fn test_format_session_timestamp_has_expected_format() {
+        let ts = format_session_timestamp();
+        // Expected format: YYYY-MM-DD HH:MM:SS.mmm
+        assert_eq!(ts.len(), 23);
+        assert_eq!(&ts[4..5], "-");
+        assert_eq!(&ts[7..8], "-");
+        assert_eq!(&ts[10..11], " ");
+        assert_eq!(&ts[13..14], ":");
+        assert_eq!(&ts[16..17], ":");
+        assert_eq!(&ts[19..20], ".");
+    }
+
+    #[test]
+    fn test_get_log_file_path_has_expected_name() {
+        let path = get_log_file_path();
+        assert_eq!(path.file_name().unwrap(), "ghui.log");
     }
 }
