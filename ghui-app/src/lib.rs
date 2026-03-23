@@ -24,6 +24,7 @@ use tokio::{
 use ts_rs::TS;
 
 pub mod logger;
+pub mod telemetry;
 
 mod nodes;
 use nodes::*;
