@@ -14,6 +14,7 @@ import type { SingleSelect } from "./bindings/SingleSelect";
 import type { Iteration } from "./bindings/Iteration";
 import type { ProjectItem } from "./bindings/ProjectItem";
 import type { LogEntry } from "./bindings/LogEntry";
+import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 
 const key = Symbol("WorkItemContext");
 
@@ -24,6 +25,11 @@ export function setWorkItemContext(wic: WorkItemContext) {
 
 export function getWorkItemContext() {
   return getContext(key) as WorkItemContext;
+}
+
+/** Fire-and-forget telemetry recording via the backend. */
+export function recordTelemetry(event: TelemetryEvent): void {
+  invoke("record_telemetry", { event }).catch(() => {});
 }
 
 export class WorkItemContext {

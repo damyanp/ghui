@@ -562,6 +562,42 @@ impl Change {
 
         format!("{name}({old_value} -> {new_value})").to_owned()
     }
+
+    /// Returns the field name for this change, suitable for telemetry.
+    pub fn field_name(&self) -> &str {
+        match &self.data {
+            ChangeData::IssueType(_) => "issue_type",
+            ChangeData::Status(_) => "status",
+            ChangeData::Blocked(_) => "blocked",
+            ChangeData::Epic(_) => "epic",
+            ChangeData::Iteration(_) => "iteration",
+            ChangeData::Kind(_) => "kind",
+            ChangeData::Workstream(_) => "workstream",
+            ChangeData::Estimate(_) => "estimate",
+            ChangeData::Priority(_) => "priority",
+            ChangeData::SetParent(_) => "set_parent",
+            ChangeData::AddToProject => "add_to_project",
+        }
+    }
+
+    /// Returns the new value for this change as a plain string, suitable for
+    /// telemetry.  Returns `None` when the value is being cleared or is not
+    /// applicable (e.g. `AddToProject`).
+    pub fn field_value(&self) -> Option<String> {
+        match &self.data {
+            ChangeData::IssueType(v) => v.clone(),
+            ChangeData::Status(v)
+            | ChangeData::Blocked(v)
+            | ChangeData::Epic(v)
+            | ChangeData::Iteration(v)
+            | ChangeData::Kind(v)
+            | ChangeData::Workstream(v)
+            | ChangeData::Estimate(v)
+            | ChangeData::Priority(v) => v.as_ref().map(|id| id.0.clone()),
+            ChangeData::SetParent(id) => Some(id.0.clone()),
+            ChangeData::AddToProject => None,
+        }
+    }
 }
 
 impl WorkItems {

@@ -7,6 +7,7 @@
     setWorkItemContext,
     WorkItemContext,
     makeProgressChannel,
+    recordTelemetry,
   } from "$lib/WorkItemContext.svelte";
   import {
     Bubbles,
@@ -126,6 +127,7 @@
         badge={numChanges > 0 ? numChanges : undefined}
         onclick={() => {
           pendingChangesOpen = true;
+          recordTelemetry({ event: "pending_changes_opened" });
         }}
       />
       <AppBarButton
@@ -169,6 +171,9 @@
         iconClass={itemsIconClass}
         disabled={disabled}
         onclick={() => {
+          if (mode !== "items") {
+            recordTelemetry({ event: "mode_switched", to: "items" });
+          }
           mode = "items";
         }}
       />
@@ -178,6 +183,9 @@
         iconClass={xtrackerIconClass}
         disabled={disabled}
         onclick={() => {
+          if (mode !== "xtracker") {
+            recordTelemetry({ event: "mode_switched", to: "xtracker" });
+          }
           mode = "xtracker";
         }}
       />
@@ -192,6 +200,7 @@
           : undefined}
         onclick={() => {
           logPanelOpen = !logPanelOpen;
+          recordTelemetry({ event: "log_panel_toggled", open: logPanelOpen });
           if (logPanelOpen) {
             context.markErrorsAsRead();
           }

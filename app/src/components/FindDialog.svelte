@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Search, SearchSlash } from "@lucide/svelte";
   import { onMount, tick } from "svelte";
+  import { recordTelemetry } from "$lib/WorkItemContext.svelte";
 
   type Props = {
     text: string;
@@ -23,6 +24,7 @@
     if (!open && e.key.trim().length === 1) {
       text = "";
       open = true;
+      recordTelemetry({ event: "find_dialog" });
       tick().then(() => {
         const input = document.getElementById(id);
         input?.focus();

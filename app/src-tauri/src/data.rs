@@ -1,7 +1,8 @@
 use crate::TauriCommandResult;
 use ghui_app::{
-    load_work_items_extra_data, save_work_items_extra_data, DataState, DataUpdate, Filters,
-    ItemToUpdate,
+    load_work_items_extra_data, save_work_items_extra_data,
+    telemetry::{self, TelemetryEvent},
+    DataState, DataUpdate, Filters, ItemToUpdate,
 };
 use tauri::{ipc::Channel, State};
 
@@ -22,6 +23,7 @@ pub async fn watch_data(
 
 #[tauri::command]
 pub async fn force_refresh_data(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
+    telemetry::record(TelemetryEvent::Refresh);
     let mut data_state = data_state.lock().await;
     data_state.refresh(true).await?;
     Ok(())
@@ -39,6 +41,10 @@ pub async fn update_items(
 
 #[tauri::command]
 pub async fn delete_changes(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
+    let count = data_state.lock().await.changes_count();
+    telemetry::record(TelemetryEvent::Discard {
+        changes_count: count,
+    });
     data_state.lock().await.clear_changes().await?;
     Ok(())
 }
@@ -48,6 +54,7 @@ pub async fn set_preview_changes(
     data_state: State<'_, DataState>,
     preview: bool,
 ) -> TauriCommandResult<()> {
+    telemetry::record(TelemetryEvent::PreviewToggled { enabled: preview });
     data_state.lock().await.set_preview_changes(preview).await?;
     Ok(())
 }
@@ -57,11 +64,21 @@ pub async fn save_changes(
     data_state: State<'_, DataState>,
     progress: Channel<(usize, usize)>,
 ) -> TauriCommandResult<()> {
+    let start = std::time::Instant::now();
+
     let report_progress = |c, t| {
         progress.send((c, t)).unwrap();
     };
 
-    Ok(data_state.save_changes(&report_progress).await?)
+    let result = data_state.save_changes(&report_progress).await;
+
+    telemetry::record(TelemetryEvent::Save {
+        changes_count: result.as_ref().copied().unwrap_or(0),
+        duration_ms: start.elapsed().as_millis() as u64,
+        success: result.is_ok(),
+    });
+
+    Ok(result.map(|_| ())?)
 }
 
 #[tauri::command]
@@ -69,6 +86,9 @@ pub async fn set_filters(
     data_state: State<'_, DataState>,
     filters: Filters,
 ) -> TauriCommandResult<()> {
+    telemetry::record(TelemetryEvent::FilterChanged {
+        active_filters: filters.active_filter_count(),
+    });
     let mut data_state = data_state.lock().await;
     data_state.set_filters(filters).await?;
     Ok(())
@@ -89,4 +109,17 @@ pub async fn get_log_file_path() -> TauriCommandResult<String> {
     Ok(ghui_app::logger::get_log_file_path()
         .to_string_lossy()
         .into_owned())
+}
+
+#[tauri::command]
+pub async fn get_telemetry_file_path() -> TauriCommandResult<String> {
+    Ok(telemetry::get_telemetry_file_path()
+        .to_string_lossy()
+        .into_owned())
+}
+
+#[tauri::command]
+pub async fn record_telemetry(event: TelemetryEvent) -> TauriCommandResult<()> {
+    telemetry::record(event);
+    Ok(())
 }
