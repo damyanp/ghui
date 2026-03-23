@@ -22,18 +22,17 @@ pub async fn get_items(
         return get_items_single_batch(client, project_item_ids).await;
     }
 
-    let tasks: Vec<_> = project_item_ids
-        .chunks(MAX_NODE_IDS)
-        .map(|chunk| {
-            let client = client.clone();
-            let chunk = chunk.to_vec();
-            tokio::spawn(async move { get_items_single_batch(&client, chunk).await })
-        })
-        .collect();
+    let batch_futures = project_item_ids.chunks(MAX_NODE_IDS).map(|chunk| {
+        let client = client.clone();
+        let chunk = chunk.to_vec();
+        async move { get_items_single_batch(&client, chunk).await }
+    });
+
+    let batch_results = try_join_all(batch_futures).await?;
 
     let mut all_items = Vec::new();
-    for task in tasks {
-        all_items.append(&mut task.await??);
+    for mut batch in batch_results {
+        all_items.append(&mut batch);
     }
     Ok(all_items)
 }
