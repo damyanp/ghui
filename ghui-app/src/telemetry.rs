@@ -78,7 +78,9 @@ pub fn record(event: &str, data: Value) {
     };
 
     if let Ok(json) = serde_json::to_string(&entry) {
-        let _ = writeln!(file, "{json}");
+        if let Err(e) = writeln!(file, "{json}") {
+            eprintln!("ghui: failed to write telemetry: {e}");
+        }
 
         // Check file size and truncate if needed.
         if let Ok(metadata) = file.metadata()
