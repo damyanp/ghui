@@ -351,12 +351,13 @@ impl AppState {
     async fn save_changes(
         &mut self,
         report_progress: &impl Fn(usize, usize),
-    ) -> Result<Vec<ProjectItemId>> {
+    ) -> Result<(Vec<ProjectItemId>, usize)> {
         let client = self.pat.new_github_client()?;
 
         let fields = self.refresh_fields(false).await?;
 
         let pre_save = self.changes.clone();
+        let changes_count = pre_save.len();
 
         let result = self
             .changes
@@ -371,7 +372,7 @@ impl AppState {
 
         self.undo_history.track_save(&self.changes, pre_save);
 
-        Ok(result)
+        Ok((result, changes_count))
     }
 
     pub async fn convert_tracked_to_sub_issues(&mut self, id: WorkItemId) -> Result<()> {
@@ -444,14 +445,16 @@ impl DataState {
         })
     }
 
-    pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<()> {
-        let project_item_ids = self.lock().await.save_changes(report_progress).await?;
+    pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<usize> {
+        let (project_item_ids, changes_count) =
+            self.lock().await.save_changes(report_progress).await?;
 
         if !project_item_ids.is_empty() {
             self.request_update_items(project_item_ids).await?;
         }
 
-        self.lock().await.refresh(false).await
+        self.lock().await.refresh(false).await?;
+        Ok(changes_count)
     }
 
     pub async fn sanitize(&self) -> Result<usize> {

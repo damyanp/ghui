@@ -563,13 +563,9 @@ impl Change {
         format!("{name}({old_value} -> {new_value})").to_owned()
     }
 
-    /// Returns a JSON value suitable for telemetry recording.
-    ///
-    /// Captures the field name and new value (as the raw option ID or string).
-    /// This does not require access to Fields/WorkItems, making it safe to call
-    /// from Tauri command handlers.
-    pub fn telemetry_data(&self) -> serde_json::Value {
-        let field = match &self.data {
+    /// Returns the field name for this change, suitable for telemetry.
+    pub fn field_name(&self) -> &str {
+        match &self.data {
             ChangeData::IssueType(_) => "issue_type",
             ChangeData::Status(_) => "status",
             ChangeData::Blocked(_) => "blocked",
@@ -581,10 +577,15 @@ impl Change {
             ChangeData::Priority(_) => "priority",
             ChangeData::SetParent(_) => "set_parent",
             ChangeData::AddToProject => "add_to_project",
-        };
+        }
+    }
 
-        let value: serde_json::Value = match &self.data {
-            ChangeData::IssueType(v) => v.clone().into(),
+    /// Returns the new value for this change as a plain string, suitable for
+    /// telemetry.  Returns `None` when the value is being cleared or is not
+    /// applicable (e.g. `AddToProject`).
+    pub fn field_value(&self) -> Option<String> {
+        match &self.data {
+            ChangeData::IssueType(v) => v.clone(),
             ChangeData::Status(v)
             | ChangeData::Blocked(v)
             | ChangeData::Epic(v)
@@ -592,15 +593,10 @@ impl Change {
             | ChangeData::Kind(v)
             | ChangeData::Workstream(v)
             | ChangeData::Estimate(v)
-            | ChangeData::Priority(v) => v.as_ref().map(|id| id.0.as_str()).into(),
-            ChangeData::SetParent(id) => id.0.as_str().into(),
-            ChangeData::AddToProject => serde_json::Value::Null,
-        };
-
-        serde_json::json!({
-            "field": field,
-            "value": value,
-        })
+            | ChangeData::Priority(v) => v.as_ref().map(|id| id.0.clone()),
+            ChangeData::SetParent(id) => Some(id.0.clone()),
+            ChangeData::AddToProject => None,
+        }
     }
 }
 

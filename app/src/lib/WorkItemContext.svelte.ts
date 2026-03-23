@@ -26,12 +26,13 @@ export function getWorkItemContext() {
   return getContext(key) as WorkItemContext;
 }
 
-/** Fire-and-forget telemetry recording via the backend. */
-export function recordTelemetry(
-  event: string,
-  data?: Record<string, unknown>
-): void {
-  invoke("record_telemetry", { event, data: data ?? null }).catch(() => {});
+/** Fire-and-forget telemetry recording via the backend.
+ *
+ * The `event` object is deserialized into a `TelemetryEvent` enum on the Rust
+ * side.  It must be internally tagged: `{ event: "snake_case_name", ...data }`.
+ */
+export function recordTelemetry(event: Record<string, unknown>): void {
+  invoke("record_telemetry", { event }).catch(() => {});
 }
 
 export class WorkItemContext {

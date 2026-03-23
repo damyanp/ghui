@@ -1,5 +1,4 @@
-use serde::Serialize;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
@@ -15,13 +14,71 @@ const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
 /// When truncating, keep this fraction of the file (the most recent data).
 const KEEP_FRACTION: f64 = 0.75;
 
+/// All telemetry events the app can record.  Each variant carries only the data
+/// relevant to that event.  Serialization to JSON happens inside [`record()`],
+/// keeping the rest of the codebase free of raw `serde_json::Value`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "event", rename_all = "snake_case")]
+pub enum TelemetryEvent {
+    SessionStart,
+    Refresh,
+    Save {
+        changes_count: usize,
+        duration_ms: u64,
+        success: bool,
+    },
+    Discard {
+        changes_count: usize,
+    },
+    PreviewToggled {
+        enabled: bool,
+    },
+    FilterChanged {
+        active_filters: usize,
+    },
+    FieldChanged {
+        field: String,
+        value: Option<String>,
+    },
+    ChangeReverted {
+        field: String,
+        value: Option<String>,
+    },
+    Undo,
+    Redo,
+    Sanitize {
+        changes_count: usize,
+    },
+    ConvertTracked,
+
+    // Frontend-originated events
+    ModeSwitched {
+        to: String,
+    },
+    LogPanelToggled {
+        open: bool,
+    },
+    PendingChangesOpened,
+    FindDialog,
+    ColumnReorder {
+        column: String,
+    },
+    ColumnResize {
+        column: String,
+    },
+    ExpandCollapse {
+        action: String,
+    },
+}
+
+/// Wire format written to the JSONL file.  The `event` tag and associated data
+/// come from flattening the [`TelemetryEvent`] enum.
 #[derive(Serialize)]
-struct TelemetryEvent<'a> {
+struct TelemetryRecord<'a> {
     ts: String,
     session: &'a str,
-    event: &'a str,
-    #[serde(skip_serializing_if = "Value::is_null")]
-    data: Value,
+    #[serde(flatten)]
+    event: &'a TelemetryEvent,
 }
 
 /// Initializes the telemetry subsystem.  Call once at application startup.
@@ -47,7 +104,7 @@ pub fn init() {
     {
         Ok(file) => {
             let _ = TELEMETRY_FILE.set(Mutex::new(file));
-            record("session_start", Value::Null);
+            record(TelemetryEvent::SessionStart);
         }
         Err(e) => {
             eprintln!("ghui: failed to open telemetry file {path:?}: {e}");
@@ -60,7 +117,7 @@ pub fn init() {
 /// Each call writes one JSON object per line.  If the file exceeds
 /// [`MAX_FILE_SIZE`], older entries are trimmed to keep the file under the
 /// limit.
-pub fn record(event: &str, data: Value) {
+pub fn record(event: TelemetryEvent) {
     let Some(lock) = TELEMETRY_FILE.get() else {
         return;
     };
@@ -70,11 +127,10 @@ pub fn record(event: &str, data: Value) {
 
     let session = SESSION_ID.get().map(|s| s.as_str()).unwrap_or("unknown");
 
-    let entry = TelemetryEvent {
+    let entry = TelemetryRecord {
         ts: format_iso_timestamp(),
         session,
-        event,
-        data,
+        event: &event,
     };
 
     if let Ok(json) = serde_json::to_string(&entry) {
@@ -249,7 +305,7 @@ mod tests {
         // Every remaining line should be valid JSON.
         for line in &lines {
             assert!(
-                serde_json::from_str::<Value>(line).is_ok(),
+                serde_json::from_str::<serde_json::Value>(line).is_ok(),
                 "Invalid JSON line: {line}"
             );
         }
@@ -259,35 +315,44 @@ mod tests {
     }
 
     #[test]
-    fn test_telemetry_event_serialization() {
-        let event = TelemetryEvent {
-            ts: "2026-01-01T00:00:00.000Z".to_string(),
-            session: "abcd1234",
-            event: "test_event",
-            data: serde_json::json!({"key": "value"}),
+    fn test_telemetry_record_with_data() {
+        let event = TelemetryEvent::Save {
+            changes_count: 3,
+            duration_ms: 1200,
+            success: true,
         };
 
-        let json = serde_json::to_string(&event).unwrap();
-        let parsed: Value = serde_json::from_str(&json).unwrap();
+        let record = TelemetryRecord {
+            ts: "2026-01-01T00:00:00.000Z".to_string(),
+            session: "abcd1234",
+            event: &event,
+        };
+
+        let json = serde_json::to_string(&record).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
         assert_eq!(parsed["ts"], "2026-01-01T00:00:00.000Z");
         assert_eq!(parsed["session"], "abcd1234");
-        assert_eq!(parsed["event"], "test_event");
-        assert_eq!(parsed["data"]["key"], "value");
+        assert_eq!(parsed["event"], "save");
+        assert_eq!(parsed["changes_count"], 3);
+        assert_eq!(parsed["duration_ms"], 1200);
+        assert_eq!(parsed["success"], true);
     }
 
     #[test]
-    fn test_telemetry_event_null_data_is_omitted() {
-        let event = TelemetryEvent {
+    fn test_telemetry_record_without_data() {
+        let event = TelemetryEvent::Undo;
+
+        let record = TelemetryRecord {
             ts: "2026-01-01T00:00:00.000Z".to_string(),
             session: "abcd1234",
-            event: "simple_event",
-            data: Value::Null,
+            event: &event,
         };
 
-        let json = serde_json::to_string(&event).unwrap();
-        let parsed: Value = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&record).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(parsed.get("data").is_none());
+        assert_eq!(parsed["event"], "undo");
+        assert!(parsed.get("changes_count").is_none());
     }
 }

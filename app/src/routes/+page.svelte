@@ -127,7 +127,7 @@
         badge={numChanges > 0 ? numChanges : undefined}
         onclick={() => {
           pendingChangesOpen = true;
-          recordTelemetry("pending_changes_opened");
+          recordTelemetry({ event: "pending_changes_opened" });
         }}
       />
       <AppBarButton
@@ -172,7 +172,7 @@
         disabled={disabled}
         onclick={() => {
           if (mode !== "items") {
-            recordTelemetry("mode_switched", { to: "items" });
+            recordTelemetry({ event: "mode_switched", to: "items" });
           }
           mode = "items";
         }}
@@ -184,7 +184,7 @@
         disabled={disabled}
         onclick={() => {
           if (mode !== "xtracker") {
-            recordTelemetry("mode_switched", { to: "xtracker" });
+            recordTelemetry({ event: "mode_switched", to: "xtracker" });
           }
           mode = "xtracker";
         }}
@@ -200,7 +200,7 @@
           : undefined}
         onclick={() => {
           logPanelOpen = !logPanelOpen;
-          recordTelemetry("log_panel_toggled", { open: logPanelOpen });
+          recordTelemetry({ event: "log_panel_toggled", open: logPanelOpen });
           if (logPanelOpen) {
             context.markErrorsAsRead();
           }

@@ -24,7 +24,7 @@
     if (!open && e.key.trim().length === 1) {
       text = "";
       open = true;
-      recordTelemetry("find_dialog");
+      recordTelemetry({ event: "find_dialog" });
       tick().then(() => {
         const input = document.getElementById(id);
         input?.focus();

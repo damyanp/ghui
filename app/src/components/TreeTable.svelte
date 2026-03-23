@@ -213,9 +213,7 @@
     if (!element.hasPointerCapture(event.pointerId)) return;
     element.releasePointerCapture(event.pointerId);
     if (columnResize) {
-      recordTelemetry("column_resize", {
-        column: columns[columnResize.index]?.name,
-      });
+      recordTelemetry({ event: "column_resize", column: columns[columnResize.index]?.name });
     }
     columnResize = undefined;
   }
@@ -293,7 +291,7 @@
     columns.splice(draggedColumnIndex, 1);
     columns.splice(droppedColumnIndex, 0, column);
 
-    recordTelemetry("column_reorder", { column: column.name });
+    recordTelemetry({ event: "column_reorder", column: column.name });
 
     droppedColumnIndex = -1;
     event.preventDefault();
@@ -484,10 +482,10 @@
       onclick={() => {
         if (expanded.includes(row.id)) {
           expanded = expanded.filter((i) => i !== row.id);
-          recordTelemetry("expand_collapse", { action: "collapse" });
+          recordTelemetry({ event: "expand_collapse", action: "collapse" });
         } else {
           expanded.push(row.id);
-          recordTelemetry("expand_collapse", { action: "expand" });
+          recordTelemetry({ event: "expand_collapse", action: "expand" });
         }
       }}
     >
