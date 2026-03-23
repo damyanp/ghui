@@ -42,7 +42,6 @@ pub fn init() {
     match OpenOptions::new()
         .create(true)
         .read(true)
-        .write(true)
         .append(true)
         .open(&path)
     {
@@ -82,10 +81,10 @@ pub fn record(event: &str, data: Value) {
         let _ = writeln!(file, "{json}");
 
         // Check file size and truncate if needed.
-        if let Ok(metadata) = file.metadata() {
-            if metadata.len() > MAX_FILE_SIZE {
-                truncate_file(&mut file);
-            }
+        if let Ok(metadata) = file.metadata()
+            && metadata.len() > MAX_FILE_SIZE
+        {
+            truncate_file(&mut file);
         }
     }
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
-  import { FolderOpen, Trash2, X } from "@lucide/svelte";
+  import { ChartNoAxesCombined, FolderOpen, Trash2, X } from "@lucide/svelte";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { invoke } from "@tauri-apps/api/core";
   import { tick } from "svelte";
@@ -42,6 +42,11 @@
 
   async function revealLogFile() {
     const path = await invoke<string>("get_log_file_path");
+    await revealItemInDir(path);
+  }
+
+  async function revealTelemetryFile() {
+    const path = await invoke<string>("get_telemetry_file_path");
     await revealItemInDir(path);
   }
 
@@ -107,6 +112,14 @@
   >
     <div class="font-bold text-sm">Output ({logs.length})</div>
     <div class="flex items-center gap-1">
+      <button
+        type="button"
+        class="btn p-1"
+        title="Reveal telemetry file"
+        onclick={revealTelemetryFile}
+      >
+        <ChartNoAxesCombined class="size-3.5" />
+      </button>
       <button
         type="button"
         class="btn p-1"

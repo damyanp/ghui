@@ -49,6 +49,7 @@
   import FindDialog from "./FindDialog.svelte";
   import TableColumnMenu from "./TableColumnMenu.svelte";
   import AddColumnButton from "./AddColumnButton.svelte";
+  import { recordTelemetry } from "$lib/WorkItemContext.svelte";
 
   let {
     columns = $bindable(),
@@ -211,6 +212,11 @@
     const element = event.target as HTMLElement;
     if (!element.hasPointerCapture(event.pointerId)) return;
     element.releasePointerCapture(event.pointerId);
+    if (columnResize) {
+      recordTelemetry("column_resize", {
+        column: columns[columnResize.index]?.name,
+      });
+    }
     columnResize = undefined;
   }
 
@@ -286,6 +292,8 @@
     let column = columns[draggedColumnIndex];
     columns.splice(draggedColumnIndex, 1);
     columns.splice(droppedColumnIndex, 0, column);
+
+    recordTelemetry("column_reorder", { column: column.name });
 
     droppedColumnIndex = -1;
     event.preventDefault();
@@ -476,8 +484,10 @@
       onclick={() => {
         if (expanded.includes(row.id)) {
           expanded = expanded.filter((i) => i !== row.id);
+          recordTelemetry("expand_collapse", { action: "collapse" });
         } else {
           expanded.push(row.id);
+          recordTelemetry("expand_collapse", { action: "expand" });
         }
       }}
     >

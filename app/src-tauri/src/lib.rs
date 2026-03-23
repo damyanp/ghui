@@ -25,6 +25,7 @@ impl serde::Serialize for TauriCommandError {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     ghui_app::logger::init();
+    ghui_app::telemetry::init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -55,6 +56,8 @@ pub fn run() {
             data::set_work_items_extra_data,
             data::get_work_items_extra_data,
             data::get_log_file_path,
+            data::get_telemetry_file_path,
+            data::record_telemetry,
             actions::convert_tracked_to_sub_issues,
             actions::sanitize,
             actions::add_change,

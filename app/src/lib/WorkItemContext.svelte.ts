@@ -26,6 +26,14 @@ export function getWorkItemContext() {
   return getContext(key) as WorkItemContext;
 }
 
+/** Fire-and-forget telemetry recording via the backend. */
+export function recordTelemetry(
+  event: string,
+  data?: Record<string, unknown>
+): void {
+  invoke("record_telemetry", { event, data: data ?? null }).catch(() => {});
+}
+
 export class WorkItemContext {
   data = $state<Data>({
     fields: make_blank_fields(),

@@ -58,6 +58,19 @@ impl Filters {
             || self.estimate.contains(&p.estimate)
             || self.priority.contains(&p.priority))
     }
+
+    /// Returns the total number of individual filter values that are active
+    /// across all fields.
+    pub fn active_filter_count(&self) -> usize {
+        self.status.len()
+            + self.blocked.len()
+            + self.epic.len()
+            + self.iteration.len()
+            + self.kind.len()
+            + self.workstream.len()
+            + self.estimate.len()
+            + self.priority.len()
+    }
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -367,6 +380,11 @@ impl AppState {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Returns the number of pending changes.
+    pub fn changes_count(&self) -> usize {
+        self.changes.len()
     }
 }
 
