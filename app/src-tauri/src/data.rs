@@ -78,8 +78,7 @@ pub async fn save_changes(
         success: result.is_ok(),
     });
 
-    result?;
-    Ok(())
+    Ok(result.map(|_| ())?)
 }
 
 #[tauri::command]

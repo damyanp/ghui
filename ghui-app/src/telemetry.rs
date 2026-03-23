@@ -4,6 +4,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use time::OffsetDateTime;
+use ts_rs::TS;
 
 static TELEMETRY_FILE: OnceLock<Mutex<File>> = OnceLock::new();
 static SESSION_ID: OnceLock<String> = OnceLock::new();
@@ -17,8 +18,9 @@ const KEEP_FRACTION: f64 = 0.75;
 /// All telemetry events the app can record.  Each variant carries only the data
 /// relevant to that event.  Serialization to JSON happens inside [`record()`],
 /// keeping the rest of the codebase free of raw `serde_json::Value`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "event", rename_all = "snake_case")]
+#[ts(export)]
 pub enum TelemetryEvent {
     SessionStart,
     Refresh,
