@@ -369,22 +369,23 @@ mod tests {
         assert!(parsed.get("changes_count").is_none());
     }
 
-    /// Exercises the production open-mode: `.write(true)` with explicit
-    /// `seek(End)` before each write, plus truncation mid-session.  Verifies
-    /// that writes after truncation land at the correct position and produce
-    /// valid JSONL.
+    /// Exercises the production open-mode: `.write(true).truncate(false)` with
+    /// explicit `seek(End)` before each write, plus truncation mid-session.
+    /// Verifies that writes after truncation land at the correct position and
+    /// produce valid JSONL.
     #[test]
     fn test_write_truncate_write_produces_valid_jsonl() {
         let dir = std::env::temp_dir().join("ghui_test_write_truncate_write");
         let _ = std::fs::create_dir_all(&dir);
         let path = dir.join("test.jsonl");
 
-        // Open the same way production does: read + write (no append).
+        // Ensure a clean slate, then open the same way production does.
+        let _ = std::fs::remove_file(&path);
         let mut file = OpenOptions::new()
             .create(true)
             .read(true)
             .write(true)
-            .truncate(true)
+            .truncate(false)
             .open(&path)
             .unwrap();
 
@@ -423,7 +424,7 @@ mod tests {
         }
 
         // The last 10 lines must be the ones written after truncation.
-        let last_10: Vec<&str> = lines.iter().rev().take(10).rev().copied().collect();
+        let last_10 = &lines[lines.len().saturating_sub(10)..];
         for (idx, line) in last_10.iter().enumerate() {
             let expected_num = 100 + idx;
             let expected = format!("{{\"line\":{expected_num}}}");
