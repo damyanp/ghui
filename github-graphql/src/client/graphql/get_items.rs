@@ -11,7 +11,34 @@ use graphql_client::{GraphQLQuery, Response};
 gql!(GetItems, "src/client/graphql/get_items.graphql");
 pub use get_items::*;
 
+/// GitHub's GraphQL API limits the number of node IDs per `nodes(ids:)` query.
+const MAX_NODE_IDS: usize = 100;
+
 pub async fn get_items(
+    client: &impl Client,
+    project_item_ids: Vec<ProjectItemId>,
+) -> Result<Vec<WorkItem>> {
+    if project_item_ids.len() <= MAX_NODE_IDS {
+        return get_items_single_batch(client, project_item_ids).await;
+    }
+
+    let tasks: Vec<_> = project_item_ids
+        .chunks(MAX_NODE_IDS)
+        .map(|chunk| {
+            let client = client.clone();
+            let chunk = chunk.to_vec();
+            tokio::spawn(async move { get_items_single_batch(&client, chunk).await })
+        })
+        .collect();
+
+    let mut all_items = Vec::new();
+    for task in tasks {
+        all_items.append(&mut task.await??);
+    }
+    Ok(all_items)
+}
+
+async fn get_items_single_batch(
     client: &impl Client,
     project_item_ids: Vec<ProjectItemId>,
 ) -> Result<Vec<WorkItem>> {
