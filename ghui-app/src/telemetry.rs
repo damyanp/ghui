@@ -86,8 +86,12 @@ struct TelemetryRecord<'a> {
 /// Initializes the telemetry subsystem.  Call once at application startup.
 ///
 /// Opens (or creates) the telemetry file at [`get_telemetry_file_path()`] in
-/// read-write + append mode.  Generates a session ID and writes a
+/// read-write mode and seeks to the end.  Generates a session ID and writes a
 /// `session_start` event.
+///
+/// The file is opened with `write` (not `append`) so that [`truncate_file()`]
+/// can seek to the start and rewrite the contents.  Each call to [`record()`]
+/// explicitly seeks to the end before writing.
 ///
 /// Safe to call more than once — subsequent calls are no-ops.
 pub fn init() {
@@ -101,10 +105,14 @@ pub fn init() {
     match OpenOptions::new()
         .create(true)
         .read(true)
-        .append(true)
+        .write(true)
+        .truncate(false)
         .open(&path)
     {
-        Ok(file) => {
+        Ok(mut file) => {
+            // Seek to end so subsequent writes append to existing content.
+            // If this fails, we still proceed; telemetry is best-effort.
+            let _ = file.seek(SeekFrom::End(0));
             let _ = TELEMETRY_FILE.set(Mutex::new(file));
             record(TelemetryEvent::SessionStart);
         }
@@ -136,6 +144,9 @@ pub fn record(event: TelemetryEvent) {
     };
 
     if let Ok(json) = serde_json::to_string(&entry) {
+        // Seek to end before writing — the file is opened with write (not
+        // append) so that truncate_file() can seek back to the start.
+        let _ = file.seek(SeekFrom::End(0));
         if let Err(e) = writeln!(file, "{json}") {
             eprintln!("ghui: failed to write telemetry: {e}");
         }
@@ -356,5 +367,70 @@ mod tests {
 
         assert_eq!(parsed["event"], "undo");
         assert!(parsed.get("changes_count").is_none());
+    }
+
+    /// Exercises the production open-mode: `.write(true)` with explicit
+    /// `seek(End)` before each write, plus truncation mid-session.  Verifies
+    /// that writes after truncation land at the correct position and produce
+    /// valid JSONL.
+    #[test]
+    fn test_write_truncate_write_produces_valid_jsonl() {
+        let dir = std::env::temp_dir().join("ghui_test_write_truncate_write");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("test.jsonl");
+
+        // Open the same way production does: read + write (no append).
+        let mut file = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .truncate(true)
+            .open(&path)
+            .unwrap();
+
+        // Phase 1: write 100 lines using seek-to-end (mimics record()).
+        for i in 0..100 {
+            file.seek(SeekFrom::End(0)).unwrap();
+            writeln!(file, "{{\"line\":{i}}}").unwrap();
+        }
+
+        // Truncate (drops oldest ~25%).
+        truncate_file(&mut file);
+
+        // Phase 2: write 10 more lines after truncation.
+        for i in 100..110 {
+            file.seek(SeekFrom::End(0)).unwrap();
+            writeln!(file, "{{\"line\":{i}}}").unwrap();
+        }
+
+        // Read everything back and verify.
+        let mut contents = String::new();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.read_to_string(&mut contents).unwrap();
+
+        let lines: Vec<&str> = contents.lines().collect();
+        assert!(!lines.is_empty());
+        // Should have fewer than 110 total (truncation removed some).
+        assert!(lines.len() < 110);
+
+        // Every line must be valid JSON and the post-truncation lines must be
+        // present at the end.
+        for line in &lines {
+            assert!(
+                serde_json::from_str::<serde_json::Value>(line).is_ok(),
+                "Invalid JSON line: {line}"
+            );
+        }
+
+        // The last 10 lines must be the ones written after truncation.
+        let last_10: Vec<&str> = lines.iter().rev().take(10).rev().copied().collect();
+        for (idx, line) in last_10.iter().enumerate() {
+            let expected_num = 100 + idx;
+            let expected = format!("{{\"line\":{expected_num}}}");
+            assert_eq!(*line, expected, "Post-truncation line {idx} mismatch");
+        }
+
+        // Cleanup.
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
