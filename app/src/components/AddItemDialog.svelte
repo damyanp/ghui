@@ -64,7 +64,11 @@
   }
 
   $effect(() => {
-    if (open) prefillFromClipboard();
+    if (open) {
+      prefillFromClipboard();
+    } else {
+      reset();
+    }
   });
 
   function prefillFromClipboard() {
@@ -90,7 +94,7 @@
 
   function handleClose() {
     open = false;
-    reset();
+    // reset() is called by the $effect watching `open`
   }
 
   async function resolve() {
@@ -195,7 +199,7 @@
   contentBase="card bg-surface-100-900 p-4 space-y-4 w-[520px]"
   modal
   onOpenChange={(details) => {
-    if (!details.open) handleClose();
+    open = details.open;
   }}
 >
   {#snippet content()}
