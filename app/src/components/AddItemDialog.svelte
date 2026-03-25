@@ -273,19 +273,19 @@
         </p>
         <div class="flex gap-2 pt-1">
           <button
-            class="btn rounded px-3 py-1 text-sm"
+            class="btn rounded px-3 py-1 text-sm preset-filled-primary-500"
             onclick={onReparentConfirmed}
           >
             Reparent
           </button>
           <button
-            class="btn rounded px-3 py-1 text-sm"
+            class="btn rounded px-3 py-1 text-sm preset-tonal"
             onclick={onKeepExistingParent}
           >
             Keep existing parent
           </button>
           <button
-            class="btn rounded px-3 py-1 text-sm"
+            class="btn rounded px-3 py-1 text-sm preset-tonal"
             onclick={handleClose}
           >
             Cancel
