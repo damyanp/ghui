@@ -19,6 +19,7 @@
   import { type IssueState } from "$lib/bindings/IssueState";
   import { type PullRequestState } from "$lib/bindings/PullRequestState";
   import { type Fields } from "$lib/bindings/Fields";
+  import type { WorkItemId } from "$lib/bindings/WorkItemId";
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
   import TableFieldSelect from "./TableFieldSelect.svelte";
   import { type FieldOption } from "$lib/bindings/FieldOption";
@@ -27,10 +28,26 @@
   import * as octicons from "@primer/octicons";
   import SingleSelectColumnMenu from "./SingleSelectColumnMenu.svelte";
   import IterationColumnMenu from "./IterationColumnMenu.svelte";
+  import AddItemDialog from "./AddItemDialog.svelte";
 
   dayjs.extend(isBetween);
 
   let context = getWorkItemContext();
+
+  // State for the "Add item from URL" dialog, shared between toolbar and
+  // context menu entry points.
+  let addItemDialogOpen = $state(false);
+  let addItemParentId = $state<WorkItemId | undefined>(undefined);
+  let addItemEpicId = $state<FieldOptionId | null | undefined>(undefined);
+
+  function openAddItemDialog(
+    parentId?: WorkItemId,
+    epicId?: FieldOptionId | null
+  ) {
+    addItemParentId = parentId;
+    addItemEpicId = epicId;
+    addItemDialogOpen = true;
+  }
 
   function getContextMenuItems(node: Node): MenuItem[] {
     let items: MenuItem[] = [];
@@ -77,6 +94,14 @@
           action: () => context.itemUpdateBatcher.add(node.id, true),
         });
 
+        if (item.data.type === "issue") {
+          items.push({
+            type: "action",
+            title: "Add child issue from URL…",
+            action: () => openAddItemDialog(item.id),
+          });
+        }
+
         if (
           item.data.type === "issue" &&
           item.data.trackedIssues.loadState === "loaded" &&
@@ -102,6 +127,13 @@
           }
         }
       }
+    } else if (node.data.type === "group") {
+      const groupData = node.data;
+      items.push({
+        type: "action",
+        title: "Add issue to this group from URL…",
+        action: () => openAddItemDialog(undefined, groupData.fieldOptionId),
+      });
     }
     if (items.length === 0) return [{ type: "text", title: "No actions" }];
     else return items;
@@ -348,6 +380,12 @@
   {onRowDragDrop}
   {onRowFirstVisible}
   {matchesFilter}
+/>
+
+<AddItemDialog
+  bind:open={addItemDialogOpen}
+  parentId={addItemParentId}
+  epicId={addItemEpicId}
 />
 
 {#snippet renderSingleSelectFieldMenuContent(column: Column<WorkItem>)}

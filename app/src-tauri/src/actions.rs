@@ -1,9 +1,9 @@
 use crate::TauriCommandResult;
 use ghui_app::{
     telemetry::{self, TelemetryEvent},
-    DataState,
+    DataState, ResolvedUrl,
 };
-use github_graphql::data::{Change, WorkItemId};
+use github_graphql::data::{Change, Changes, WorkItemId};
 use tauri::State;
 
 #[tauri::command]
@@ -42,6 +42,24 @@ pub async fn add_change(
     Ok(())
 }
 
+/// Stages a batch of changes as a single undoable action.
+///
+/// This is the preferred path when multiple related changes need to be applied
+/// together (e.g. AddToProject + SetParent + Epic + Workstream when the user
+/// pastes a GitHub URL).
+#[tauri::command]
+pub async fn add_changes(
+    data_state: State<'_, DataState>,
+    changes: Vec<Change>,
+) -> TauriCommandResult<()> {
+    let mut batch = Changes::default();
+    for change in changes {
+        batch.add(change);
+    }
+    data_state.lock().await.add_changes(batch).await?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn remove_change(
     data_state: State<'_, DataState>,
@@ -67,4 +85,17 @@ pub async fn redo_change(data_state: State<'_, DataState>) -> TauriCommandResult
     telemetry::record(TelemetryEvent::Redo);
     data_state.lock().await.redo_change().await?;
     Ok(())
+}
+
+/// Resolves a GitHub issue URL to the item's global node ID.
+///
+/// The frontend uses the returned ID to check whether the item is already in
+/// the project and to inspect its current state before staging changes.
+#[tauri::command]
+pub async fn resolve_url(
+    data_state: State<'_, DataState>,
+    url: String,
+) -> TauriCommandResult<ResolvedUrl> {
+    let resolved = data_state.lock().await.resolve_url(url).await?;
+    Ok(resolved)
 }
