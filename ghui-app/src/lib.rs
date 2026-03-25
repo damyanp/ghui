@@ -46,6 +46,8 @@ pub use pat::PATState;
 pub struct ResolvedUrl {
     /// The GitHub global node ID of the resolved issue.
     pub id: WorkItemId,
+    /// The title of the resolved issue.
+    pub title: String,
 }
 
 #[derive(Default, Serialize, Deserialize, TS, Debug, Clone)]
@@ -407,9 +409,10 @@ impl AppState {
     /// and to inspect its current state (e.g., existing parent).
     pub async fn resolve_url(&self, url: String) -> Result<ResolvedUrl> {
         let client = self.pat.new_github_client()?;
-        let id_str = get_resource_id(&client, &url).await?;
+        let (id_str, title) = get_resource_id(&client, &url).await?;
         Ok(ResolvedUrl {
             id: WorkItemId(id_str),
+            title,
         })
     }
 

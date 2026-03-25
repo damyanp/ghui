@@ -10,12 +10,12 @@ gql!(
     "src/client/graphql/get_resource_id_query.graphql"
 );
 
-pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<String> {
+pub async fn get_resource_id(client: &impl Client, url: &str) -> Result<(String, String)> {
     let data = get_resource_id_query(client, url).await?;
 
     let resource = data.resource.unwrap();
     match &resource {
-        GetResourceIdQueryResource::Issue(i) => Some(i.id.clone()),
+        GetResourceIdQueryResource::Issue(i) => Some((i.id.clone(), i.title.clone())),
         _ => None,
     }
     .ok_or(Error::GraphQlResponseUnexpected(format!(

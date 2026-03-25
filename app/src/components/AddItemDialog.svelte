@@ -22,6 +22,7 @@
   let resolving = $state(false);
   let error = $state<string | null>(null);
   let resolvedId = $state<WorkItemId | null>(null);
+  let resolvedTitle = $state<string | null>(null);
 
   // After resolving, this holds the existing parent of the item (if any).
   let existingParentId = $state<WorkItemId | null>(null);
@@ -29,6 +30,10 @@
   // Whether the user has been shown the reparent dialog and chosen to reparent.
   // null = not yet asked, true = reparent confirmed, false = keep existing
   let reparentChoice = $state<boolean | null>(null);
+
+  // User-selected epic and workstream (initialised when item is resolved).
+  let selectedEpicId = $state<FieldOptionId | null>(null);
+  let selectedWorkstreamId = $state<FieldOptionId | null>(null);
 
   const parentItem = $derived(
     parentId ? context.data.workItems[parentId] : undefined
@@ -86,10 +91,13 @@
   function reset() {
     url = "";
     resolvedId = null;
+    resolvedTitle = null;
     existingParentId = null;
     reparentChoice = null;
     error = null;
     resolving = false;
+    selectedEpicId = null;
+    selectedWorkstreamId = null;
   }
 
   function handleClose() {
@@ -103,12 +111,14 @@
     resolving = true;
     error = null;
     resolvedId = null;
+    resolvedTitle = null;
     existingParentId = null;
     reparentChoice = null;
 
     try {
       const resolved = await context.resolveUrl(url.trim());
       resolvedId = resolved.id;
+      resolvedTitle = resolved.title;
 
       // Check if the item is already in the project and has a parent.
       const existing = context.data.workItems[resolved.id];
@@ -117,6 +127,16 @@
       } else {
         existingParentId = null;
       }
+
+      // Initialise epic and workstream selectors from the effective default.
+      selectedEpicId =
+        epicId !== undefined
+          ? epicId
+          : parentItem?.projectItem.epic ?? null;
+
+      const ws = parentItem?.projectItem.workstream;
+      selectedWorkstreamId =
+        ws && "loadState" in ws && ws.loadState === "loaded" ? ws.value : null;
     } catch (e) {
       error = String(e);
     } finally {
@@ -146,32 +166,20 @@
       });
     }
 
-    // 3. Inherit epic from context: explicit epicId prop overrides, then parent's epic.
-    const effectiveEpicId: FieldOptionId | null | undefined =
-      epicId !== undefined
-        ? epicId
-        : doSetParent && parentId
-          ? (parentItem?.projectItem.epic ?? null)
-          : null;
-
-    if (effectiveEpicId) {
+    // 3. Apply user-selected epic (if any).
+    if (selectedEpicId) {
       changes.push({
         workItemId: resolvedId,
-        data: { type: "epic", value: effectiveEpicId },
+        data: { type: "epic", value: selectedEpicId },
       });
     }
 
-    // 4. Inherit workstream from parent if parent is provided.
-    if (doSetParent && parentId && parentItem) {
-      const ws = parentItem.projectItem.workstream;
-      const workstreamId =
-        ws && "loadState" in ws && ws.loadState === "loaded" ? ws.value : null;
-      if (workstreamId) {
-        changes.push({
-          workItemId: resolvedId,
-          data: { type: "workstream", value: workstreamId },
-        });
-      }
+    // 4. Apply user-selected workstream (if any).
+    if (selectedWorkstreamId) {
+      changes.push({
+        workItemId: resolvedId,
+        data: { type: "workstream", value: selectedWorkstreamId },
+      });
     }
 
     await context.addChanges(changes);
@@ -241,16 +249,43 @@
 
     {#if resolvedId && !needsReparentConfirmation}
       {@const alreadyInProject = !!context.data.workItems[resolvedId]}
-      <div class="text-sm space-y-1">
-        <p>
-          <span class="font-semibold">ID:</span>
-          <span class="font-mono opacity-80">{resolvedId}</span>
-        </p>
-        {#if alreadyInProject}
-          <p class="opacity-70">This item is already in the project.</p>
-        {:else}
-          <p class="opacity-70">This item will be added to the project.</p>
-        {/if}
+      <div class="text-sm space-y-3">
+        <div class="space-y-1">
+          {#if resolvedTitle}
+            <p class="font-semibold">{resolvedTitle}</p>
+          {/if}
+          {#if alreadyInProject}
+            <p class="opacity-70">This item is already in the project.</p>
+          {:else}
+            <p class="opacity-70">This item will be added to the project.</p>
+          {/if}
+        </div>
+
+        <div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+          <label for="epic-select" class="opacity-70">Epic</label>
+          <select
+            id="epic-select"
+            class="rounded bg-surface-50-950 px-2 py-1 text-sm"
+            bind:value={selectedEpicId}
+          >
+            <option value={null}>—</option>
+            {#each context.data.fields.epic.options as option (option.id)}
+              <option value={option.id}>{option.value}</option>
+            {/each}
+          </select>
+
+          <label for="workstream-select" class="opacity-70">Workstream</label>
+          <select
+            id="workstream-select"
+            class="rounded bg-surface-50-950 px-2 py-1 text-sm"
+            bind:value={selectedWorkstreamId}
+          >
+            <option value={null}>—</option>
+            {#each context.data.fields.workstream.options as option (option.id)}
+              <option value={option.id}>{option.value}</option>
+            {/each}
+          </select>
+        </div>
       </div>
     {/if}
 

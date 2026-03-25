@@ -14,4 +14,8 @@ export type ResolvedUrl = {
    * The GitHub global node ID of the resolved issue.
    */
   id: WorkItemId;
+  /**
+   * The title of the resolved issue.
+   */
+  title: string;
 };
