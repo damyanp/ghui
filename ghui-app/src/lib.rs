@@ -27,6 +27,7 @@ use ts_rs::TS;
 
 pub mod logger;
 pub mod telemetry;
+pub mod updater;
 
 mod nodes;
 use nodes::*;

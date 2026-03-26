@@ -23,6 +23,7 @@
     ScrollText,
     Trash2,
     Undo2,
+    ArrowDownToLine,
   } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
   import LogPanel from "../components/LogPanel.svelte";
@@ -33,6 +34,8 @@
     setWorkItemExecutionTrackerContext,
     WorkItemExecutionTrackerContext,
   } from "../components/WorkItemExecutionTracker.svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import type { ReleaseInfo } from "$lib/bindings/ReleaseInfo";
 
   const context = setWorkItemContext(new WorkItemContext());
   setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
@@ -58,6 +61,10 @@
   let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
+
+  // Update check state
+  let updateInfo = $state<ReleaseInfo | null>(null);
+  let updateCheckState = $state<"idle" | "checking" | "downloading">("idle");
 
   async function runBusy(action: () => Promise<void>): Promise<void> {
     if (busy) return;
@@ -93,6 +100,47 @@
     let fg = "blue";
     return `background-image: linear-gradient(90deg,${bg},${percent},${bg},${percent},${fg})`;
   });
+
+  async function checkForUpdate() {
+    updateCheckState = "checking";
+    updateInfo = null;
+    try {
+      updateInfo = await invoke<ReleaseInfo | null>("check_for_update");
+    } catch {
+      updateInfo = null;
+    } finally {
+      updateCheckState = "idle";
+    }
+  }
+
+  async function installUpdate() {
+    if (!updateInfo) return;
+    updateInfo = null;
+    updateCheckState = "downloading";
+    try {
+      await invoke("install_update");
+      // App exits inside install_update after spawning the installer.
+    } catch {
+      // Intentionally empty: state is reset in finally.
+    } finally {
+      updateCheckState = "idle";
+    }
+  }
+
+  const updateButtonText = $derived.by(() => {
+    if (updateCheckState === "checking") return "Checking…";
+    if (updateCheckState === "downloading") return "Downloading…";
+    if (updateInfo) return `Install ${updateInfo.tagName}`;
+    return "Updates";
+  });
+
+  const updateButtonDisabled = $derived(
+    updateCheckState !== "idle" || disabled
+  );
+
+  const updateIconClass = $derived(updateInfo ? "bg-primary-500" : "");
+
+  const onUpdateClicked = $derived(updateInfo ? installUpdate : checkForUpdate);
 </script>
 
 <div class="flex flex-col h-full w-full fixed">
@@ -234,6 +282,13 @@
     {/snippet}
 
     {#snippet trail()}
+      <AppBarButton
+        text={updateButtonText}
+        icon={ArrowDownToLine}
+        iconClass={updateIconClass}
+        disabled={updateButtonDisabled}
+        onclick={onUpdateClicked}
+      />
       <Pat />
     {/snippet}
   </AppBar>
