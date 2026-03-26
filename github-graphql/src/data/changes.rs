@@ -2,12 +2,15 @@ use super::{
     Field, FieldOptionId, Fields, Issue, ProjectItemId, Result, WorkItem, WorkItemData, WorkItemId,
     WorkItems,
 };
-use crate::client::{
-    graphql::{
-        add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
-        mutators::SettableProjectFieldValue, set_issue_type, set_project_field_value,
+use crate::{
+    client::{
+        graphql::{
+            add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
+            mutators::SettableProjectFieldValue, set_issue_type, set_project_field_value,
+        },
+        transport::Client,
     },
-    transport::Client,
+    Error,
 };
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
@@ -448,19 +451,24 @@ impl Change {
             .map(|item| &item.project_item.id)
             .or_else(|| new_project_items.get(&self.work_item_id));
 
-        if let Some(project_item_id) = project_item_id {
-            if let Some(new_value_id) = value {
-                set_project_field_value::<T>(
-                    client,
-                    project_id,
-                    project_item_id,
-                    &field.id,
-                    new_value_id,
-                )
-                .await?;
-            } else {
-                clear_project_field_value(client, project_id, project_item_id, &field.id).await?;
-            }
+        let Some(project_item_id) = project_item_id else {
+            return Err(Error::GraphQlResponseUnexpected(format!(
+                "Unable to find project item id for work item {:?}",
+                self.work_item_id
+            )));
+        };
+
+        if let Some(new_value_id) = value {
+            set_project_field_value::<T>(
+                client,
+                project_id,
+                project_item_id,
+                &field.id,
+                new_value_id,
+            )
+            .await?;
+        } else {
+            clear_project_field_value(client, project_id, project_item_id, &field.id).await?;
         }
         Ok(())
     }

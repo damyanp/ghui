@@ -34,8 +34,9 @@
 
   let context = getWorkItemContext();
 
-  // State for the "Add item from URL" dialog, shared between toolbar and
-  // context menu entry points.
+  // State for the "Add item from URL" dialog used within WorkItemTree (for
+  // example, from its context menu). The main toolbar in +page.svelte uses a
+  // separate AddItemDialog instance and state.
   let addItemDialogOpen = $state(false);
   let addItemParentId = $state<WorkItemId | undefined>(undefined);
   let addItemEpicId = $state<FieldOptionId | null | undefined>(undefined);

@@ -58,7 +58,7 @@
     const item = context.data.workItems[id];
     if (!item) return id;
     if (item.resourcePath) {
-      // resourcePath has the form /owner/repo/issues/123 — pick owner and number.
+      // resourcePath has the form /owner/repo/issues/123 — pick repo and number.
       const parts = item.resourcePath.split("/");
       return `${parts.at(-3) ?? "?"}#${parts.at(-1) ?? "?"}`;
     }
@@ -190,9 +190,13 @@
       });
     }
 
-    await context.addChanges(changes);
-    recordTelemetry({ event: "add_item_from_url", has_parent: doSetParent && !!parentId });
-    handleClose();
+    try {
+      await context.addChanges(changes);
+      recordTelemetry({ event: "add_item_from_url", has_parent: doSetParent && !!parentId });
+      handleClose();
+    } catch (e) {
+      error = e instanceof Error ? e.message : JSON.stringify(e);
+    }
   }
 
   async function onConfirm() {
