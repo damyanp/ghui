@@ -44,11 +44,21 @@ jobs:
           (Get-Content $toml) -replace '^version = ".*"', "version = `"$v`"" | Set-Content $toml
         }
 
+        # Regenerate Cargo.lock to reflect version changes
+        cargo generate-lockfile
+
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml ghui-app/Cargo.toml github-graphql/Cargo.toml ghui-util/Cargo.toml
-        git commit -m "Bump version to $v"
-        git push
+        git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml ghui-app/Cargo.toml github-graphql/Cargo.toml ghui-util/Cargo.toml Cargo.lock
+
+        git diff --cached --quiet
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "No version changes to commit; skipping git commit and push."
+        }
+        else {
+          git commit -m "Bump version to $v"
+          git push
+        }
 
     - name: Setup Node.js
       uses: actions/setup-node@v4

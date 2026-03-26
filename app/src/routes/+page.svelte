@@ -110,10 +110,7 @@
     if (!updateInfo) return;
     updateCheckState = "downloading";
     try {
-      await invoke("install_update", {
-        downloadUrl: updateInfo.downloadUrl,
-        tagName: updateInfo.tagName,
-      });
+      await invoke("install_update");
       // App exits inside install_update after spawning the installer.
     } catch {
       updateCheckState = "idle";

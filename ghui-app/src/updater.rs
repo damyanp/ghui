@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use tokio::io::AsyncWriteExt;
 use ts_rs::TS;
 
 const RELEASES_URL: &str = "https://api.github.com/repos/damyanp/ghui/releases/latest";
@@ -28,10 +29,38 @@ struct GithubAsset {
     browser_download_url: String,
 }
 
+/// Parses a version string (with optional leading `v`) into a `(major, minor, patch)` tuple.
+fn parse_version(v: &str) -> Option<(u32, u32, u32)> {
+    let v = v.trim_start_matches('v');
+    let mut parts = v.splitn(3, '.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    let patch = parts.next()?.splitn(2, '-').next()?.parse().ok()?;
+    Some((major, minor, patch))
+}
+
+/// Extracts a `ReleaseInfo` from a GitHub release if `release` is newer than
+/// `current_version` and contains an NSIS installer asset.
+fn extract_release_info(release: GithubRelease, current_version: &str) -> Option<ReleaseInfo> {
+    let latest = parse_version(&release.tag_name)?;
+    let current = parse_version(current_version)?;
+    if latest <= current {
+        return None;
+    }
+    let asset = release
+        .assets
+        .into_iter()
+        .find(|a| a.name.ends_with("-setup.exe"))?;
+    Some(ReleaseInfo {
+        tag_name: release.tag_name,
+        download_url: asset.browser_download_url,
+    })
+}
+
 /// Checks GitHub for a newer release.
 ///
-/// Returns `None` if the latest release is the same version as the running
-/// binary, or if no `.exe` installer asset is found.
+/// Returns `None` if the latest release is not newer than the running binary,
+/// or if no NSIS installer asset is found.
 pub async fn check_for_update() -> Result<Option<ReleaseInfo>> {
     let client = reqwest::Client::builder()
         .user_agent(concat!("ghui/", env!("CARGO_PKG_VERSION")))
@@ -45,44 +74,26 @@ pub async fn check_for_update() -> Result<Option<ReleaseInfo>> {
         .json()
         .await?;
 
-    let current = env!("CARGO_PKG_VERSION");
-    let latest = release.tag_name.trim_start_matches('v');
-
-    if latest == current {
-        return Ok(None);
-    }
-
-    let asset = release
-        .assets
-        .into_iter()
-        .find(|a| a.name.ends_with(".exe"));
-
-    match asset {
-        Some(a) => Ok(Some(ReleaseInfo {
-            tag_name: release.tag_name,
-            download_url: a.browser_download_url,
-        })),
-        None => Ok(None),
-    }
+    Ok(extract_release_info(release, env!("CARGO_PKG_VERSION")))
 }
 
 /// Downloads the installer exe to a temporary file and returns its path.
+///
+/// The response body is streamed directly to disk to avoid loading the entire
+/// installer into memory at once.
 pub async fn download_installer(download_url: &str, tag_name: &str) -> Result<PathBuf> {
     let client = reqwest::Client::builder()
         .user_agent(concat!("ghui/", env!("CARGO_PKG_VERSION")))
         .build()?;
 
-    let bytes = client
-        .get(download_url)
-        .send()
-        .await?
-        .error_for_status()?
-        .bytes()
-        .await?;
-
     let filename = format!("ghui-installer-{}.exe", tag_name);
     let path = std::env::temp_dir().join(filename);
-    tokio::fs::write(&path, &bytes).await?;
+    let mut file = tokio::fs::File::create(&path).await?;
+    let mut response = client.get(download_url).send().await?.error_for_status()?;
+    while let Some(chunk) = response.chunk().await? {
+        file.write_all(&chunk).await?;
+    }
+
     Ok(path)
 }
 
@@ -113,21 +124,6 @@ mod tests {
             name: name.to_string(),
             browser_download_url: url.to_string(),
         }
-    }
-
-    fn extract_release_info(release: GithubRelease, current_version: &str) -> Option<ReleaseInfo> {
-        let latest = release.tag_name.trim_start_matches('v');
-        if latest == current_version {
-            return None;
-        }
-        let asset = release
-            .assets
-            .into_iter()
-            .find(|a| a.name.ends_with(".exe"))?;
-        Some(ReleaseInfo {
-            tag_name: release.tag_name,
-            download_url: asset.browser_download_url,
-        })
     }
 
     #[test]
@@ -178,5 +174,35 @@ mod tests {
         let release = make_release("v9.9.9", vec![]);
         let result = extract_release_info(release, "0.2.0");
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_check_older_release_returns_none() {
+        let release = make_release(
+            "v0.1.0",
+            vec![make_asset(
+                "ghui_0.1.0_x64-setup.exe",
+                "https://example.com/ghui.exe",
+            )],
+        );
+        let result = extract_release_info(release, "0.2.0");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_non_setup_exe_not_picked() {
+        let release = make_release(
+            "v9.9.9",
+            vec![
+                make_asset("helper.exe", "https://example.com/helper.exe"),
+                make_asset("ghui_9.9.9_x64-setup.exe", "https://example.com/setup.exe"),
+            ],
+        );
+        let result = extract_release_info(release, "0.2.0");
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap().download_url,
+            "https://example.com/setup.exe"
+        );
     }
 }
