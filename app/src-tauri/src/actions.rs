@@ -22,9 +22,10 @@ pub async fn convert_tracked_to_sub_issues(
 
 #[tauri::command]
 pub async fn sanitize(data_state: State<'_, DataState>) -> TauriCommandResult<usize> {
-    let count = data_state.sanitize().await?;
+    let (count, conflicts_count) = data_state.sanitize().await?;
     telemetry::record(TelemetryEvent::Sanitize {
         changes_count: count,
+        conflicts_count,
     });
     Ok(count)
 }

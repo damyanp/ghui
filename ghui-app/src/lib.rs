@@ -499,7 +499,7 @@ impl DataState {
         Ok(changes_count)
     }
 
-    pub async fn sanitize(&self) -> Result<usize> {
+    pub async fn sanitize(&self) -> Result<(usize, usize)> {
         self.load_all_work_items(false).await?;
 
         let mut app_state = self.lock().await;
@@ -508,11 +508,12 @@ impl DataState {
         {
             let report = work_items.sanitize(fields);
             let num_changes = report.changes.len();
+            let num_conflicts = report.epic_conflicts.len();
             app_state.epic_conflicts = report.epic_conflicts;
             app_state.add_changes(report.changes).await?;
-            return Ok(num_changes);
+            return Ok((num_changes, num_conflicts));
         }
-        Ok(0)
+        Ok((0, 0))
     }
 
     /// Stages Epic override changes for the given item IDs, pulling the

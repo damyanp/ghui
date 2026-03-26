@@ -21,7 +21,7 @@ export type TelemetryEvent =
   | { "event": "change_reverted"; field: string; value: string | null }
   | { "event": "undo" }
   | { "event": "redo" }
-  | { "event": "sanitize"; changes_count: number }
+  | { "event": "sanitize"; changes_count: number; conflicts_count: number }
   | { "event": "convert_tracked" }
   | { "event": "add_item_from_url"; has_parent: boolean }
   | { "event": "mode_switched"; to: string }

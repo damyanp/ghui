@@ -241,13 +241,7 @@ impl WorkItems {
                     let this_workstream = item.project_item.workstream.expect_loaded().clone();
 
                     for child_id in &issue.sub_issues {
-                        sanitize_issue_hierarchy(
-                            items,
-                            report,
-                            child_id,
-                            epic,
-                            &this_workstream,
-                        );
+                        sanitize_issue_hierarchy(items, report, child_id, epic, &this_workstream);
                     }
                 }
             } else {

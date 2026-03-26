@@ -50,6 +50,7 @@ pub enum TelemetryEvent {
     Redo,
     Sanitize {
         changes_count: usize,
+        conflicts_count: usize,
     },
     ConvertTracked,
 
