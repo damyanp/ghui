@@ -113,6 +113,8 @@
       await invoke("install_update");
       // App exits inside install_update after spawning the installer.
     } catch {
+      // Intentionally empty: state is reset in finally.
+    } finally {
       updateCheckState = "idle";
     }
   }

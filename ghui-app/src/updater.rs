@@ -86,7 +86,8 @@ pub async fn download_installer(download_url: &str, tag_name: &str) -> Result<Pa
         .user_agent(concat!("ghui/", env!("CARGO_PKG_VERSION")))
         .build()?;
 
-    let filename = format!("ghui-installer-{}.exe", tag_name);
+    let safe_tag = tag_name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+    let filename = format!("ghui-installer-{}.exe", safe_tag);
     let path = std::env::temp_dir().join(filename);
     let mut file = tokio::fs::File::create(&path).await?;
     let mut response = client.get(download_url).send().await?.error_for_status()?;

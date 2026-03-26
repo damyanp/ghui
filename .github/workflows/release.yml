@@ -57,7 +57,7 @@ jobs:
         }
         else {
           git commit -m "Bump version to $v"
-          git push
+          git push origin HEAD:"${{ github.ref_name }}"
         }
 
     - name: Setup Node.js
@@ -79,7 +79,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         $tag = "v${{ inputs.version }}"
-        $nsis = Get-ChildItem target/release/bundle/nsis/*.exe | Select-Object -First 1
+        $nsis = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
         if ($null -eq $nsis) {
           Write-Error "No NSIS installer found in target/release/bundle/nsis/"
           exit 1
