@@ -99,8 +99,11 @@
 
   async function checkForUpdate() {
     updateCheckState = "checking";
+    updateInfo = null;
     try {
       updateInfo = await invoke<ReleaseInfo | null>("check_for_update");
+    } catch {
+      updateInfo = null;
     } finally {
       updateCheckState = "idle";
     }
@@ -108,6 +111,7 @@
 
   async function installUpdate() {
     if (!updateInfo) return;
+    updateInfo = null;
     updateCheckState = "downloading";
     try {
       await invoke("install_update");
