@@ -1,7 +1,9 @@
 use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::{
-    client::graphql::{custom_fields_query::get_fields, get_all_items, get_items::get_items},
+    client::graphql::{
+        custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
+    },
     data::{
         Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, UndoHistory, UpdateType,
         WorkItem, WorkItemId, WorkItems,
@@ -31,6 +33,22 @@ use nodes::*;
 
 mod pat;
 pub use pat::PATState;
+
+/// The result of resolving a GitHub URL to a work item identifier.
+///
+/// The frontend uses this to determine whether the item is already in the
+/// current project (by checking `id` against `data.workItems`) and to retrieve
+/// the current parent (if any) to decide whether a reparent confirmation dialog is
+/// needed before staging a `SetParent` change.
+#[derive(Debug, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ResolvedUrl {
+    /// The GitHub global node ID of the resolved issue.
+    pub id: WorkItemId,
+    /// The title of the resolved issue.
+    pub title: String,
+}
 
 #[derive(Default, Serialize, Deserialize, TS, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -381,6 +399,21 @@ impl AppState {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Resolves a GitHub issue URL to a `ResolvedUrl` containing the item's
+    /// global node ID.
+    ///
+    /// The caller can then compare the returned ID against the local
+    /// `work_items` map to determine whether the item is already in the project
+    /// and to inspect its current state (e.g., existing parent).
+    pub async fn resolve_url(&self, url: String) -> Result<ResolvedUrl> {
+        let client = self.pat.new_github_client()?;
+        let (id_str, title) = get_resource_id(&client, &url).await?;
+        Ok(ResolvedUrl {
+            id: WorkItemId(id_str),
+            title,
+        })
     }
 
     /// Returns the number of pending changes.

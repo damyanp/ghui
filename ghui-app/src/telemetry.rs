@@ -53,6 +53,10 @@ pub enum TelemetryEvent {
     },
     ConvertTracked,
 
+    AddItemFromUrl {
+        has_parent: bool,
+    },
+
     // Frontend-originated events
     ModeSwitched {
         to: String,

@@ -15,6 +15,7 @@
     Eye,
     EyeOff,
     ListTree,
+    LinkIcon,
     Redo2,
     ReceiptText,
     Save,
@@ -25,6 +26,7 @@
   import AppBarButton from "../components/AppBarButton.svelte";
   import LogPanel from "../components/LogPanel.svelte";
   import PendingChangesDialog from "../components/PendingChangesDialog.svelte";
+  import AddItemDialog from "../components/AddItemDialog.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
     WorkItemExecutionTrackerContext,
@@ -48,6 +50,7 @@
 
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
+  let addItemDialogOpen = $state(false);
   let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
@@ -142,6 +145,15 @@
       <div class="w-3"></div>
 
       <AppBarButton
+        icon={LinkIcon}
+        text="Add"
+        disabled={disabled}
+        onclick={() => {
+          addItemDialogOpen = true;
+        }}
+      />
+
+      <AppBarButton
         icon={Bubbles}
         text="Sanitize"
         disabled={disabled}
@@ -214,6 +226,7 @@
   </AppBar>
 
   <PendingChangesDialog bind:open={pendingChangesOpen} />
+  <AddItemDialog bind:open={addItemDialogOpen} />
 
   <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
     {#if mode === "items"}

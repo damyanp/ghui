@@ -15,6 +15,7 @@ import type { Iteration } from "./bindings/Iteration";
 import type { ProjectItem } from "./bindings/ProjectItem";
 import type { LogEntry } from "./bindings/LogEntry";
 import type { TelemetryEvent } from "./bindings/TelemetryEvent";
+import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 
 const key = Symbol("WorkItemContext");
 
@@ -265,6 +266,10 @@ export class WorkItemContext {
     await invoke("add_change", { change });
   }
 
+  public async addChanges(changes: Change[]) {
+    await invoke("add_changes", { changes });
+  }
+
   public async removeChange(change: Change) {
     await invoke("remove_change", { change });
   }
@@ -275,6 +280,10 @@ export class WorkItemContext {
 
   public async redoChange() {
     await invoke("redo_change");
+  }
+
+  public async resolveUrl(url: string): Promise<ResolvedUrl> {
+    return await invoke<ResolvedUrl>("resolve_url", { url });
   }
 
   // #endregion

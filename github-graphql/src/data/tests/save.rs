@@ -35,6 +35,19 @@ impl MockClient {
             .push_back(response);
         self
     }
+
+    /// Asserts that all queued mock responses were consumed.  Call this after
+    /// `save()` to verify no expected mutations were silently skipped.
+    fn assert_all_consumed(&self) {
+        let responses = self.responses.lock().unwrap();
+        for (keyword, queue) in responses.iter() {
+            assert!(
+                queue.is_empty(),
+                "MockClient: {count} unconsumed response(s) for '{keyword}'",
+                count = queue.len()
+            );
+        }
+    }
 }
 
 impl Client for MockClient {
@@ -277,4 +290,82 @@ async fn test_save_empty_changes_returns_empty() {
         .unwrap();
 
     assert!(result.is_empty());
+}
+
+/// Verifies that when `AddToProject` and field changes (e.g. Epic) are staged
+/// for the same new item, the field change is saved successfully even though
+/// the item is not yet in `work_items` at the time `save()` is called.
+///
+/// The fix is that `AddToProject` is always processed first and the resulting
+/// `ProjectItemId` is passed to subsequent field saves so they can look it up.
+#[tokio::test]
+async fn test_save_field_change_uses_project_item_id_from_add_to_project() {
+    let data = TestData::default();
+
+    let mut changes = Changes::default();
+    // Epic change for the same new item — this would previously be silently
+    // skipped because the item is not in work_items yet.
+    changes.add(Change {
+        work_item_id: "new_item".to_string().into(),
+        data: ChangeData::Epic(Some(FieldOptionId("id(EpicA)".into()))),
+    });
+    changes.add(Change {
+        work_item_id: "new_item".to_string().into(),
+        data: ChangeData::AddToProject,
+    });
+
+    // MockClient must receive both mutations: AddToProject first (due to
+    // sorting), then the Epic field update using the returned project_item_id.
+    let client = MockClient::new()
+        .on_mutation("addProjectV2ItemById", add_to_project_response("PVTI_new"))
+        .on_mutation("updateProjectV2ItemFieldValue", field_mutation_response());
+
+    // Both changes should succeed without panicking (mock panics on
+    // unexpected calls).
+    let result = changes
+        .save(
+            &client,
+            &data.fields,
+            &data.work_items,
+            SaveMode::Commit,
+            &noop_progress,
+        )
+        .await
+        .unwrap();
+
+    // AddToProject returns a ProjectItemId directly.
+    assert!(result.contains(&ProjectItemId("PVTI_new".into())));
+    // Verify both mutations were actually executed (none silently skipped).
+    client.assert_all_consumed();
+}
+
+/// Verifies that field changes for an item already in the project are not
+/// affected by the AddToProject ordering fix.
+#[tokio::test]
+async fn test_save_field_change_for_existing_item_still_works() {
+    let mut data = TestData::default();
+    let id = data.build().epic("EpicA").add();
+    let project_item_id = data.work_items.get(&id).unwrap().project_item.id.clone();
+
+    let mut changes = Changes::default();
+    changes.add(Change {
+        work_item_id: id,
+        data: ChangeData::Epic(Some(FieldOptionId("id(EpicB)".into()))),
+    });
+
+    let client =
+        MockClient::new().on_mutation("updateProjectV2ItemFieldValue", field_mutation_response());
+
+    let result = changes
+        .save(
+            &client,
+            &data.fields,
+            &data.work_items,
+            SaveMode::Commit,
+            &noop_progress,
+        )
+        .await
+        .unwrap();
+
+    assert!(result.contains(&project_item_id));
 }

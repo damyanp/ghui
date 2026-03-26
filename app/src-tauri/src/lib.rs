@@ -61,9 +61,11 @@ pub fn run() {
             actions::convert_tracked_to_sub_issues,
             actions::sanitize,
             actions::add_change,
+            actions::add_changes,
             actions::remove_change,
             actions::undo_change,
             actions::redo_change,
+            actions::resolve_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

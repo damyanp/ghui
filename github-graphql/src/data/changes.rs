@@ -2,12 +2,15 @@ use super::{
     Field, FieldOptionId, Fields, Issue, ProjectItemId, Result, WorkItem, WorkItemData, WorkItemId,
     WorkItems,
 };
-use crate::client::{
-    graphql::{
-        add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
-        mutators::SettableProjectFieldValue, set_issue_type, set_project_field_value,
+use crate::{
+    client::{
+        graphql::{
+            add_sub_issue, add_to_project, clear_project_field_value, get_issue_types,
+            mutators::SettableProjectFieldValue, set_issue_type, set_project_field_value,
+        },
+        transport::Client,
     },
-    transport::Client,
+    Error,
 };
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
@@ -213,6 +216,10 @@ impl Changes {
     /// to update the local state. This includes both items that were modified
     /// in-place (looked up from `work_items`) and items that were newly added
     /// to the project (captured directly from the `add_to_project` mutation).
+    ///
+    /// `AddToProject` changes are always processed first so that field changes
+    /// (e.g. Epic, Workstream) for the same newly-added item can look up the
+    /// freshly-created `ProjectItemId` and save correctly.
     pub async fn save(
         &mut self,
         client: &impl Client,
@@ -227,12 +234,34 @@ impl Changes {
 
         let change_count = data.len();
 
-        for (change_number, (key, change)) in data.into_iter().enumerate() {
+        // Sort so AddToProject changes always run first.  This ensures that any
+        // field changes (Epic, Workstream, …) for a newly-added item can find
+        // the ProjectItemId that AddToProject just created.
+        let mut sorted: Vec<_> = data.into_iter().collect();
+        sorted.sort_by_key(|(_, change)| match &change.data {
+            ChangeData::AddToProject => 0,
+            _ => 1,
+        });
+
+        // Tracks ProjectItemIds for items added to the project in this save
+        // pass so that subsequent field saves for those items can find the id.
+        let mut new_project_items: HashMap<WorkItemId, ProjectItemId> = HashMap::new();
+
+        for (change_number, (key, change)) in sorted.into_iter().enumerate() {
             let result = if let SaveMode::Commit = mode {
                 let result = change
-                    .save(client, fields, work_items, &mut project_item_ids)
+                    .save(
+                        client,
+                        fields,
+                        work_items,
+                        &new_project_items,
+                        &mut project_item_ids,
+                    )
                     .await;
-                if let Ok(changed) = result {
+                if let Ok((changed, new_item)) = result {
+                    if let Some((work_item_id, project_item_id)) = new_item {
+                        new_project_items.insert(work_item_id, project_item_id);
+                    }
                     changed.into_iter().for_each(|i| {
                         changed_work_items.insert(i);
                     });
@@ -276,15 +305,22 @@ pub enum SaveMode {
 }
 
 impl Change {
+    /// Saves this change via the GitHub API.
+    ///
+    /// Returns `(changed_work_item_ids, Option<(WorkItemId, ProjectItemId)>)`.
+    /// The second element is `Some` only for `AddToProject` changes and
+    /// contains the newly-created mapping so callers can track it.
     async fn save(
         &self,
         client: &impl Client,
         fields: &Fields,
         work_items: &WorkItems,
+        new_project_items: &HashMap<WorkItemId, ProjectItemId>,
         project_item_ids: &mut Vec<ProjectItemId>,
-    ) -> Result<Vec<WorkItemId>> {
+    ) -> Result<(Vec<WorkItemId>, Option<(WorkItemId, ProjectItemId)>)> {
         let mut changed_items = Vec::new();
         changed_items.push(self.work_item_id.clone());
+        let mut new_item = None;
 
         match &self.data {
             ChangeData::IssueType(value) => self.set_issue_type(client, work_items, value).await?,
@@ -292,6 +328,7 @@ impl Change {
                 self.save_field(
                     client,
                     work_items,
+                    new_project_items,
                     &fields.project_id,
                     &fields.status,
                     value,
@@ -302,6 +339,7 @@ impl Change {
                 self.save_field(
                     client,
                     work_items,
+                    new_project_items,
                     &fields.project_id,
                     &fields.blocked,
                     value,
@@ -309,13 +347,21 @@ impl Change {
                 .await?
             }
             ChangeData::Epic(value) => {
-                self.save_field(client, work_items, &fields.project_id, &fields.epic, value)
-                    .await?
+                self.save_field(
+                    client,
+                    work_items,
+                    new_project_items,
+                    &fields.project_id,
+                    &fields.epic,
+                    value,
+                )
+                .await?
             }
             ChangeData::Iteration(value) => {
                 self.save_field(
                     client,
                     work_items,
+                    new_project_items,
                     &fields.project_id,
                     &fields.iteration,
                     value,
@@ -323,13 +369,21 @@ impl Change {
                 .await?
             }
             ChangeData::Kind(value) => {
-                self.save_field(client, work_items, &fields.project_id, &fields.kind, value)
-                    .await?
+                self.save_field(
+                    client,
+                    work_items,
+                    new_project_items,
+                    &fields.project_id,
+                    &fields.kind,
+                    value,
+                )
+                .await?
             }
             ChangeData::Workstream(value) => {
                 self.save_field(
                     client,
                     work_items,
+                    new_project_items,
                     &fields.project_id,
                     &fields.workstream,
                     value,
@@ -340,6 +394,7 @@ impl Change {
                 self.save_field(
                     client,
                     work_items,
+                    new_project_items,
                     &fields.project_id,
                     &fields.estimate,
                     value,
@@ -350,6 +405,7 @@ impl Change {
                 self.save_field(
                     client,
                     work_items,
+                    new_project_items,
                     &fields.project_id,
                     &fields.priority,
                     value,
@@ -371,37 +427,48 @@ impl Change {
             ChangeData::AddToProject => {
                 let project_item_id =
                     add_to_project(client, &fields.project_id, &self.work_item_id.0).await?;
-                project_item_ids.push(project_item_id);
+                project_item_ids.push(project_item_id.clone());
+                new_item = Some((self.work_item_id.clone(), project_item_id));
             }
         }
 
-        Ok(changed_items)
+        Ok((changed_items, new_item))
     }
 
     async fn save_field<T: SettableProjectFieldValue>(
         &self,
         client: &impl Client,
         work_items: &WorkItems,
+        new_project_items: &HashMap<WorkItemId, ProjectItemId>,
         project_id: &str,
         field: &Field<T>,
         value: &Option<FieldOptionId>,
     ) -> Result<()> {
-        if let Some(project_item_id) = work_items
+        // Look up the project item id: first check items already in the
+        // project, then fall back to items added earlier in this save pass.
+        let project_item_id = work_items
             .get(&self.work_item_id)
             .map(|item| &item.project_item.id)
-        {
-            if let Some(new_value_id) = value {
-                set_project_field_value::<T>(
-                    client,
-                    project_id,
-                    project_item_id,
-                    &field.id,
-                    new_value_id,
-                )
-                .await?;
-            } else {
-                clear_project_field_value(client, project_id, project_item_id, &field.id).await?;
-            }
+            .or_else(|| new_project_items.get(&self.work_item_id));
+
+        let Some(project_item_id) = project_item_id else {
+            return Err(Error::GraphQlResponseUnexpected(format!(
+                "Unable to find project item id for work item {:?}",
+                self.work_item_id
+            )));
+        };
+
+        if let Some(new_value_id) = value {
+            set_project_field_value::<T>(
+                client,
+                project_id,
+                project_item_id,
+                &field.id,
+                new_value_id,
+            )
+            .await?;
+        } else {
+            clear_project_field_value(client, project_id, project_item_id, &field.id).await?;
         }
         Ok(())
     }

@@ -23,6 +23,7 @@ export type TelemetryEvent =
   | { "event": "redo" }
   | { "event": "sanitize"; changes_count: number }
   | { "event": "convert_tracked" }
+  | { "event": "add_item_from_url"; has_parent: boolean }
   | { "event": "mode_switched"; to: string }
   | { "event": "log_panel_toggled"; open: boolean }
   | { "event": "pending_changes_opened" }
