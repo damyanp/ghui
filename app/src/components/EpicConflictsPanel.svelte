@@ -65,13 +65,16 @@
     selected = next;
   }
 
+  // Auto-close when all conflicts have been staged (via async DataUpdate).
+  $effect(() => {
+    if (open && conflicts.length === 0) {
+      open = false;
+    }
+  });
+
   async function stageSelected() {
     const ids = Array.from(selected);
     await context.stageEpicOverrides(ids);
-    // Conflicts list updates automatically via DataUpdate; if now empty, close.
-    if (context.data.epicConflicts.length === 0) {
-      open = false;
-    }
   }
 </script>
 

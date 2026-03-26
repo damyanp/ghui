@@ -522,26 +522,21 @@ impl DataState {
     pub async fn stage_epic_overrides(&self, ids: Vec<WorkItemId>) -> Result<()> {
         let mut app_state = self.lock().await;
 
+        let id_set: std::collections::HashSet<&WorkItemId> = ids.iter().collect();
         let mut changes = Changes::default();
-        let mut staged: Vec<WorkItemId> = Vec::new();
 
-        for id in &ids {
-            if let Some(conflict) = app_state
-                .epic_conflicts
-                .iter()
-                .find(|c| &c.work_item_id == id)
-            {
+        for conflict in &app_state.epic_conflicts {
+            if id_set.contains(&conflict.work_item_id) {
                 changes.add(Change {
-                    work_item_id: id.clone(),
+                    work_item_id: conflict.work_item_id.clone(),
                     data: ChangeData::Epic(Some(conflict.proposed_epic.clone())),
                 });
-                staged.push(id.clone());
             }
         }
 
         app_state
             .epic_conflicts
-            .retain(|c| !staged.contains(&c.work_item_id));
+            .retain(|c| !id_set.contains(&c.work_item_id));
 
         app_state.add_changes(changes).await?;
         Ok(())
