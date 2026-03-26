@@ -4,6 +4,7 @@ use tauri::Manager;
 mod actions;
 mod data;
 mod pat;
+mod update;
 
 pub type TauriCommandResult<T> = core::result::Result<T, TauriCommandError>;
 
@@ -66,6 +67,8 @@ pub fn run() {
             actions::undo_change,
             actions::redo_change,
             actions::resolve_url,
+            update::check_for_update,
+            update::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
