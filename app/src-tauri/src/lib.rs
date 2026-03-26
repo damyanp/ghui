@@ -60,6 +60,7 @@ pub fn run() {
             data::record_telemetry,
             actions::convert_tracked_to_sub_issues,
             actions::sanitize,
+            actions::stage_epic_overrides,
             actions::add_change,
             actions::add_changes,
             actions::remove_change,

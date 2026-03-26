@@ -52,6 +52,7 @@ export class WorkItemContext {
     changes: { data: {} },
     canUndo: false,
     canRedo: false,
+    epicConflicts: [],
   });
 
   workItemTreeExpandedItems = $state<string[]>([]);
@@ -146,6 +147,10 @@ export class WorkItemContext {
 
   public async sanitize() {
     await invoke("sanitize");
+  }
+
+  public async stageEpicOverrides(itemIds: WorkItemId[]) {
+    await invoke("stage_epic_overrides", { itemIds });
   }
 
   public getFieldOption(

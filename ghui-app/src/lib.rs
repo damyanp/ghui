@@ -5,8 +5,8 @@ use github_graphql::{
         custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
     },
     data::{
-        Change, Changes, FieldOptionId, Fields, ProjectItemId, SaveMode, UndoHistory, UpdateType,
-        WorkItem, WorkItemId, WorkItems,
+        Change, ChangeData, Changes, FieldOptionId, Fields, ProjectItemId, SanitizeConflict,
+        SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
     },
 };
 use log::{error, info, warn};
@@ -108,6 +108,11 @@ pub struct Data {
     changes: Changes,
     can_undo: bool,
     can_redo: bool,
+
+    /// Epic conflicts found during the last sanitize run.  Each entry
+    /// represents an item whose existing Epic was not overwritten; the user
+    /// can review these and selectively stage the override.
+    epic_conflicts: Vec<SanitizeConflict>,
 }
 
 #[derive(Default, Serialize, TS, Debug, Clone, PartialEq)]
@@ -169,6 +174,8 @@ pub struct AppState {
     changes: Changes,
     undo_history: UndoHistory,
     preview_changes: bool,
+    /// Epic conflicts from the most recent sanitize run.
+    epic_conflicts: Vec<SanitizeConflict>,
 }
 
 impl Default for AppState {
@@ -190,6 +197,7 @@ impl AppState {
             changes: Changes::default(),
             undo_history: UndoHistory::default(),
             preview_changes: true,
+            epic_conflicts: Vec::new(),
         }
     }
 
@@ -224,6 +232,7 @@ impl AppState {
             changes: self.changes.clone(),
             can_undo: self.undo_history.can_undo(),
             can_redo: self.undo_history.can_redo(),
+            epic_conflicts: self.epic_conflicts.clone(),
         })));
         Ok(())
     }
@@ -497,12 +506,44 @@ impl DataState {
         if let Some(work_items) = app_state.work_items.as_ref()
             && let Some(fields) = app_state.fields.as_ref()
         {
-            let changes = work_items.sanitize(fields);
-            let num_changes = changes.len();
-            app_state.add_changes(changes).await?;
+            let report = work_items.sanitize(fields);
+            let num_changes = report.changes.len();
+            app_state.epic_conflicts = report.epic_conflicts;
+            app_state.add_changes(report.changes).await?;
             return Ok(num_changes);
         }
         Ok(0)
+    }
+
+    /// Stages Epic override changes for the given item IDs, pulling the
+    /// proposed Epic from the stored conflict list.  Removes the staged items
+    /// from the conflict list and triggers a UI refresh.
+    pub async fn stage_epic_overrides(&self, ids: Vec<WorkItemId>) -> Result<()> {
+        let mut app_state = self.lock().await;
+
+        let mut changes = Changes::default();
+        let mut staged: Vec<WorkItemId> = Vec::new();
+
+        for id in &ids {
+            if let Some(conflict) = app_state
+                .epic_conflicts
+                .iter()
+                .find(|c| &c.work_item_id == id)
+            {
+                changes.add(Change {
+                    work_item_id: id.clone(),
+                    data: ChangeData::Epic(Some(conflict.proposed_epic.clone())),
+                });
+                staged.push(id.clone());
+            }
+        }
+
+        app_state
+            .epic_conflicts
+            .retain(|c| !staged.contains(&c.work_item_id));
+
+        app_state.add_changes(changes).await?;
+        Ok(())
     }
 
     pub async fn load_all_work_items(&self, force: bool) -> Result<()> {

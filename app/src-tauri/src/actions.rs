@@ -29,6 +29,20 @@ pub async fn sanitize(data_state: State<'_, DataState>) -> TauriCommandResult<us
     Ok(count)
 }
 
+/// Stages Epic override changes for items that had conflicts during sanitize.
+///
+/// Each item in `item_ids` must have a corresponding entry in the stored
+/// epic conflict list.  Matching entries are removed from the conflict list
+/// and the override is added as a normal pending change (undo-tracked).
+#[tauri::command]
+pub async fn stage_epic_overrides(
+    data_state: State<'_, DataState>,
+    item_ids: Vec<WorkItemId>,
+) -> TauriCommandResult<()> {
+    data_state.stage_epic_overrides(item_ids).await?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn add_change(
     data_state: State<'_, DataState>,

@@ -3,6 +3,7 @@ import type { Changes } from "./Changes";
 import type { Fields } from "./Fields";
 import type { Filters } from "./Filters";
 import type { Node } from "./Node";
+import type { SanitizeConflict } from "./SanitizeConflict";
 import type { WorkItem } from "./WorkItem";
 import type { WorkItemId } from "./WorkItemId";
 
@@ -15,4 +16,5 @@ export type Data = {
   changes: Changes;
   canUndo: boolean;
   canRedo: boolean;
+  epicConflicts: Array<SanitizeConflict>;
 };
