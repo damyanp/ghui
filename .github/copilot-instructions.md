@@ -217,6 +217,7 @@ let { columns = $bindable() } = $props();   // Two-way bindable props
 
 ### Do
 
+- **Bump the version on every code change** — every PR that modifies code and gets pushed to `main` must increment the version number in all five locations listed in `instructions.md`. Code reviews must verify this.
 - **Reuse existing patterns** — look at how similar things are done elsewhere in the codebase before introducing new approaches.
 - **Keep `Changes` and `UndoHistory` separate** — this was a deliberate architectural decision.
 - **Add comments for non-obvious behavior** (e.g., why the window starts invisible).
