@@ -56,7 +56,7 @@ async fn add_item(
     epic_id: Option<&FieldOptionId>,
     issue: &str,
 ) -> Result {
-    let content_id = get_resource_id(client, issue).await?;
+    let (content_id, _title) = get_resource_id(client, issue).await?;
     let item_id = add_to_project(client, &fields.project_id, &content_id).await?;
     if let Some(epic_id) = epic_id {
         set_project_field_value::<SingleSelect>(

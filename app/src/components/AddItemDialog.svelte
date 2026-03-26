@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Modal } from "@skeletonlabs/skeleton-svelte";
-  import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
+  import { getWorkItemContext, recordTelemetry } from "$lib/WorkItemContext.svelte";
   import type { Change } from "$lib/bindings/Change";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
@@ -32,8 +32,9 @@
   let reparentChoice = $state<boolean | null>(null);
 
   // User-selected epic and workstream (initialised when item is resolved).
-  let selectedEpicId = $state<FieldOptionId | null>(null);
-  let selectedWorkstreamId = $state<FieldOptionId | null>(null);
+  // Empty string means "no selection" (null can't be used as <option value> reliably).
+  let selectedEpicId = $state<FieldOptionId | "">("");
+  let selectedWorkstreamId = $state<FieldOptionId | "">("");
 
   const parentItem = $derived(
     parentId ? context.data.workItems[parentId] : undefined
@@ -48,6 +49,7 @@
     resolvedId !== null &&
       parentId !== undefined &&
       existingParentId !== null &&
+      existingParentId !== parentId &&
       reparentChoice === null
   );
 
@@ -81,6 +83,10 @@
       .readText()
       .then((text) => {
         const trimmed = text.trim();
+        if (!open || url !== "") {
+          // Only prefill if the dialog is still open and the user hasn't typed yet.
+          return;
+        }
         if (trimmed.startsWith("https://github.com/")) {
           url = trimmed;
         }
@@ -96,8 +102,8 @@
     reparentChoice = null;
     error = null;
     resolving = false;
-    selectedEpicId = null;
-    selectedWorkstreamId = null;
+    selectedEpicId = "";
+    selectedWorkstreamId = "";
   }
 
   function handleClose() {
@@ -131,14 +137,16 @@
       // Initialise epic and workstream selectors from the effective default.
       selectedEpicId =
         epicId !== undefined
-          ? epicId
-          : parentItem?.projectItem.epic ?? null;
+          ? (epicId ?? "")
+          : (parentItem?.projectItem.epic ?? "");
 
       const ws = parentItem?.projectItem.workstream;
       selectedWorkstreamId =
-        ws && "loadState" in ws && ws.loadState === "loaded" ? ws.value : null;
+        ws && "loadState" in ws && ws.loadState === "loaded"
+          ? (ws.value ?? "")
+          : "";
     } catch (e) {
-      error = String(e);
+      error = e instanceof Error ? e.message : JSON.stringify(e);
     } finally {
       resolving = false;
     }
@@ -183,6 +191,7 @@
     }
 
     await context.addChanges(changes);
+    recordTelemetry({ event: "add_item_from_url", has_parent: doSetParent && !!parentId });
     handleClose();
   }
 
@@ -268,7 +277,7 @@
             class="rounded bg-surface-50-950 px-2 py-1 text-sm"
             bind:value={selectedEpicId}
           >
-            <option value={null}>—</option>
+            <option value="">—</option>
             {#each context.data.fields.epic.options as option (option.id)}
               <option value={option.id}>{option.value}</option>
             {/each}
@@ -280,7 +289,7 @@
             class="rounded bg-surface-50-950 px-2 py-1 text-sm"
             bind:value={selectedWorkstreamId}
           >
-            <option value={null}>—</option>
+            <option value="">—</option>
             {#each context.data.fields.workstream.options as option (option.id)}
               <option value={option.id}>{option.value}</option>
             {/each}

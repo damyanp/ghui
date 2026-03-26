@@ -35,6 +35,19 @@ impl MockClient {
             .push_back(response);
         self
     }
+
+    /// Asserts that all queued mock responses were consumed.  Call this after
+    /// `save()` to verify no expected mutations were silently skipped.
+    fn assert_all_consumed(&self) {
+        let responses = self.responses.lock().unwrap();
+        for (keyword, queue) in responses.iter() {
+            assert!(
+                queue.is_empty(),
+                "MockClient: {count} unconsumed response(s) for '{keyword}'",
+                count = queue.len()
+            );
+        }
+    }
 }
 
 impl Client for MockClient {
@@ -322,6 +335,8 @@ async fn test_save_field_change_uses_project_item_id_from_add_to_project() {
 
     // AddToProject returns a ProjectItemId directly.
     assert!(result.contains(&ProjectItemId("PVTI_new".into())));
+    // Verify both mutations were actually executed (none silently skipped).
+    client.assert_all_consumed();
 }
 
 /// Verifies that field changes for an item already in the project are not
