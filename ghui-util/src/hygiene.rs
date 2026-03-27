@@ -48,7 +48,8 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
 
     let fields = get_fields(client).await?;
 
-    let mut changes = items.sanitize(&fields);
+    let report = items.sanitize(&fields);
+    let mut changes = report.changes;
 
     let report_progress = |change: &Change, _, _| {
         println!(

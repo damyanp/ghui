@@ -16,7 +16,7 @@ fn test_closed_issues_set_state_to_closed() {
         .status("Active")
         .add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
 
@@ -27,7 +27,8 @@ fn test_closed_issues_set_state_to_closed() {
         data: ChangeData::Status(closed_option),
     });
 
-    assert_eq!(actual_changes, expected_changes);
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -46,7 +47,7 @@ fn test_set_epic_from_parent() {
         .sub_issues(&[&child_no_epic, &child_wrong_epic, &child_right_epic])
         .add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {
@@ -54,7 +55,29 @@ fn test_set_epic_from_parent() {
         data: ChangeData::Epic(data.fields.epic.option_id(RIGHT_EPIC.into()).cloned()),
     });
 
-    assert_eq!(actual_changes, expected_changes);
+    assert_eq!(report.changes, expected_changes);
+
+    // child_wrong_epic has a conflicting Epic — it must appear in conflicts.
+    assert_eq!(report.epic_conflicts.len(), 1);
+    assert_eq!(report.epic_conflicts[0].work_item_id, child_wrong_epic);
+    assert_eq!(
+        report.epic_conflicts[0].proposed_epic,
+        data.fields
+            .epic
+            .option_id(RIGHT_EPIC.into())
+            .cloned()
+            .unwrap()
+    );
+    assert_eq!(
+        report.epic_conflicts[0].current_epic,
+        data.fields
+            .epic
+            .option_id(WRONG_EPIC.into())
+            .cloned()
+            .unwrap()
+    );
+    // child_right_epic already has the correct Epic — no conflict.
+    let _ = child_right_epic;
 }
 
 #[test]
@@ -76,7 +99,7 @@ fn test_set_epic_from_grandparent() {
 
     let epic = ChangeData::Epic(data.fields.epic.option_id(EPIC.into()).cloned());
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {
@@ -92,7 +115,8 @@ fn test_set_epic_from_grandparent() {
         data: epic.clone(),
     });
 
-    assert_eq!(actual_changes, expected_changes);
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -113,7 +137,7 @@ fn test_set_workstream_from_parent() {
 
     let ws = ChangeData::Workstream(data.fields.workstream.option_id(WS_PARENT.into()).cloned());
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {
@@ -125,7 +149,8 @@ fn test_set_workstream_from_parent() {
         data: ws,
     });
 
-    assert_eq!(actual_changes, expected_changes);
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -137,10 +162,11 @@ fn test_set_workstream_on_blank_parent_from_child() {
     let _child_with_ws = data.build().workstream(WS).add();
     let _child_blank = data.build().add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     // Parent is blank: sanitize does not change workstreams.
-    assert_eq!(actual_changes, Changes::default());
+    assert_eq!(report.changes, Changes::default());
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -152,10 +178,11 @@ fn test_blank_parent_with_conflicting_children_workstreams_no_change() {
 
     data.build().sub_issues(&[&child_ws1, &child_ws2]).add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     // Parent is blank: sanitize does not change workstreams.
-    assert_eq!(actual_changes, Changes::default());
+    assert_eq!(report.changes, Changes::default());
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -164,7 +191,7 @@ fn test_assigned_issue_with_no_status_gets_planning() {
 
     let assigned_item_id = data.build().assignees(&["user1"]).add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     let planning_option = data.fields.status.option_id(Some("Planning")).cloned();
@@ -173,7 +200,8 @@ fn test_assigned_issue_with_no_status_gets_planning() {
         data: ChangeData::Status(planning_option),
     });
 
-    assert_eq!(actual_changes, expected_changes);
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -182,9 +210,10 @@ fn test_assigned_issue_with_status_set_no_change() {
 
     data.build().assignees(&["user1"]).status("Active").add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
-    assert_eq!(actual_changes, Changes::default());
+    assert_eq!(report.changes, Changes::default());
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -193,9 +222,10 @@ fn test_unassigned_issue_with_no_status_no_change() {
 
     data.build().add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
-    assert_eq!(actual_changes, Changes::default());
+    assert_eq!(report.changes, Changes::default());
+    assert!(report.epic_conflicts.is_empty());
 }
 
 #[test]
@@ -208,7 +238,7 @@ fn test_closed_assigned_issue_gets_closed_not_planning() {
         .assignees(&["user1"])
         .add();
 
-    let actual_changes = data.work_items.sanitize(&data.fields);
+    let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     let closed_option = data.fields.status.option_id(Some("Closed")).cloned();
@@ -217,5 +247,46 @@ fn test_closed_assigned_issue_gets_closed_not_planning() {
         data: ChangeData::Status(closed_option),
     });
 
-    assert_eq!(actual_changes, expected_changes);
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
+}
+
+#[test]
+fn test_epic_conflict_recorded_not_changed() {
+    let mut data = TestData::default();
+
+    const PARENT_EPIC: &str = "DML Demo";
+    const CHILD_EPIC: &str = "MiniEngine Demo";
+
+    let child_id = data.build().epic(CHILD_EPIC).add();
+    data.build()
+        .epic(PARENT_EPIC)
+        .sub_issues(&[&child_id])
+        .add();
+
+    let report = data.work_items.sanitize(&data.fields);
+
+    // No change should be staged for the child — the existing Epic is preserved.
+    assert_eq!(report.changes, Changes::default());
+
+    // But the conflict is recorded for the user to review.
+    assert_eq!(report.epic_conflicts.len(), 1);
+    let conflict = &report.epic_conflicts[0];
+    assert_eq!(conflict.work_item_id, child_id);
+    assert_eq!(
+        conflict.current_epic,
+        data.fields
+            .epic
+            .option_id(CHILD_EPIC.into())
+            .cloned()
+            .unwrap()
+    );
+    assert_eq!(
+        conflict.proposed_epic,
+        data.fields
+            .epic
+            .option_id(PARENT_EPIC.into())
+            .cloned()
+            .unwrap()
+    );
 }

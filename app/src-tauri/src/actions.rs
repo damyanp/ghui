@@ -22,11 +22,27 @@ pub async fn convert_tracked_to_sub_issues(
 
 #[tauri::command]
 pub async fn sanitize(data_state: State<'_, DataState>) -> TauriCommandResult<usize> {
-    let count = data_state.sanitize().await?;
+    let (count, conflicts_count) = data_state.sanitize().await?;
     telemetry::record(TelemetryEvent::Sanitize {
         changes_count: count,
+        conflicts_count,
     });
     Ok(count)
+}
+
+/// Stages Epic override changes for items that had conflicts during sanitize.
+///
+/// Each item in `item_ids` that has a matching entry in the stored epic
+/// conflict list will have its override staged as a normal pending change
+/// (undo-tracked) and removed from the conflict list.  IDs that are not
+/// present in the conflict list are silently ignored.
+#[tauri::command]
+pub async fn stage_epic_overrides(
+    data_state: State<'_, DataState>,
+    item_ids: Vec<WorkItemId>,
+) -> TauriCommandResult<()> {
+    data_state.stage_epic_overrides(item_ids).await?;
+    Ok(())
 }
 
 #[tauri::command]

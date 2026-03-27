@@ -4,10 +4,34 @@ use crate::data::{
 };
 
 use super::{Change, ChangeData, Changes, Fields, WorkItem, WorkItemData, WorkItemId};
-use log::warn;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use structdiff::StructDiff;
+use ts_rs::TS;
+
+/// A single Epic conflict found during sanitize: the item already has an Epic
+/// set, but the hierarchy says it should inherit a different one.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SanitizeConflict {
+    pub work_item_id: WorkItemId,
+    /// The Epic currently set on the item.
+    pub current_epic: FieldOptionId,
+    /// The Epic the hierarchy says this item should have.
+    pub proposed_epic: FieldOptionId,
+}
+
+/// The result of a `sanitize()` call.
+///
+/// `changes` are the staged field updates (items with no conflicts).
+/// `epic_conflicts` are items that already have an Epic and were therefore
+/// skipped — the caller can present these for user review.
+#[derive(Debug, Default)]
+pub struct SanitizeReport {
+    pub changes: Changes,
+    pub epic_conflicts: Vec<SanitizeConflict>,
+}
 
 #[derive(Default, Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct WorkItems {
@@ -118,8 +142,8 @@ impl WorkItems {
         changes
     }
 
-    pub fn sanitize(&self, fields: &Fields) -> Changes {
-        let mut changes = Changes::default();
+    pub fn sanitize(&self, fields: &Fields) -> SanitizeReport {
+        let mut report = SanitizeReport::default();
 
         let closed_option_id = fields.status.option_id("Closed".into()).cloned();
         let bug_kind_id = fields.kind.option_id("Bug".into()).cloned();
@@ -128,7 +152,7 @@ impl WorkItems {
         for item in self.work_items.values() {
             // Closed items should have status set to Closed
             if *item.is_closed().expect_loaded() && item.project_item.status != closed_option_id {
-                changes.add(Change {
+                report.changes.add(Change {
                     work_item_id: item.id.clone(),
                     data: ChangeData::Status(closed_option_id.clone()),
                 });
@@ -141,7 +165,7 @@ impl WorkItems {
                 if *kind == bug_kind_id
                     && issue.issue_type.expect_loaded().as_deref() != Some("Bug")
                 {
-                    changes.add(Change {
+                    report.changes.add(Change {
                         work_item_id: item.id.clone(),
                         data: ChangeData::IssueType(Some("Bug".to_owned())),
                     });
@@ -154,7 +178,7 @@ impl WorkItems {
                     && item.project_item.status.is_none()
                     && !*item.is_closed().expect_loaded()
                 {
-                    changes.add(Change {
+                    report.changes.add(Change {
                         work_item_id: item.id.clone(),
                         data: ChangeData::Status(planning_option_id.clone()),
                     });
@@ -163,13 +187,12 @@ impl WorkItems {
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(fields, self, &mut changes, &root_item_id, &None, &None);
+            sanitize_issue_hierarchy(self, &mut report, &root_item_id, &None, &None);
         }
 
         fn sanitize_issue_hierarchy(
-            fields: &Fields,
             items: &WorkItems,
-            changes: &mut Changes,
+            report: &mut SanitizeReport,
             id: &WorkItemId,
             epic: &Option<FieldOptionId>,
             parent_workstream: &Option<FieldOptionId>,
@@ -178,15 +201,16 @@ impl WorkItems {
                 let this_item_epic = &item.project_item.epic;
 
                 if epic.is_some() && item.project_item.epic != *epic {
-                    if this_item_epic.is_some() {
-                        warn!(
-                            "{} - epic is '{}', should be '{}' - but not changing non-blank value",
-                            item.describe(),
-                            fields.epic.option_name(this_item_epic.as_ref()).unwrap(),
-                            fields.epic.option_name(epic.as_ref()).unwrap()
-                        );
+                    if let Some(current) = this_item_epic {
+                        // Item already has a different Epic — record the conflict
+                        // so the user can review and selectively override it.
+                        report.epic_conflicts.push(SanitizeConflict {
+                            work_item_id: id.clone(),
+                            current_epic: current.clone(),
+                            proposed_epic: epic.clone().unwrap(),
+                        });
                     } else {
-                        changes.add(Change {
+                        report.changes.add(Change {
                             work_item_id: id.clone(),
                             data: ChangeData::Epic(epic.clone()),
                         });
@@ -204,7 +228,7 @@ impl WorkItems {
                 if let Some(parent_ws) = parent_workstream {
                     let current_ws = item.project_item.workstream.expect_loaded();
                     if current_ws.as_ref() != Some(parent_ws) {
-                        changes.add(Change {
+                        report.changes.add(Change {
                             work_item_id: id.clone(),
                             data: ChangeData::Workstream(Some(parent_ws.clone())),
                         });
@@ -217,26 +241,19 @@ impl WorkItems {
                     let this_workstream = item.project_item.workstream.expect_loaded().clone();
 
                     for child_id in &issue.sub_issues {
-                        sanitize_issue_hierarchy(
-                            fields,
-                            items,
-                            changes,
-                            child_id,
-                            epic,
-                            &this_workstream,
-                        );
+                        sanitize_issue_hierarchy(items, report, child_id, epic, &this_workstream);
                     }
                 }
             } else {
                 // This work item isn't in the project - add it
-                changes.add(Change {
+                report.changes.add(Change {
                     work_item_id: id.clone(),
                     data: ChangeData::AddToProject,
                 });
             }
         }
 
-        changes
+        report
     }
 }
 

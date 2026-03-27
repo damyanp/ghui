@@ -14,6 +14,7 @@
     ChartGantt,
     Eye,
     EyeOff,
+    GitBranch,
     ListTree,
     LinkIcon,
     Redo2,
@@ -28,6 +29,7 @@
   import LogPanel from "../components/LogPanel.svelte";
   import PendingChangesDialog from "../components/PendingChangesDialog.svelte";
   import AddItemDialog from "../components/AddItemDialog.svelte";
+  import EpicConflictsPanel from "../components/EpicConflictsPanel.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
     WorkItemExecutionTrackerContext,
@@ -50,10 +52,12 @@
   const numChanges = $derived(Object.keys(context.data.changes.data).length);
   const canUndo = $derived(context.data.canUndo);
   const canRedo = $derived(context.data.canRedo);
+  const numEpicConflicts = $derived(context.data.epicConflicts.length);
 
   let saveProgress = $state(0);
   let pendingChangesOpen = $state(false);
   let addItemDialogOpen = $state(false);
+  let epicConflictsOpen = $state(false);
   let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
@@ -207,6 +211,15 @@
         disabled={disabled}
         onclick={() => runBusy(() => context.sanitize())}
       />
+      <AppBarButton
+        icon={GitBranch}
+        text="Epic Conflicts"
+        disabled={!numEpicConflicts || disabled}
+        badge={numEpicConflicts > 0 ? numEpicConflicts : undefined}
+        onclick={() => {
+          epicConflictsOpen = true;
+        }}
+      />
 
       <div class="w-3"></div>
 
@@ -282,6 +295,7 @@
 
   <PendingChangesDialog bind:open={pendingChangesOpen} />
   <AddItemDialog bind:open={addItemDialogOpen} />
+  <EpicConflictsPanel bind:open={epicConflictsOpen} />
 
   <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
     {#if mode === "items"}
