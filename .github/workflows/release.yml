@@ -21,8 +21,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        # Need a token that can push back to main
-        token: ${{ secrets.GITHUB_TOKEN }}
+        # Need a PAT to push back to main (bypasses rulesets)
+        token: ${{ secrets.RELEASE_PAT }}
 
     - name: Bump version numbers
       shell: pwsh
