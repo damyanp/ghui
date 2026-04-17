@@ -51,6 +51,7 @@
 <script lang="ts" generics="T">
   import dayjs from "dayjs";
   import { Copy, ZoomIn, ZoomOut } from "@lucide/svelte";
+  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
   import {
     ExecutionTrackerContext,
     getExecutionTrackerContext,
@@ -357,7 +358,7 @@
       <button
         class="btn-icon preset-filled opacity-0 transition-opacity group-hover:opacity-100"
         onclick={() =>
-          navigator.clipboard.writeText(JSON.stringify(data, undefined, " "))}
+          writeText(JSON.stringify(data, undefined, " "))}
         ><Copy /></button
       >
     </div>

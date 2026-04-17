@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Modal } from "@skeletonlabs/skeleton-svelte";
+  import { readText } from "@tauri-apps/plugin-clipboard-manager";
   import { getWorkItemContext, recordTelemetry } from "$lib/WorkItemContext.svelte";
   import type { Change } from "$lib/bindings/Change";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
@@ -79,8 +80,10 @@
   });
 
   function prefillFromClipboard() {
-    navigator.clipboard
-      .readText()
+    // Use the Tauri clipboard plugin instead of navigator.clipboard to avoid
+    // triggering WebView2's native permission prompt, which can appear after
+    // the dialog is closed and leave the app in an unresponsive state.
+    readText()
       .then((text) => {
         const trimmed = text.trim();
         if (!open || url !== "") {
