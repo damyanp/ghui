@@ -47,6 +47,17 @@
   ) {
     addItemParentId = parentId;
     addItemEpicId = epicId;
+    // Workaround for a bits-ui (ContextMenu) <-> @zag-js/dialog (Modal) interaction:
+    // when this runs from a ContextMenu item's onSelect, bits-ui has just set
+    // `body.style.pointerEvents = "none"` and won't restore it for ~24ms. The
+    // Skeleton Modal is built on zag-js's dialog, which on open captures the
+    // current `body.style.pointerEvents` as the "original" value to restore on
+    // close. If it captures "none", closing the dialog leaves the body frozen
+    // (https://github.com/huntabyte/bits-ui/issues/1639 covers a similar race).
+    // Clear it explicitly so zag captures an empty string.
+    if (typeof document !== "undefined") {
+      document.body.style.pointerEvents = "";
+    }
     addItemDialogOpen = true;
   }
 
