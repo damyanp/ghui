@@ -51,6 +51,7 @@ pub fn run() {
             data::watch_data,
             data::force_refresh_data,
             data::update_items,
+            data::load_all_work_items,
             data::delete_changes,
             data::set_preview_changes,
             data::save_changes,

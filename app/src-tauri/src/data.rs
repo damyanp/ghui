@@ -39,6 +39,17 @@ pub async fn update_items(
     Ok(())
 }
 
+/// Loads the full field data for every work item that isn't already fully
+/// loaded. Uses the backend batch loader (`DataState::load_all_work_items`)
+/// which fetches in chunks of 50 and awaits all results. Returns only once
+/// every chunk has completed so callers can use the returned promise to drive
+/// a loading state.
+#[tauri::command]
+pub async fn load_all_work_items(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
+    data_state.load_all_work_items(false).await?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn delete_changes(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
     let count = data_state.lock().await.changes_count();

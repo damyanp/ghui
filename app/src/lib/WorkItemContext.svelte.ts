@@ -139,6 +139,15 @@ export class WorkItemContext {
     this.itemUpdateBatcher.add(workItemId, false);
   }
 
+  /**
+   * Triggers the backend to load full field data for every work item that
+   * isn't already loaded. Resolves only after every chunk has completed, so
+   * callers can use the returned promise to drive a loading indicator.
+   */
+  public async loadAllWorkItems(): Promise<void> {
+    await invoke("load_all_work_items");
+  }
+
   public async convertTrackedIssuesToSubIssue(id: WorkItemId) {
     await invoke("convert_tracked_to_sub_issues", {
       id,

@@ -16,5 +16,10 @@ export type Data = {
   changes: Changes;
   canUndo: boolean;
   canRedo: boolean;
+  /**
+   * Epic conflicts found during the last sanitize run.  Each entry
+   * represents an item whose existing Epic was not overwritten; the user
+   * can review these and selectively stage the override.
+   */
   epicConflicts: Array<SanitizeConflict>;
 };

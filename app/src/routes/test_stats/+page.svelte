@@ -248,11 +248,12 @@
 
   const mockContext: Pick<
     WorkItemContext,
-    "data" | "getFieldOption" | "updateWorkItem" | "loadProgress"
+    "data" | "getFieldOption" | "updateWorkItem" | "loadProgress" | "loadAllWorkItems"
   > = {
     data: mockData,
     loadProgress: 0,
     async updateWorkItem() {},
+    async loadAllWorkItems() {},
     getFieldOption(fieldName: keyof Fields, id: FieldOptionId | null) {
       if (!id) return undefined;
       const field = this.data.fields[fieldName];

@@ -24,12 +24,13 @@
     "bg-error-700",
   ];
   const MIN_PROGRESS_BAR_WIDTH_PERCENT = 4;
-  const MAX_LOAD_ATTEMPTS_PER_ISSUE = 3;
-  const MAX_IN_FLIGHT_LOAD_REQUESTS = 8;
+  const STALL_THRESHOLD_MS = 10_000;
+  const MAX_RECENT_PROGRESS_EVENTS = 10;
+  const MAX_DEBUG_PENDING_IDS = 20;
 
   type StatisticsContext = Pick<
     WorkItemContext,
-    "data" | "getFieldOption" | "updateWorkItem" | "loadProgress"
+    "data" | "getFieldOption" | "updateWorkItem" | "loadProgress" | "loadAllWorkItems"
   >;
 
   type Props = {
@@ -89,15 +90,17 @@
       .sort((a, b) => b.total - a.total);
   });
 
-  let isIssueLoadFailed = $state<Record<string, true>>({});
-  let loadAttemptsByIssue = $state<Record<string, number>>({});
+  let isLoadingAll = $state(false);
+  let loadError = $state<string | null>(null);
+  let lastProgressEvents = $state<
+    Array<{ timestamp: number; pendingCount: number; loadedCount: number }>
+  >([]);
+  let lastProgressAt = $state<number | null>(null);
+  let now = $state(Date.now());
 
   const pendingIssueIds = $derived.by(() =>
     issueItems
-      .filter(
-        (issue) =>
-          !isIssueLoadedForStatistics(issue) && !isIssueLoadFailed[issue.id]
-      )
+      .filter((issue) => !isIssueLoadedForStatistics(issue))
       .map((issue) => issue.id)
   );
 
@@ -126,72 +129,131 @@
       .sort((a, b) => b.count - a.count);
   });
 
-  const requestedLoadIds = new Set<string>();
-  function markIssueLoadFailed(issueId: string): void {
-    if (!isIssueLoadFailed[issueId]) {
-      isIssueLoadFailed = { ...isIssueLoadFailed, [issueId]: true };
-    }
-  }
-
+  // Record a progress event whenever the pending count changes.
   $effect(() => {
-    const pendingSet = new Set(pendingIssueIds);
-    const issueIdSet = new Set(issueItems.map((issue) => issue.id));
-
-    let shouldUpdateFailedIssues = false;
-    const nextFailedIssues: Record<string, true> = {};
-    for (const issueId of Object.keys(isIssueLoadFailed)) {
-      if (issueIdSet.has(issueId)) {
-        nextFailedIssues[issueId] = true;
-      } else {
-        shouldUpdateFailedIssues = true;
-      }
-    }
-    if (shouldUpdateFailedIssues) {
-      isIssueLoadFailed = nextFailedIssues;
-    }
-
-    let shouldUpdateAttempts = false;
-    const nextLoadAttempts: Record<string, number> = {};
-    for (const [issueId, attempts] of Object.entries(loadAttemptsByIssue)) {
-      if (issueIdSet.has(issueId)) {
-        nextLoadAttempts[issueId] = attempts;
-      } else {
-        shouldUpdateAttempts = true;
-      }
-    }
-    if (shouldUpdateAttempts) {
-      loadAttemptsByIssue = nextLoadAttempts;
-    }
-
-    for (const issueId of [...requestedLoadIds]) {
-      if (!issueIdSet.has(issueId)) requestedLoadIds.delete(issueId);
-    }
-
-    for (const issueId of pendingIssueIds) {
-      if (requestedLoadIds.size >= MAX_IN_FLIGHT_LOAD_REQUESTS) break;
-      if (requestedLoadIds.has(issueId)) continue;
-      const attempts = loadAttemptsByIssue[issueId] ?? 0;
-      if (attempts >= MAX_LOAD_ATTEMPTS_PER_ISSUE) {
-        markIssueLoadFailed(issueId);
-        continue;
-      }
-
-      loadAttemptsByIssue = { ...loadAttemptsByIssue, [issueId]: attempts + 1 };
-      requestedLoadIds.add(issueId);
-      context
-        .updateWorkItem(issueId)
-        .catch(() => {
-          console.warn(`Failed to load statistics data for issue ${issueId}`);
-        })
-        .finally(() => {
-          requestedLoadIds.delete(issueId);
-        });
-    }
-
-    for (const issueId of [...requestedLoadIds]) {
-      if (!pendingSet.has(issueId)) requestedLoadIds.delete(issueId);
+    const loadedCount = issueItems.length - pendingIssueIds.length;
+    const pendingCount = pendingIssueIds.length;
+    const last = lastProgressEvents[lastProgressEvents.length - 1];
+    if (
+      last === undefined ||
+      last.pendingCount !== pendingCount ||
+      last.loadedCount !== loadedCount
+    ) {
+      const event = { timestamp: Date.now(), pendingCount, loadedCount };
+      lastProgressEvents = [
+        ...lastProgressEvents.slice(-(MAX_RECENT_PROGRESS_EVENTS - 1)),
+        event,
+      ];
+      lastProgressAt = event.timestamp;
     }
   });
+
+  // Kick off a single batch load of every missing item on mount (and whenever
+  // the backend reports new items that need loading). `loadAllWorkItems()`
+  // awaits all chunks in the backend, so its promise actually represents
+  // completion — unlike `updateWorkItem()` which was fire-and-forget.
+  $effect(() => {
+    if (isLoadingAll) return;
+    if (pendingIssueIds.length === 0) return;
+    if (context.loadAllWorkItems === undefined) return;
+
+    console.debug(
+      `[WorkItemStatistics] loadAllWorkItems start; ${pendingIssueIds.length} pending issue(s)`
+    );
+    isLoadingAll = true;
+    loadError = null;
+    context
+      .loadAllWorkItems()
+      .catch((e: unknown) => {
+        loadError = e instanceof Error ? e.message : String(e);
+        console.warn("[WorkItemStatistics] loadAllWorkItems failed", e);
+      })
+      .finally(() => {
+        isLoadingAll = false;
+        console.debug("[WorkItemStatistics] loadAllWorkItems finished");
+      });
+  });
+
+  // Tick `now` once a second while we're still waiting, so the stall detector
+  // re-evaluates without needing a data update.
+  $effect(() => {
+    if (pendingIssueIds.length === 0) return;
+    const handle = setInterval(() => {
+      now = Date.now();
+    }, 1000);
+    return () => clearInterval(handle);
+  });
+
+  const elapsedSinceLastProgressMs = $derived(
+    lastProgressAt === null ? 0 : now - lastProgressAt
+  );
+  const isStalled = $derived(
+    pendingIssueIds.length > 0 &&
+      lastProgressAt !== null &&
+      elapsedSinceLastProgressMs > STALL_THRESHOLD_MS
+  );
+
+  // Debug panel is opt-in via `?debug=1` on the URL.
+  const debugEnabled = $derived.by(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return new URLSearchParams(window.location.search).get("debug") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  // Per-field pending breakdown: how many pending issues are missing each
+  // individual field. Helps identify a field that never resolves.
+  const pendingByField = $derived.by(() => {
+    const counts = { epic: 0, status: 0, kind: 0, workstream: 0 };
+    for (const issue of issueItems) {
+      if (!isLoadedFieldValueLoaded(issue, "epic")) counts.epic += 1;
+      if (!isLoadedFieldValueLoaded(issue, "status")) counts.status += 1;
+      if (!isDelayLoadedFieldValueLoaded(issue, "kind")) counts.kind += 1;
+      if (!isDelayLoadedFieldValueLoaded(issue, "workstream"))
+        counts.workstream += 1;
+    }
+    return counts;
+  });
+
+  const debugPendingIds = $derived(pendingIssueIds.slice(0, MAX_DEBUG_PENDING_IDS));
+
+  function buildDiagnostics() {
+    return {
+      generatedAt: new Date().toISOString(),
+      totals: {
+        issues: issueItems.length,
+        loaded: issueItems.length - pendingIssueIds.length,
+        pending: pendingIssueIds.length,
+      },
+      progressPercent: statisticsLoadProgressPercent,
+      isLoadingAll,
+      loadError,
+      isStalled,
+      elapsedSinceLastProgressMs,
+      pendingByField,
+      pendingIssueIds: debugPendingIds.map((id) => ({
+        id,
+        title: context.data.workItems[id]?.title ?? null,
+      })),
+      recentProgressEvents: lastProgressEvents.map((e) => ({
+        at: new Date(e.timestamp).toISOString(),
+        loaded: e.loadedCount,
+        pending: e.pendingCount,
+      })),
+    };
+  }
+
+  async function copyDiagnostics() {
+    const json = JSON.stringify(buildDiagnostics(), null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch (e) {
+      console.warn("[WorkItemStatistics] copy diagnostics failed", e);
+      console.info("[WorkItemStatistics] diagnostics payload:\n" + json);
+    }
+  }
 
   function getPivotValues(item: IssueWorkItem, pivot: PivotField): string[] {
     switch (pivot) {
@@ -329,15 +391,107 @@
   {#if pendingIssueIds.length > 0}
     <div class="mb-4 rounded border border-surface-300-700 p-3">
       <div class="mb-2 flex items-center justify-between text-sm">
-        <span>Loading issue field data for statistics…</span>
+        <span>
+          {#if isStalled}
+            Stalled waiting on {pendingIssueIds.length} issue{pendingIssueIds.length ===
+            1
+              ? ""
+              : "s"} (no progress in {Math.round(elapsedSinceLastProgressMs / 1000)}s)
+          {:else}
+            Loading issue field data for statistics…
+            ({issueItems.length - pendingIssueIds.length}/{issueItems.length})
+          {/if}
+        </span>
         <span class="tabular-nums">{statisticsLoadProgressPercent}%</span>
       </div>
       <div class="h-2 overflow-hidden rounded bg-surface-200-800">
         <div
-          class="h-full bg-primary-500 transition-[width] duration-200"
+          class={`h-full transition-[width] duration-200 ${isStalled ? "bg-warning-500" : "bg-primary-500"}`}
           style={`width: ${Math.max(MIN_PROGRESS_BAR_WIDTH_PERCENT, statisticsLoadProgress * 100)}%`}
         ></div>
       </div>
+      {#if loadError}
+        <div class="mt-2 text-xs text-error-500">
+          Load error: {loadError}
+        </div>
+      {/if}
+      {#if isStalled || debugEnabled}
+        <button
+          type="button"
+          class="mt-2 text-xs underline text-primary-700-300"
+          onclick={copyDiagnostics}
+        >
+          Copy diagnostics JSON
+        </button>
+      {/if}
+    </div>
+  {/if}
+
+  {#if debugEnabled && (pendingIssueIds.length > 0 || lastProgressEvents.length > 0)}
+    <div
+      class="mb-4 rounded border border-surface-300-700 bg-surface-100-900 p-3 text-xs"
+    >
+      <div class="mb-2 font-semibold">Statistics loader debug</div>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div>Total issues</div>
+        <div class="tabular-nums">{issueItems.length}</div>
+        <div>Loaded</div>
+        <div class="tabular-nums">
+          {issueItems.length - pendingIssueIds.length}
+        </div>
+        <div>Pending</div>
+        <div class="tabular-nums">{pendingIssueIds.length}</div>
+        <div>Loader in flight</div>
+        <div>{isLoadingAll ? "yes" : "no"}</div>
+        <div>Last progress</div>
+        <div>
+          {lastProgressAt === null
+            ? "(none)"
+            : `${Math.round(elapsedSinceLastProgressMs / 1000)}s ago`}
+        </div>
+        <div>Stalled</div>
+        <div>{isStalled ? "yes" : "no"}</div>
+        <div>Missing epic</div>
+        <div class="tabular-nums">{pendingByField.epic}</div>
+        <div>Missing status</div>
+        <div class="tabular-nums">{pendingByField.status}</div>
+        <div>Missing kind</div>
+        <div class="tabular-nums">{pendingByField.kind}</div>
+        <div>Missing workstream</div>
+        <div class="tabular-nums">{pendingByField.workstream}</div>
+      </div>
+
+      {#if debugPendingIds.length > 0}
+        <div class="mt-3 font-semibold">
+          First {debugPendingIds.length} pending issue(s)
+        </div>
+        <ul class="mt-1 list-disc pl-5 max-h-40 overflow-y-auto">
+          {#each debugPendingIds as id}
+            <li class="truncate">
+              <span class="font-mono">{id}</span>
+              {#if context.data.workItems[id]?.title}
+                — {context.data.workItems[id]?.title}
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
+      {#if lastProgressEvents.length > 0}
+        <div class="mt-3 font-semibold">Recent progress events</div>
+        <ul class="mt-1 list-disc pl-5 max-h-40 overflow-y-auto">
+          {#each [...lastProgressEvents].reverse() as event}
+            <li>
+              <span class="tabular-nums"
+                >{new Date(event.timestamp)
+                  .toISOString()
+                  .substring(11, 19)}</span
+              >
+              — loaded {event.loadedCount}, pending {event.pendingCount}
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </div>
   {/if}
 
