@@ -152,10 +152,22 @@
   // the backend reports new items that need loading). `loadAllWorkItems()`
   // awaits all chunks in the backend, so its promise actually represents
   // completion — unlike `updateWorkItem()` which was fire-and-forget.
+  //
+  // After a run completes we record which issue IDs were still pending, and
+  // we refuse to re-fire while the pending set is unchanged from that
+  // snapshot. That prevents a runaway loop if some pending items are never
+  // reachable by the backend loader (e.g. a frontend "loaded" predicate that
+  // disagrees with the backend's `is_loaded()`).
+  let lastAttemptedPendingKey = $state<string | null>(null);
+
   $effect(() => {
     if (isLoadingAll) return;
     if (pendingIssueIds.length === 0) return;
     if (context.loadAllWorkItems === undefined) return;
+
+    const pendingKey = pendingIssueIds.join(",");
+    if (pendingKey === lastAttemptedPendingKey) return;
+    lastAttemptedPendingKey = pendingKey;
 
     console.debug(
       `[WorkItemStatistics] loadAllWorkItems start; ${pendingIssueIds.length} pending issue(s)`
@@ -308,7 +320,12 @@
     item: IssueWorkItem,
     fieldName: LoadedField
   ): boolean {
-    return typeof item.projectItem[fieldName] !== "object";
+    // `null` is a valid loaded value (the field is intentionally unset). It's
+    // only `{ loadState: ... }` shapes that mean "not loaded yet". Note that
+    // `typeof null === "object"` in JS, so we have to special-case `null`
+    // before the typeof check.
+    const value = item.projectItem[fieldName];
+    return value === null || typeof value !== "object";
   }
 
   function isDelayLoadedFieldValueLoaded(

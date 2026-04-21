@@ -563,6 +563,10 @@ impl DataState {
                 .collect();
             drop(app_state);
 
+            if project_item_ids.is_empty() {
+                return Ok(());
+            }
+
             info!("Loading {} items....", project_item_ids.len());
 
             let join_handles = JoinSet::from_iter(
