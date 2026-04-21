@@ -114,7 +114,9 @@
   onDestroy(() => {
     if (refreshSummaryTimer) {
       clearTimeout(refreshSummaryTimer);
+      refreshSummaryTimer = null;
     }
+    refreshSummaryMessage = null;
   });
 
   async function saveChanges() {

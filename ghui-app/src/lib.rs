@@ -239,7 +239,14 @@ impl AppState {
     }
 
     pub async fn force_refresh(&mut self) -> Result<(usize, usize)> {
-        let previous_work_items = self.work_items.clone();
+        let previous_work_items = self.work_items.as_ref().map(|work_items| {
+            HashMap::from_iter(
+                work_items
+                    .work_items
+                    .iter()
+                    .map(|(id, item)| (id.clone(), item.updated_at.clone())),
+            )
+        });
         self.refresh(true).await?;
 
         if let Some(work_items) = &self.work_items {
@@ -654,17 +661,17 @@ fn get_appdata_path(name: &str) -> PathBuf {
 }
 
 fn summarize_refresh_changes(
-    previous_work_items: Option<&WorkItems>,
+    previous_updated_at: Option<&HashMap<WorkItemId, String>>,
     current_work_items: &WorkItems,
 ) -> (usize, usize) {
     let mut new_items = 0;
     let mut updated_items = 0;
 
     for (id, item) in &current_work_items.work_items {
-        if let Some(previous_work_items) = previous_work_items
-            && let Some(previous_item) = previous_work_items.get(id)
+        if let Some(previous_updated_at) = previous_updated_at
+            && let Some(previous_item_updated_at) = previous_updated_at.get(id)
         {
-            if previous_item.updated_at != item.updated_at {
+            if previous_item_updated_at != &item.updated_at {
                 updated_items += 1;
             }
         } else {
@@ -772,8 +779,16 @@ mod tests {
             .unwrap()
             .updated_at = "same".to_string();
 
+        let previous_updated_at = HashMap::from_iter(
+            previous_data
+                .work_items
+                .work_items
+                .iter()
+                .map(|(id, item)| (id.clone(), item.updated_at.clone())),
+        );
+
         let (new_items, updated_items) =
-            summarize_refresh_changes(Some(&previous_data.work_items), &current_work_items);
+            summarize_refresh_changes(Some(&previous_updated_at), &current_work_items);
 
         assert_eq!((new_items, updated_items), (1, 1));
     }
