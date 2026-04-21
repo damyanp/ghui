@@ -178,10 +178,14 @@
 
       loadAttemptsByIssue = { ...loadAttemptsByIssue, [issueId]: attempts + 1 };
       requestedLoadIds.add(issueId);
-      context.updateWorkItem(issueId).catch(() => {
-        console.warn(`Failed to load statistics data for issue ${issueId}`);
-        requestedLoadIds.delete(issueId);
-      });
+      context
+        .updateWorkItem(issueId)
+        .catch(() => {
+          console.warn(`Failed to load statistics data for issue ${issueId}`);
+        })
+        .finally(() => {
+          requestedLoadIds.delete(issueId);
+        });
     }
 
     for (const issueId of [...requestedLoadIds]) {
