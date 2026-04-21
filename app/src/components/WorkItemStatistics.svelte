@@ -10,6 +10,15 @@
   type IssueWorkItem = WorkItem & { data: { type: "issue" } & Issue };
   const MIN_BAR_OPACITY = 0.35;
   const BAR_OPACITY_RANGE = 0.65;
+  const SEGMENT_COLOR_CLASSES = [
+    "bg-primary-500",
+    "bg-secondary-500",
+    "bg-tertiary-500",
+    "bg-success-500",
+    "bg-warning-500",
+    "bg-error-500",
+    "bg-surface-500",
+  ];
 
   type StatisticsContext = Pick<WorkItemContext, "data" | "getFieldOption">;
 
@@ -37,11 +46,14 @@
     for (const issue of issueItems) {
       const kind = getKind(issue);
       const pivotValues = getPivotValues(issue, pivotField);
-      const bucket = grouped.get(kind) ?? new Map<string, number>();
+      let bucket = grouped.get(kind);
+      if (!bucket) {
+        bucket = new Map<string, number>();
+        grouped.set(kind, bucket);
+      }
       for (const pivotValue of pivotValues) {
         bucket.set(pivotValue, (bucket.get(pivotValue) ?? 0) + 1);
       }
-      grouped.set(kind, bucket);
     }
 
     return [...grouped.entries()]
@@ -85,7 +97,7 @@
           : ["(unassigned)"];
       case "epic":
       case "status":
-        return [getFieldValueLabel(item, pivot)];
+        return [getLoadedFieldValueLabel(item, pivot)];
       case "workstream":
         return [getDelayLoadFieldValueLabel(item, pivot)];
       default: {
@@ -95,7 +107,10 @@
     }
   }
 
-  function getFieldValueLabel(item: IssueWorkItem, fieldName: LoadedField): string {
+  function getLoadedFieldValueLabel(
+    item: IssueWorkItem,
+    fieldName: LoadedField
+  ): string {
     const fieldValue = item.projectItem[fieldName];
     if (typeof fieldValue === "object") return "(not loaded)";
     return context.getFieldOption(fieldName, fieldValue) ?? "(none)";
@@ -114,24 +129,15 @@
   }
 
   function getSegmentColor(name: string): string {
-    const colorClasses = [
-      "bg-primary-500",
-      "bg-secondary-500",
-      "bg-tertiary-500",
-      "bg-success-500",
-      "bg-warning-500",
-      "bg-error-500",
-      "bg-surface-500",
-    ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
       hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
     }
-    return colorClasses[hash % colorClasses.length];
+    return SEGMENT_COLOR_CLASSES[hash % SEGMENT_COLOR_CLASSES.length];
   }
 
   function isIssueWorkItem(item: WorkItem | undefined): item is IssueWorkItem {
-    return item?.data.type === "issue";
+    return item !== undefined && item.data.type === "issue";
   }
 </script>
 
