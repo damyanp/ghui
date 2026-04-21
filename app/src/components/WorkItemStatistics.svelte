@@ -24,6 +24,7 @@
     "bg-error-700",
   ];
   const MIN_PROGRESS_BAR_WIDTH_PERCENT = 4;
+  const MAX_LOAD_ATTEMPTS_PER_ISSUE = 3;
 
   type StatisticsContext = Pick<
     WorkItemContext,
@@ -87,9 +88,16 @@
       .sort((a, b) => b.total - a.total);
   });
 
+  let isIssueLoadFailed = $state<Record<string, true>>({});
+  let loadAttemptsByIssue = $state<Record<string, number>>({});
+  let trackedIssueKey = $state("");
+
   const pendingIssueIds = $derived.by(() =>
     issueItems
-      .filter((issue) => !isIssueLoadedForStatistics(issue))
+      .filter(
+        (issue) =>
+          !isIssueLoadedForStatistics(issue) && !isIssueLoadFailed[issue.id]
+      )
       .map((issue) => issue.id)
   );
 
@@ -119,11 +127,34 @@
   });
 
   const requestedLoadIds = new Set<string>();
+  function markIssueLoadFailed(issueId: string): void {
+    if (!isIssueLoadFailed[issueId]) {
+      isIssueLoadFailed = { ...isIssueLoadFailed, [issueId]: true };
+    }
+  }
+
+  $effect(() => {
+    const nextIssueKey = issueItems.map((issue) => issue.id).join("|");
+    if (nextIssueKey === trackedIssueKey) return;
+
+    trackedIssueKey = nextIssueKey;
+    isIssueLoadFailed = {};
+    loadAttemptsByIssue = {};
+    requestedLoadIds.clear();
+  });
+
   $effect(() => {
     const pendingSet = new Set(pendingIssueIds);
 
     for (const issueId of pendingIssueIds) {
       if (requestedLoadIds.has(issueId)) continue;
+      const attempts = loadAttemptsByIssue[issueId] ?? 0;
+      if (attempts >= MAX_LOAD_ATTEMPTS_PER_ISSUE) {
+        markIssueLoadFailed(issueId);
+        continue;
+      }
+
+      loadAttemptsByIssue = { ...loadAttemptsByIssue, [issueId]: attempts + 1 };
       requestedLoadIds.add(issueId);
       context.updateWorkItem(issueId).catch(() => {
         console.warn(`Failed to load statistics data for issue ${issueId}`);
@@ -286,10 +317,6 @@
 
   {#if issueItems.length === 0}
     <div class="text-surface-700-300">No filtered issues to chart.</div>
-  {:else if pendingIssueIds.length > 0}
-    <div class="text-surface-700-300">
-      Preparing chart with fully loaded issue data ({issueItems.length - pendingIssueIds.length}/{issueItems.length}).
-    </div>
   {:else if chartRows.length === 0}
     <div class="text-surface-700-300">No filtered issues to chart.</div>
   {:else}
