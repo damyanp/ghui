@@ -2,7 +2,7 @@ use crate::TauriCommandResult;
 use ghui_app::{
     load_work_items_extra_data, save_work_items_extra_data,
     telemetry::{self, TelemetryEvent},
-    DataState, DataUpdate, Filters, ItemToUpdate,
+    DataState, DataUpdate, Filters, ItemToUpdate, RefreshSummary,
 };
 use tauri::{ipc::Channel, State};
 
@@ -24,7 +24,7 @@ pub async fn watch_data(
 #[tauri::command]
 pub async fn force_refresh_data(
     data_state: State<'_, DataState>,
-) -> TauriCommandResult<(usize, usize)> {
+) -> TauriCommandResult<RefreshSummary> {
     telemetry::record(TelemetryEvent::Refresh);
     let mut data_state = data_state.lock().await;
     Ok(data_state.force_refresh().await?)

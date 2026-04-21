@@ -16,6 +16,7 @@ import type { ProjectItem } from "./bindings/ProjectItem";
 import type { LogEntry } from "./bindings/LogEntry";
 import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
+import type { RefreshSummary } from "./bindings/RefreshSummary";
 
 const key = Symbol("WorkItemContext");
 
@@ -129,8 +130,8 @@ export class WorkItemContext {
     this.unreadErrorCount = 0;
   }
 
-  public async refresh(): Promise<[number, number]> {
-    return await invoke<[number, number]>("force_refresh_data");
+  public async refresh(): Promise<RefreshSummary> {
+    return await invoke<RefreshSummary>("force_refresh_data");
   }
 
   itemUpdateBatcher = new ItemUpdateBatcher();

@@ -37,6 +37,7 @@
   } from "../components/WorkItemExecutionTracker.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import type { ReleaseInfo } from "$lib/bindings/ReleaseInfo";
+  import type { RefreshSummary } from "$lib/bindings/RefreshSummary";
 
   const context = setWorkItemContext(new WorkItemContext());
   setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
@@ -69,7 +70,10 @@
   let updateInfo = $state<ReleaseInfo | null>(null);
   let updateCheckState = $state<"idle" | "checking" | "downloading">("idle");
 
-  function showRefreshSummary([newItems, updatedItems]: [number, number]): void {
+  function showRefreshSummary({
+    newItems,
+    updatedItems,
+  }: RefreshSummary): void {
     const parts: string[] = [];
     if (newItems > 0) {
       parts.push(`${newItems} new ${newItems === 1 ? "item" : "items"}`);
