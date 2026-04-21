@@ -771,6 +771,8 @@ mod tests {
 
         let mut current_work_items = previous_data.work_items.clone();
         let mut new_data = TestData::default();
+        new_data.next_id();
+        new_data.next_id();
         let new_id = new_data.build().status("Active").add();
         let new_item = new_data.work_items.get(&new_id).unwrap().clone();
         current_work_items.add(new_item);

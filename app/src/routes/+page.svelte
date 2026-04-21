@@ -359,7 +359,12 @@
   {/if}
 
   {#if refreshSummaryMessage}
-    <div class="fixed top-16 right-4 z-10 rounded-md border border-surface-400-600 bg-surface-100-900 px-3 py-2 text-sm shadow-md">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      class="fixed top-16 right-4 z-10 rounded-md border border-surface-400-600 bg-surface-100-900 px-3 py-2 text-sm shadow-md"
+    >
       {refreshSummaryMessage}
     </div>
   {/if}
