@@ -16,18 +16,30 @@
     "bg-success-500",
     "bg-warning-500",
     "bg-error-500",
-    "bg-surface-500",
+    "bg-primary-700",
+    "bg-secondary-700",
+    "bg-tertiary-700",
+    "bg-success-700",
+    "bg-warning-700",
+    "bg-error-700",
   ];
 
-  type StatisticsContext = Pick<WorkItemContext, "data" | "getFieldOption">;
+  type StatisticsContext = Pick<
+    WorkItemContext,
+    "data" | "getFieldOption" | "updateWorkItem" | "loadProgress"
+  >;
 
   type Props = {
     context?: StatisticsContext;
+    rowPivotField?: PivotField;
+    seriesPivotField?: SeriesPivotField;
   };
 
-  let { context = getWorkItemContext() }: Props = $props();
-  let rowPivotField = $state<PivotField>("kind");
-  let seriesPivotField = $state<SeriesPivotField>("none");
+  let {
+    context = getWorkItemContext(),
+    rowPivotField = $bindable<PivotField>("kind"),
+    seriesPivotField = $bindable<SeriesPivotField>("none"),
+  }: Props = $props();
 
   const issueItems = $derived.by(() => {
     const items: IssueWorkItem[] = [];
@@ -74,6 +86,18 @@
       .sort((a, b) => b.total - a.total);
   });
 
+  const pendingIssueIds = $derived.by(() =>
+    issueItems
+      .filter((issue) => !isIssueLoadedForStatistics(issue))
+      .map((issue) => issue.id)
+  );
+
+  const statisticsLoadProgress = $derived(
+    issueItems.length === 0
+      ? 1
+      : (issueItems.length - pendingIssueIds.length) / issueItems.length
+  );
+
   const maxRowTotal = $derived(
     chartRows.length > 0 ? Math.max(...chartRows.map((row) => row.total)) : 0
   );
@@ -88,6 +112,22 @@
     return [...totals.entries()]
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
+  });
+
+  const requestedLoadIds = new Set<string>();
+  $effect(() => {
+    const pendingIds = pendingIssueIds;
+    const pendingSet = new Set(pendingIds);
+
+    for (const issueId of pendingIds) {
+      if (requestedLoadIds.has(issueId)) continue;
+      requestedLoadIds.add(issueId);
+      void context.updateWorkItem(issueId);
+    }
+
+    for (const issueId of [...requestedLoadIds]) {
+      if (!pendingSet.has(issueId)) requestedLoadIds.delete(issueId);
+    }
   });
 
   function getPivotValues(item: IssueWorkItem, pivot: PivotField): string[] {
@@ -114,7 +154,7 @@
     fieldName: LoadedField
   ): string {
     const fieldValue = item.projectItem[fieldName];
-    if (typeof fieldValue === "object") return "(not loaded)";
+    if (typeof fieldValue === "object") return "(none)";
     return context.getFieldOption(fieldName, fieldValue) ?? "(none)";
   }
 
@@ -126,8 +166,32 @@
     if (typeof fieldValue !== "object") {
       return context.getFieldOption(fieldName, fieldValue) ?? "(none)";
     }
-    if (fieldValue.loadState !== "loaded") return "(not loaded)";
+    if (fieldValue.loadState !== "loaded") return "(none)";
     return context.getFieldOption(fieldName, fieldValue.value) ?? "(none)";
+  }
+
+  function isIssueLoadedForStatistics(item: IssueWorkItem): boolean {
+    return (
+      isLoadedFieldValueLoaded(item, "epic") &&
+      isLoadedFieldValueLoaded(item, "status") &&
+      isDelayLoadedFieldValueLoaded(item, "kind") &&
+      isDelayLoadedFieldValueLoaded(item, "workstream")
+    );
+  }
+
+  function isLoadedFieldValueLoaded(
+    item: IssueWorkItem,
+    fieldName: LoadedField
+  ): boolean {
+    return typeof item.projectItem[fieldName] !== "object";
+  }
+
+  function isDelayLoadedFieldValueLoaded(
+    item: IssueWorkItem,
+    fieldName: DelayLoadedField
+  ): boolean {
+    const fieldValue = item.projectItem[fieldName];
+    return typeof fieldValue !== "object" || fieldValue.loadState === "loaded";
   }
 
   function getSegmentColor(name: string): string {
@@ -199,7 +263,28 @@
     </div>
   </div>
 
-  {#if chartRows.length === 0}
+  {#if pendingIssueIds.length > 0}
+    <div class="mb-4 rounded border border-surface-300-700 p-3">
+      <div class="mb-2 flex items-center justify-between text-sm">
+        <span>Loading issue field data for statistics…</span>
+        <span class="tabular-nums">{Math.round(statisticsLoadProgress * 100)}%</span>
+      </div>
+      <div class="h-2 overflow-hidden rounded bg-surface-200-800">
+        <div
+          class="h-full bg-primary-500 transition-[width] duration-200"
+          style={`width: ${Math.max(4, statisticsLoadProgress * 100)}%`}
+        ></div>
+      </div>
+    </div>
+  {/if}
+
+  {#if issueItems.length === 0}
+    <div class="text-surface-700-300">No filtered issues to chart.</div>
+  {:else if pendingIssueIds.length > 0}
+    <div class="text-surface-700-300">
+      Preparing chart with fully loaded issue data ({issueItems.length - pendingIssueIds.length}/{issueItems.length}).
+    </div>
+  {:else if chartRows.length === 0}
     <div class="text-surface-700-300">No filtered issues to chart.</div>
   {:else}
     <div class="mb-2 text-xs text-surface-700-300">

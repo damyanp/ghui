@@ -43,7 +43,17 @@
   setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
 
   type Mode = "items" | "xtracker" | "statistics";
+  type StatisticsPivotField =
+    | "kind"
+    | "epic"
+    | "workstream"
+    | "assigned"
+    | "status";
+  type StatisticsSeriesPivotField = "none" | StatisticsPivotField;
   let mode = $state<Mode>("items");
+  let statisticsRowPivotField = $state<StatisticsPivotField>("kind");
+  let statisticsSeriesPivotField =
+    $state<StatisticsSeriesPivotField>("none");
 
   const itemsIconClass = $derived(mode === "items" ? "bg-primary-500" : "");
   const xtrackerIconClass = $derived(
@@ -320,7 +330,10 @@
     {:else if mode === "xtracker"}
       <WorkItemExecutionTracker />
     {:else if mode === "statistics"}
-      <WorkItemStatistics />
+      <WorkItemStatistics
+        bind:rowPivotField={statisticsRowPivotField}
+        bind:seriesPivotField={statisticsSeriesPivotField}
+      />
     {:else}
       <h1>Unknown mode {mode}</h1>
     {/if}
