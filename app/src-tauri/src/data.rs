@@ -22,11 +22,12 @@ pub async fn watch_data(
 }
 
 #[tauri::command]
-pub async fn force_refresh_data(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
+pub async fn force_refresh_data(
+    data_state: State<'_, DataState>,
+) -> TauriCommandResult<(usize, usize)> {
     telemetry::record(TelemetryEvent::Refresh);
     let mut data_state = data_state.lock().await;
-    data_state.refresh(true).await?;
-    Ok(())
+    Ok(data_state.force_refresh().await?)
 }
 
 #[tauri::command]

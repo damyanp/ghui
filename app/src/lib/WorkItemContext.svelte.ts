@@ -129,8 +129,8 @@ export class WorkItemContext {
     this.unreadErrorCount = 0;
   }
 
-  public async refresh(): Promise<void> {
-    await invoke("force_refresh_data");
+  public async refresh(): Promise<[number, number]> {
+    return await invoke<[number, number]>("force_refresh_data");
   }
 
   itemUpdateBatcher = new ItemUpdateBatcher();
