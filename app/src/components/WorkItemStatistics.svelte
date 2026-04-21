@@ -8,6 +8,8 @@
   type LoadedField = "epic" | "status";
   type DelayLoadedField = "kind" | "workstream";
   type IssueWorkItem = WorkItem & { data: { type: "issue" } & Issue };
+  const MIN_BAR_OPACITY = 0.35;
+  const BAR_OPACITY_RANGE = 0.65;
 
   type StatisticsContext = Pick<WorkItemContext, "data" | "getFieldOption">;
 
@@ -86,6 +88,10 @@
         return [getFieldValueLabel(item, pivot)];
       case "workstream":
         return [getDelayLoadFieldValueLabel(item, pivot)];
+      default: {
+        const _exhaustive: never = pivot;
+        return [_exhaustive];
+      }
     }
   }
 
@@ -108,11 +114,20 @@
   }
 
   function getSegmentColor(name: string): string {
+    const colorClasses = [
+      "bg-primary-500",
+      "bg-secondary-500",
+      "bg-tertiary-500",
+      "bg-success-500",
+      "bg-warning-500",
+      "bg-error-500",
+      "bg-surface-500",
+    ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
-      hash = (hash * 31 + name.charCodeAt(i)) % 360;
+      hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
     }
-    return `hsl(${hash} 65% 55%)`;
+    return colorClasses[hash % colorClasses.length];
   }
 
   function isIssueWorkItem(item: WorkItem | undefined): item is IssueWorkItem {
@@ -145,11 +160,11 @@
           <div class="h-5 rounded bg-surface-200-800 overflow-hidden flex">
             {#each row.segments as segment}
               <div
-                class="h-full min-w-[2px]"
+                class={`h-full min-w-[2px] ${getSegmentColor(segment.name)}`}
                 title={`${segment.name}: ${segment.count}`}
-                style={`width: ${(segment.count / row.total) * 100}%; background-color: ${getSegmentColor(segment.name)}; opacity: ${maxRowTotal === 0
+                style={`width: ${(segment.count / row.total) * 100}%; opacity: ${maxRowTotal === 0
                   ? 1
-                  : 0.35 + (0.65 * row.total) / maxRowTotal}`}
+                  : MIN_BAR_OPACITY + (BAR_OPACITY_RANGE * row.total) / maxRowTotal}`}
               ></div>
             {/each}
           </div>
@@ -166,8 +181,7 @@
         {#each pivotTotals as pivot}
           <div class="flex items-center gap-2 text-sm">
             <span
-              class="inline-block h-3 w-3 rounded"
-              style={`background-color: ${getSegmentColor(pivot.name)}`}
+              class={`inline-block h-3 w-3 rounded ${getSegmentColor(pivot.name)}`}
             ></span>
             <span class="truncate max-w-[20rem]" title={pivot.name}>
               {pivot.name}
