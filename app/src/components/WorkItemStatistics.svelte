@@ -29,12 +29,6 @@
   let rowPivotField = $state<PivotField>("kind");
   let seriesPivotField = $state<SeriesPivotField>("none");
 
-  $effect(() => {
-    if (seriesPivotField === rowPivotField) {
-      seriesPivotField = "none";
-    }
-  });
-
   const issueItems = $derived.by(() => {
     const items: IssueWorkItem[] = [];
     for (const node of context.data.nodes) {
@@ -160,7 +154,14 @@
     <select
       id="row-pivot-field"
       class="select variant-form"
-      bind:value={rowPivotField}
+      value={rowPivotField}
+      onchange={(e) => {
+        const next = (e.currentTarget as HTMLSelectElement).value as PivotField;
+        rowPivotField = next;
+        if (seriesPivotField === next) {
+          seriesPivotField = "none";
+        }
+      }}
     >
       <option value="kind">Kind</option>
       <option value="epic">Epic</option>
@@ -202,7 +203,7 @@
     <div class="text-surface-700-300">No filtered issues to chart.</div>
   {:else}
     <div class="mb-2 text-xs text-surface-700-300">
-      Bar length uses absolute counts (max row = {maxRowTotal}).
+      Bar width scaled to max row total ({maxRowTotal}).
     </div>
     <div class="flex flex-col gap-2">
       {#each chartRows as row}
