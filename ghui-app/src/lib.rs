@@ -153,6 +153,14 @@ pub struct ItemToUpdate {
     pub force: bool,
 }
 
+#[derive(Default, Deserialize, Serialize, TS, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RefreshSummary {
+    pub new_items: usize,
+    pub updated_items: usize,
+}
+
 type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
 #[derive(Default)]
@@ -236,6 +244,27 @@ impl AppState {
             epic_conflicts: self.epic_conflicts.clone(),
         })));
         Ok(())
+    }
+
+    pub async fn force_refresh(&mut self) -> Result<RefreshSummary> {
+        let previous_work_items = self.work_items.as_ref().map(|work_items| {
+            HashMap::from_iter(
+                work_items
+                    .work_items
+                    .iter()
+                    .map(|(id, item)| (id.clone(), item.updated_at.clone())),
+            )
+        });
+        self.refresh(true).await?;
+
+        if let Some(work_items) = &self.work_items {
+            Ok(summarize_refresh_changes(
+                previous_work_items.as_ref(),
+                work_items,
+            ))
+        } else {
+            Ok(RefreshSummary::default())
+        }
     }
 
     pub async fn refresh_fields(&mut self, force: bool) -> Result<Fields> {
@@ -639,6 +668,31 @@ fn get_appdata_path(name: &str) -> PathBuf {
     path
 }
 
+fn summarize_refresh_changes(
+    previous_updated_at: Option<&HashMap<WorkItemId, String>>,
+    current_work_items: &WorkItems,
+) -> RefreshSummary {
+    let mut new_items = 0;
+    let mut updated_items = 0;
+
+    for (id, item) in &current_work_items.work_items {
+        if let Some(previous_updated_at) = previous_updated_at
+            && let Some(previous_item_updated_at) = previous_updated_at.get(id)
+        {
+            if previous_item_updated_at != &item.updated_at {
+                updated_items += 1;
+            }
+        } else {
+            new_items += 1;
+        }
+    }
+
+    RefreshSummary {
+        new_items,
+        updated_items,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -707,5 +761,68 @@ mod tests {
         let result = state.get_project_ids_to_update(&items);
 
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_summarize_refresh_changes_counts_new_and_updated_items() {
+        let mut previous_data = TestData::default();
+        let unchanged_id = previous_data.build().status("Active").add();
+        let updated_id = previous_data.build().status("Active").add();
+
+        let mut current_work_items = previous_data.work_items.clone();
+        let mut new_data = TestData::default();
+        new_data.next_id();
+        new_data.next_id();
+        let new_id = new_data.build().status("Active").add();
+        let new_item = new_data.work_items.get(&new_id).unwrap().clone();
+        current_work_items.add(new_item);
+        current_work_items.get_mut(&updated_id).unwrap().updated_at = "updated".to_string();
+        current_work_items
+            .get_mut(&unchanged_id)
+            .unwrap()
+            .updated_at = "same".to_string();
+        previous_data
+            .work_items
+            .get_mut(&updated_id)
+            .unwrap()
+            .updated_at = "old".to_string();
+        previous_data
+            .work_items
+            .get_mut(&unchanged_id)
+            .unwrap()
+            .updated_at = "same".to_string();
+
+        let previous_updated_at = HashMap::from_iter(
+            previous_data
+                .work_items
+                .work_items
+                .iter()
+                .map(|(id, item)| (id.clone(), item.updated_at.clone())),
+        );
+
+        let summary = summarize_refresh_changes(Some(&previous_updated_at), &current_work_items);
+        assert_eq!(
+            summary,
+            RefreshSummary {
+                new_items: 1,
+                updated_items: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_summarize_refresh_changes_counts_all_items_as_new_when_no_previous_items() {
+        let mut current_data = TestData::default();
+        current_data.build().status("Active").add();
+        current_data.build().status("Active").add();
+
+        let summary = summarize_refresh_changes(None, &current_data.work_items);
+        assert_eq!(
+            summary,
+            RefreshSummary {
+                new_items: 2,
+                updated_items: 0,
+            }
+        );
     }
 }

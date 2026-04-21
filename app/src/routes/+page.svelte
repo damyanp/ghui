@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { AppBar } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
   import WorkItemTree from "../components/WorkItemTree.svelte";
@@ -36,6 +37,7 @@
   } from "../components/WorkItemExecutionTracker.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import type { ReleaseInfo } from "$lib/bindings/ReleaseInfo";
+  import type { RefreshSummary } from "$lib/bindings/RefreshSummary";
 
   const context = setWorkItemContext(new WorkItemContext());
   setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
@@ -55,6 +57,8 @@
   const numEpicConflicts = $derived(context.data.epicConflicts.length);
 
   let saveProgress = $state(0);
+  let refreshSummaryMessage = $state<string | null>(null);
+  let refreshSummaryTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingChangesOpen = $state(false);
   let addItemDialogOpen = $state(false);
   let epicConflictsOpen = $state(false);
@@ -65,6 +69,34 @@
   // Update check state
   let updateInfo = $state<ReleaseInfo | null>(null);
   let updateCheckState = $state<"idle" | "checking" | "downloading">("idle");
+
+  function showRefreshSummary({
+    newItems,
+    updatedItems,
+  }: RefreshSummary): void {
+    const parts: string[] = [];
+    if (newItems > 0) {
+      parts.push(`${newItems} new ${newItems === 1 ? "item" : "items"}`);
+    }
+    if (updatedItems > 0) {
+      parts.push(
+        `${updatedItems} updated ${updatedItems === 1 ? "item" : "items"}`
+      );
+    }
+
+    refreshSummaryMessage =
+      parts.length === 0
+        ? "Refresh complete: no changes found."
+        : `Refresh complete: ${parts.join(", ")}.`;
+
+    if (refreshSummaryTimer) {
+      clearTimeout(refreshSummaryTimer);
+    }
+    refreshSummaryTimer = setTimeout(() => {
+      refreshSummaryMessage = null;
+      refreshSummaryTimer = null;
+    }, 5000);
+  }
 
   async function runBusy(action: () => Promise<void>): Promise<void> {
     if (busy) return;
@@ -77,8 +109,19 @@
   }
 
   async function onRefreshClicked(): Promise<void> {
-    await runBusy(() => context.refresh());
+    await runBusy(async () => {
+      const summary = await context.refresh();
+      showRefreshSummary(summary);
+    });
   }
+
+  onDestroy(() => {
+    if (refreshSummaryTimer) {
+      clearTimeout(refreshSummaryTimer);
+      refreshSummaryTimer = null;
+    }
+    refreshSummaryMessage = null;
+  });
 
   async function saveChanges() {
     await runBusy(async () => {
@@ -313,5 +356,16 @@
         logPanelOpen = false;
       }}
     />
+  {/if}
+
+  {#if refreshSummaryMessage}
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      class="fixed top-16 right-4 z-10 rounded-md border border-surface-400-600 bg-surface-100-900 px-3 py-2 text-sm shadow-md"
+    >
+      {refreshSummaryMessage}
+    </div>
   {/if}
 </div>
