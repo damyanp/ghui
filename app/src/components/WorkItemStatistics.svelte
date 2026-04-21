@@ -153,11 +153,13 @@
   // awaits all chunks in the backend, so its promise actually represents
   // completion — unlike `updateWorkItem()` which was fire-and-forget.
   //
-  // After a run completes we record which issue IDs were still pending, and
-  // we refuse to re-fire while the pending set is unchanged from that
-  // snapshot. That prevents a runaway loop if some pending items are never
-  // reachable by the backend loader (e.g. a frontend "loaded" predicate that
-  // disagrees with the backend's `is_loaded()`).
+  // After a successful run completes we record which issue IDs were still
+  // pending, and we refuse to re-fire while the pending set is unchanged from
+  // that snapshot. That prevents a runaway loop if some pending items are
+  // never reachable by the backend loader (e.g. a frontend "loaded" predicate
+  // that disagrees with the backend's `is_loaded()`). The key uses sorted IDs
+  // so a pure reorder of `pendingIssueIds` doesn't trigger a redundant call,
+  // and we clear it on failure so transient errors can be retried.
   let lastAttemptedPendingKey = $state<string | null>(null);
 
   $effect(() => {
@@ -165,9 +167,8 @@
     if (pendingIssueIds.length === 0) return;
     if (context.loadAllWorkItems === undefined) return;
 
-    const pendingKey = pendingIssueIds.join(",");
+    const pendingKey = [...pendingIssueIds].sort().join(",");
     if (pendingKey === lastAttemptedPendingKey) return;
-    lastAttemptedPendingKey = pendingKey;
 
     console.debug(
       `[WorkItemStatistics] loadAllWorkItems start; ${pendingIssueIds.length} pending issue(s)`
@@ -176,6 +177,12 @@
     loadError = null;
     context
       .loadAllWorkItems()
+      .then(() => {
+        // Only suppress retries on success. On failure we leave
+        // `lastAttemptedPendingKey` unchanged so the next reactive run can try
+        // again once the user/backend recovers.
+        lastAttemptedPendingKey = pendingKey;
+      })
       .catch((e: unknown) => {
         loadError = e instanceof Error ? e.message : String(e);
         console.warn("[WorkItemStatistics] loadAllWorkItems failed", e);
@@ -355,11 +362,11 @@
 </script>
 
 <div class="overflow-y-auto flex-1 p-3">
-  <div class="mb-4 flex flex-wrap items-center gap-3">
-    <label for="row-pivot-field" class="text-sm font-semibold">Rows</label>
+  <div class="mb-4 flex flex-nowrap items-center gap-2 text-sm">
+    <label for="row-pivot-field" class="font-semibold">Rows</label>
     <select
       id="row-pivot-field"
-      class="select variant-form"
+      class="select variant-form text-sm py-1 px-2 w-auto"
       value={rowPivotField}
       onchange={(e) => {
         const next = (e.currentTarget as HTMLSelectElement).value as PivotField;
@@ -376,10 +383,10 @@
       <option value="status">Status</option>
     </select>
 
-    <label for="series-pivot-field" class="text-sm font-semibold">Series</label>
+    <label for="series-pivot-field" class="font-semibold">Series</label>
     <select
       id="series-pivot-field"
-      class="select variant-form"
+      class="select variant-form text-sm py-1 px-2 w-auto"
       bind:value={seriesPivotField}
     >
       <option value="none">None</option>
@@ -400,7 +407,7 @@
       {/if}
     </select>
 
-    <div class="text-sm text-surface-700-300">
+    <div class="text-surface-700-300 ml-2">
       {issueItems.length} filtered issues
     </div>
   </div>
@@ -517,9 +524,6 @@
   {:else if chartRows.length === 0}
     <div class="text-surface-700-300">No filtered issues to chart.</div>
   {:else}
-    <div class="mb-2 text-xs text-surface-700-300">
-      Bar width scaled to max row total ({maxRowTotal}).
-    </div>
     <div class="flex flex-col gap-2">
       {#each chartRows as row}
         <div class="grid grid-cols-[14rem_1fr_3rem] items-center gap-2">

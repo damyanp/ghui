@@ -9,7 +9,7 @@ use github_graphql::{
         SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
     },
 };
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -471,7 +471,7 @@ impl DataState {
         tokio::spawn(async move {
             let batch_size = project_item_ids.len();
             let started = std::time::Instant::now();
-            info!("request_update_items: starting batch of {batch_size} item(s)");
+            debug!("request_update_items: starting batch of {batch_size} item(s)");
 
             let state = app_state.lock().await;
             let client = match state.pat.new_github_client() {
@@ -519,7 +519,7 @@ impl DataState {
                 warn!("failed to save cached work items: {e}");
             }
 
-            info!(
+            debug!(
                 "request_update_items: completed batch of {batch_size} item(s) in {}ms",
                 started.elapsed().as_millis()
             );
