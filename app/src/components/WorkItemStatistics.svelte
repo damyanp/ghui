@@ -25,6 +25,7 @@
   ];
   const MIN_PROGRESS_BAR_WIDTH_PERCENT = 4;
   const MAX_LOAD_ATTEMPTS_PER_ISSUE = 3;
+  const MAX_IN_FLIGHT_LOAD_REQUESTS = 8;
 
   type StatisticsContext = Pick<
     WorkItemContext,
@@ -90,7 +91,6 @@
 
   let isIssueLoadFailed = $state<Record<string, true>>({});
   let loadAttemptsByIssue = $state<Record<string, number>>({});
-  let trackedIssueKey = $state("");
 
   const pendingIssueIds = $derived.by(() =>
     issueItems
@@ -134,19 +134,41 @@
   }
 
   $effect(() => {
-    const nextIssueKey = issueItems.map((issue) => issue.id).join("|");
-    if (nextIssueKey === trackedIssueKey) return;
-
-    trackedIssueKey = nextIssueKey;
-    isIssueLoadFailed = {};
-    loadAttemptsByIssue = {};
-    requestedLoadIds.clear();
-  });
-
-  $effect(() => {
     const pendingSet = new Set(pendingIssueIds);
+    const issueIdSet = new Set(issueItems.map((issue) => issue.id));
+
+    let shouldUpdateFailedIssues = false;
+    const nextFailedIssues: Record<string, true> = {};
+    for (const issueId of Object.keys(isIssueLoadFailed)) {
+      if (issueIdSet.has(issueId)) {
+        nextFailedIssues[issueId] = true;
+      } else {
+        shouldUpdateFailedIssues = true;
+      }
+    }
+    if (shouldUpdateFailedIssues) {
+      isIssueLoadFailed = nextFailedIssues;
+    }
+
+    let shouldUpdateAttempts = false;
+    const nextLoadAttempts: Record<string, number> = {};
+    for (const [issueId, attempts] of Object.entries(loadAttemptsByIssue)) {
+      if (issueIdSet.has(issueId)) {
+        nextLoadAttempts[issueId] = attempts;
+      } else {
+        shouldUpdateAttempts = true;
+      }
+    }
+    if (shouldUpdateAttempts) {
+      loadAttemptsByIssue = nextLoadAttempts;
+    }
+
+    for (const issueId of [...requestedLoadIds]) {
+      if (!issueIdSet.has(issueId)) requestedLoadIds.delete(issueId);
+    }
 
     for (const issueId of pendingIssueIds) {
+      if (requestedLoadIds.size >= MAX_IN_FLIGHT_LOAD_REQUESTS) break;
       if (requestedLoadIds.has(issueId)) continue;
       const attempts = loadAttemptsByIssue[issueId] ?? 0;
       if (attempts >= MAX_LOAD_ATTEMPTS_PER_ISSUE) {
