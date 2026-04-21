@@ -4,12 +4,11 @@
   import type { Issue } from "$lib/bindings/Issue";
   import type { WorkItem } from "$lib/bindings/WorkItem";
 
-  type PivotField = "none" | "epic" | "workstream" | "assigned" | "status";
+  type PivotField = "kind" | "epic" | "workstream" | "assigned" | "status";
+  type SeriesPivotField = "none" | PivotField;
   type LoadedField = "epic" | "status";
   type DelayLoadedField = "kind" | "workstream";
   type IssueWorkItem = WorkItem & { data: { type: "issue" } & Issue };
-  const MIN_BAR_OPACITY = 0.35;
-  const BAR_OPACITY_RANGE = 0.65;
   const SEGMENT_COLOR_CLASSES = [
     "bg-primary-500",
     "bg-secondary-500",
@@ -27,7 +26,14 @@
   };
 
   let { context = getWorkItemContext() }: Props = $props();
-  let pivotField = $state<PivotField>("none");
+  let rowPivotField = $state<PivotField>("kind");
+  let seriesPivotField = $state<SeriesPivotField>("none");
+
+  $effect(() => {
+    if (seriesPivotField === rowPivotField) {
+      seriesPivotField = "none";
+    }
+  });
 
   const issueItems = $derived.by(() => {
     const items: IssueWorkItem[] = [];
@@ -44,25 +50,32 @@
   const chartRows = $derived.by(() => {
     const grouped = new Map<string, Map<string, number>>();
     for (const issue of issueItems) {
-      const kind = getKind(issue);
-      const pivotValues = getPivotValues(issue, pivotField);
-      let bucket = grouped.get(kind);
-      if (!bucket) {
-        bucket = new Map<string, number>();
-        grouped.set(kind, bucket);
-      }
-      for (const pivotValue of pivotValues) {
-        bucket.set(pivotValue, (bucket.get(pivotValue) ?? 0) + 1);
+      const rowValues = getPivotValues(issue, rowPivotField);
+      const seriesValues =
+        seriesPivotField === "none"
+          ? ["All issues"]
+          : getPivotValues(issue, seriesPivotField);
+
+      for (const rowValue of rowValues) {
+        let bucket = grouped.get(rowValue);
+        if (!bucket) {
+          bucket = new Map<string, number>();
+          grouped.set(rowValue, bucket);
+        }
+
+        for (const seriesValue of seriesValues) {
+          bucket.set(seriesValue, (bucket.get(seriesValue) ?? 0) + 1);
+        }
       }
     }
 
     return [...grouped.entries()]
-      .map(([kind, counts]) => {
+      .map(([rowName, counts]) => {
         const segments = [...counts.entries()]
           .map(([name, count]) => ({ name, count }))
           .sort((a, b) => b.count - a.count);
         const total = segments.reduce((sum, segment) => sum + segment.count, 0);
-        return { kind, segments, total };
+        return { rowName, segments, total };
       })
       .sort((a, b) => b.total - a.total);
   });
@@ -71,7 +84,7 @@
     chartRows.length > 0 ? Math.max(...chartRows.map((row) => row.total)) : 0
   );
 
-  const pivotTotals = $derived.by(() => {
+  const seriesTotals = $derived.by(() => {
     const totals = new Map<string, number>();
     for (const row of chartRows) {
       for (const segment of row.segments) {
@@ -83,23 +96,18 @@
       .sort((a, b) => b.count - a.count);
   });
 
-  function getKind(item: IssueWorkItem): string {
-    return getDelayLoadFieldValueLabel(item, "kind");
-  }
-
   function getPivotValues(item: IssueWorkItem, pivot: PivotField): string[] {
     switch (pivot) {
-      case "none":
-        return ["All issues"];
+      case "kind":
+      case "workstream":
+        return [getDelayLoadFieldValueLabel(item, pivot)];
+      case "epic":
+      case "status":
+        return [getLoadedFieldValueLabel(item, pivot)];
       case "assigned":
         return item.data.assignees.length > 0
           ? item.data.assignees
           : ["(unassigned)"];
-      case "epic":
-      case "status":
-        return [getLoadedFieldValueLabel(item, pivot)];
-      case "workstream":
-        return [getDelayLoadFieldValueLabel(item, pivot)];
       default: {
         const _exhaustive: never = pivot;
         return [_exhaustive];
@@ -136,21 +144,55 @@
     return SEGMENT_COLOR_CLASSES[hash % SEGMENT_COLOR_CLASSES.length];
   }
 
+  function getSegmentWidth(count: number): number {
+    if (maxRowTotal === 0) return 0;
+    return (count / maxRowTotal) * 100;
+  }
+
   function isIssueWorkItem(item: WorkItem | undefined): item is IssueWorkItem {
     return item !== undefined && item.data.type === "issue";
   }
 </script>
 
 <div class="overflow-y-auto flex-1 p-3">
-  <div class="mb-4 flex items-center gap-3">
-    <label for="pivot-field" class="text-sm font-semibold">Pivot</label>
-    <select id="pivot-field" class="select variant-form" bind:value={pivotField}>
-      <option value="none">None</option>
+  <div class="mb-4 flex flex-wrap items-center gap-3">
+    <label for="row-pivot-field" class="text-sm font-semibold">Rows</label>
+    <select
+      id="row-pivot-field"
+      class="select variant-form"
+      bind:value={rowPivotField}
+    >
+      <option value="kind">Kind</option>
       <option value="epic">Epic</option>
       <option value="workstream">Workstream</option>
       <option value="assigned">Assigned</option>
       <option value="status">Status</option>
     </select>
+
+    <label for="series-pivot-field" class="text-sm font-semibold">Series</label>
+    <select
+      id="series-pivot-field"
+      class="select variant-form"
+      bind:value={seriesPivotField}
+    >
+      <option value="none">None</option>
+      {#if rowPivotField !== "kind"}
+        <option value="kind">Kind</option>
+      {/if}
+      {#if rowPivotField !== "epic"}
+        <option value="epic">Epic</option>
+      {/if}
+      {#if rowPivotField !== "workstream"}
+        <option value="workstream">Workstream</option>
+      {/if}
+      {#if rowPivotField !== "assigned"}
+        <option value="assigned">Assigned</option>
+      {/if}
+      {#if rowPivotField !== "status"}
+        <option value="status">Status</option>
+      {/if}
+    </select>
+
     <div class="text-sm text-surface-700-300">
       {issueItems.length} filtered issues
     </div>
@@ -159,18 +201,19 @@
   {#if chartRows.length === 0}
     <div class="text-surface-700-300">No filtered issues to chart.</div>
   {:else}
+    <div class="mb-2 text-xs text-surface-700-300">
+      Bar length uses absolute counts (max row = {maxRowTotal}).
+    </div>
     <div class="flex flex-col gap-2">
       {#each chartRows as row}
-        <div class="grid grid-cols-[12rem_1fr_3rem] items-center gap-2">
-          <div class="truncate text-sm" title={row.kind}>{row.kind}</div>
+        <div class="grid grid-cols-[14rem_1fr_3rem] items-center gap-2">
+          <div class="truncate text-sm" title={row.rowName}>{row.rowName}</div>
           <div class="h-5 rounded bg-surface-200-800 overflow-hidden flex">
             {#each row.segments as segment}
               <div
                 class={`h-full min-w-[2px] ${getSegmentColor(segment.name)}`}
                 title={`${segment.name}: ${segment.count}`}
-                style={`width: ${(segment.count / row.total) * 100}%; opacity: ${maxRowTotal === 0
-                  ? 1
-                  : MIN_BAR_OPACITY + (BAR_OPACITY_RANGE * row.total) / maxRowTotal}`}
+                style={`width: ${getSegmentWidth(segment.count)}%`}
               ></div>
             {/each}
           </div>
@@ -180,19 +223,19 @@
     </div>
   {/if}
 
-  {#if pivotField !== "none" && pivotTotals.length > 0}
+  {#if seriesTotals.length > 0}
     <div class="mt-5">
-      <div class="text-sm font-semibold mb-2">Pivot legend</div>
+      <div class="text-sm font-semibold mb-2">Series legend</div>
       <div class="flex flex-wrap gap-3">
-        {#each pivotTotals as pivot}
+        {#each seriesTotals as series}
           <div class="flex items-center gap-2 text-sm">
             <span
-              class={`inline-block h-3 w-3 rounded ${getSegmentColor(pivot.name)}`}
+              class={`inline-block h-3 w-3 rounded ${getSegmentColor(series.name)}`}
             ></span>
-            <span class="truncate max-w-[20rem]" title={pivot.name}>
-              {pivot.name}
+            <span class="truncate max-w-[20rem]" title={series.name}>
+              {series.name}
             </span>
-            <span class="tabular-nums text-surface-700-300">{pivot.count}</span>
+            <span class="tabular-nums text-surface-700-300">{series.count}</span>
           </div>
         {/each}
       </div>
