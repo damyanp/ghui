@@ -23,6 +23,7 @@
     "bg-warning-700",
     "bg-error-700",
   ];
+  const MIN_PROGRESS_BAR_WIDTH_PERCENT = 4;
 
   type StatisticsContext = Pick<
     WorkItemContext,
@@ -94,8 +95,11 @@
 
   const statisticsLoadProgress = $derived(
     issueItems.length === 0
-      ? 1
+      ? 0
       : (issueItems.length - pendingIssueIds.length) / issueItems.length
+  );
+  const statisticsLoadProgressPercent = $derived(
+    Math.round(statisticsLoadProgress * 100)
   );
 
   const maxRowTotal = $derived(
@@ -116,13 +120,15 @@
 
   const requestedLoadIds = new Set<string>();
   $effect(() => {
-    const pendingIds = pendingIssueIds;
-    const pendingSet = new Set(pendingIds);
+    const pendingSet = new Set(pendingIssueIds);
 
-    for (const issueId of pendingIds) {
+    for (const issueId of pendingIssueIds) {
       if (requestedLoadIds.has(issueId)) continue;
       requestedLoadIds.add(issueId);
-      void context.updateWorkItem(issueId);
+      context.updateWorkItem(issueId).catch(() => {
+        console.warn(`Failed to load statistics data for issue ${issueId}`);
+        requestedLoadIds.delete(issueId);
+      });
     }
 
     for (const issueId of [...requestedLoadIds]) {
@@ -267,12 +273,12 @@
     <div class="mb-4 rounded border border-surface-300-700 p-3">
       <div class="mb-2 flex items-center justify-between text-sm">
         <span>Loading issue field data for statistics…</span>
-        <span class="tabular-nums">{Math.round(statisticsLoadProgress * 100)}%</span>
+        <span class="tabular-nums">{statisticsLoadProgressPercent}%</span>
       </div>
       <div class="h-2 overflow-hidden rounded bg-surface-200-800">
         <div
           class="h-full bg-primary-500 transition-[width] duration-200"
-          style={`width: ${Math.max(4, statisticsLoadProgress * 100)}%`}
+          style={`width: ${Math.max(MIN_PROGRESS_BAR_WIDTH_PERCENT, statisticsLoadProgress * 100)}%`}
         ></div>
       </div>
     </div>
