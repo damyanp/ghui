@@ -229,7 +229,7 @@ async fn get_issue_vector(
         ))
         .await??;
 
-        Ok(work_items.chain(remaining_work_items.into_iter()).collect())
+        Ok(work_items.chain(remaining_work_items).collect())
     } else {
         Ok(work_items.collect())
     }
