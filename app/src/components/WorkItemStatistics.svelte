@@ -153,14 +153,21 @@
   // awaits all chunks in the backend, so its promise actually represents
   // completion — unlike `updateWorkItem()` which was fire-and-forget.
   //
-  // After a successful run completes we record which issue IDs were still
-  // pending, and we refuse to re-fire while the pending set is unchanged from
-  // that snapshot. That prevents a runaway loop if some pending items are
-  // never reachable by the backend loader (e.g. a frontend "loaded" predicate
-  // that disagrees with the backend's `is_loaded()`). The key uses sorted IDs
-  // so a pure reorder of `pendingIssueIds` doesn't trigger a redundant call,
-  // and we clear it on failure so transient errors can be retried.
+  // We record which issue IDs were attempted and refuse to re-fire while the
+  // pending set is unchanged. The key is set *before* the call (not after
+  // success) so a persistent failure doesn't immediately re-trigger the
+  // request when `isLoadingAll` flips back to false in `finally`. On failure
+  // we apply an exponential timestamp-based backoff (capped) before clearing
+  // the key, so transient errors are retried but a broken backend (offline,
+  // missing PAT) doesn't get hammered. The key uses sorted IDs so a pure
+  // reorder of `pendingIssueIds` doesn't trigger a redundant call. A change
+  // in the pending set (new IDs appearing) bypasses the backoff and retries
+  // immediately, which is what we want.
+  const FAILURE_BACKOFF_BASE_MS = 5_000;
+  const FAILURE_BACKOFF_MAX_MS = 60_000;
   let lastAttemptedPendingKey = $state<string | null>(null);
+  let failureRetryAt = $state<number | null>(null);
+  let consecutiveFailures = $state(0);
 
   $effect(() => {
     if (isLoadingAll) return;
@@ -168,24 +175,47 @@
     if (context.loadAllWorkItems === undefined) return;
 
     const pendingKey = [...pendingIssueIds].sort().join(",");
-    if (pendingKey === lastAttemptedPendingKey) return;
+    if (pendingKey === lastAttemptedPendingKey) {
+      // Same pending set as last attempt. If we're in a failure-backoff
+      // window, schedule a wake-up to retry once it expires.
+      if (failureRetryAt !== null) {
+        const delay = failureRetryAt - Date.now();
+        if (delay > 0) {
+          const handle = setTimeout(() => {
+            lastAttemptedPendingKey = null;
+            failureRetryAt = null;
+          }, delay);
+          return () => clearTimeout(handle);
+        }
+        // Backoff has already expired — clear and let the next tick retry.
+        lastAttemptedPendingKey = null;
+        failureRetryAt = null;
+      }
+      return;
+    }
 
     console.debug(
       `[WorkItemStatistics] loadAllWorkItems start; ${pendingIssueIds.length} pending issue(s)`
     );
     isLoadingAll = true;
     loadError = null;
+    // Set the attempted key eagerly so a synchronous failure doesn't loop.
+    lastAttemptedPendingKey = pendingKey;
     context
       .loadAllWorkItems()
       .then(() => {
-        // Only suppress retries on success. On failure we leave
-        // `lastAttemptedPendingKey` unchanged so the next reactive run can try
-        // again once the user/backend recovers.
-        lastAttemptedPendingKey = pendingKey;
+        consecutiveFailures = 0;
+        failureRetryAt = null;
       })
       .catch((e: unknown) => {
         loadError = e instanceof Error ? e.message : String(e);
         console.warn("[WorkItemStatistics] loadAllWorkItems failed", e);
+        consecutiveFailures += 1;
+        const backoff = Math.min(
+          FAILURE_BACKOFF_BASE_MS * 2 ** (consecutiveFailures - 1),
+          FAILURE_BACKOFF_MAX_MS
+        );
+        failureRetryAt = Date.now() + backoff;
       })
       .finally(() => {
         isLoadingAll = false;
