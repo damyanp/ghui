@@ -9,7 +9,7 @@ use github_graphql::{
         SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
     },
 };
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -468,6 +468,10 @@ impl DataState {
 
         let app_state = Arc::clone(&self.0);
         tokio::spawn(async move {
+            let batch_size = project_item_ids.len();
+            let started = std::time::Instant::now();
+            debug!("request_update_items: starting batch of {batch_size} item(s)");
+
             let state = app_state.lock().await;
             let client = match state.pat.new_github_client() {
                 Ok(client) => client,
@@ -481,7 +485,7 @@ impl DataState {
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
                 Err(e) => {
-                    error!("Failed to get items: {e}");
+                    error!("Failed to get items (batch of {batch_size}): {e}");
                     return;
                 }
             };
@@ -513,6 +517,11 @@ impl DataState {
             {
                 warn!("failed to save cached work items: {e}");
             }
+
+            debug!(
+                "request_update_items: completed batch of {batch_size} item(s) in {}ms",
+                started.elapsed().as_millis()
+            );
         })
     }
 
@@ -581,6 +590,10 @@ impl DataState {
                 .map(|w| w.project_item.id.clone())
                 .collect();
             drop(app_state);
+
+            if project_item_ids.is_empty() {
+                return Ok(());
+            }
 
             info!("Loading {} items....", project_item_ids.len());
 
