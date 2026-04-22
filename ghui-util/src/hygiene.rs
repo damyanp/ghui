@@ -30,7 +30,7 @@ pub async fn run(options: Options) -> Result {
 async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
     Ok(data::WorkItems::from_iter(
-        get_all_items(client, &report_progress).await?.into_iter(),
+        get_all_items(client, &report_progress).await?,
     ))
 }
 
@@ -39,7 +39,7 @@ pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result 
         RunHygieneMode::TestData => {
             let mut file = std::fs::File::open("all_items.json")?;
             let work_items: Vec<data::WorkItem> = serde_json::from_reader(&mut file)?;
-            data::WorkItems::from_iter(work_items.into_iter())
+            data::WorkItems::from_iter(work_items)
         }
         _ => get_items(client).await?,
     };

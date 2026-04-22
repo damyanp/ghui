@@ -325,8 +325,7 @@ impl AppState {
 
         report_progress(0, 1);
 
-        let work_items =
-            WorkItems::from_iter(get_all_items(&client, &report_progress).await?.into_iter());
+        let work_items = WorkItems::from_iter(get_all_items(&client, &report_progress).await?);
 
         let save_result = save_workitems_to_appdata(&work_items);
         if let Err(error) = save_result {
