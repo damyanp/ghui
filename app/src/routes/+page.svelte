@@ -12,6 +12,7 @@
   } from "$lib/WorkItemContext.svelte";
   import {
     Bubbles,
+    ChartColumnBig,
     ChartGantt,
     Eye,
     EyeOff,
@@ -35,6 +36,7 @@
     setWorkItemExecutionTrackerContext,
     WorkItemExecutionTrackerContext,
   } from "../components/WorkItemExecutionTracker.svelte";
+  import WorkItemStatistics from "../components/WorkItemStatistics.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import type { ReleaseInfo } from "$lib/bindings/ReleaseInfo";
   import type { RefreshSummary } from "$lib/bindings/RefreshSummary";
@@ -42,12 +44,25 @@
   const context = setWorkItemContext(new WorkItemContext());
   setWorkItemExecutionTrackerContext(new WorkItemExecutionTrackerContext());
 
-  type Mode = "items" | "xtracker";
+  type Mode = "items" | "xtracker" | "statistics";
+  type StatisticsPivotField =
+    | "kind"
+    | "epic"
+    | "workstream"
+    | "assigned"
+    | "status";
+  type StatisticsSeriesPivotField = "none" | StatisticsPivotField;
   let mode = $state<Mode>("items");
+  let statisticsRowPivotField = $state<StatisticsPivotField>("kind");
+  let statisticsSeriesPivotField =
+    $state<StatisticsSeriesPivotField>("none");
 
   const itemsIconClass = $derived(mode === "items" ? "bg-primary-500" : "");
   const xtrackerIconClass = $derived(
     mode === "xtracker" ? "bg-primary-500" : ""
+  );
+  const statisticsIconClass = $derived(
+    mode === "statistics" ? "bg-primary-500" : ""
   );
 
   // Changes toolbar state
@@ -305,6 +320,18 @@
           mode = "xtracker";
         }}
       />
+      <AppBarButton
+        text="Statistics"
+        icon={ChartColumnBig}
+        iconClass={statisticsIconClass}
+        disabled={disabled}
+        onclick={() => {
+          if (mode !== "statistics") {
+            recordTelemetry({ event: "mode_switched", to: "statistics" });
+          }
+          mode = "statistics";
+        }}
+      />
 
       <div class="w-3"></div>
 
@@ -345,6 +372,11 @@
       <WorkItemTree />
     {:else if mode === "xtracker"}
       <WorkItemExecutionTracker />
+    {:else if mode === "statistics"}
+      <WorkItemStatistics
+        bind:rowPivotField={statisticsRowPivotField}
+        bind:seriesPivotField={statisticsSeriesPivotField}
+      />
     {:else}
       <h1>Unknown mode {mode}</h1>
     {/if}

@@ -2,11 +2,11 @@
 import type { WorkItemId } from "./WorkItemId";
 
 /**
- * The result of resolving a GitHub URL to a project item identifier.
+ * The result of resolving a GitHub URL to a work item identifier.
  *
  * The frontend uses this to determine whether the item is already in the
- * project (by checking `id` against `data.workItems`) and to retrieve the
- * current parent (if any) to decide whether a reparent confirmation dialog is
+ * current project (by checking `id` against `data.workItems`) and to retrieve
+ * the current parent (if any) to decide whether a reparent confirmation dialog is
  * needed before staging a `SetParent` change.
  */
 export type ResolvedUrl = {
