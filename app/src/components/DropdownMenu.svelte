@@ -6,6 +6,7 @@
     icon: typeof Icon;
     label: string;
     iconClass?: string;
+    badge?: number;
     disabled?: boolean;
     onclick: () => void;
   };
@@ -132,7 +133,7 @@
         {@const ItemIcon = item.icon}
         <button
           role="menuitem"
-          class="btn w-full justify-start gap-2"
+          class="btn w-full justify-start gap-2 relative"
           disabled={item.disabled}
           onclick={() => {
             item.onclick();
@@ -140,6 +141,11 @@
           }}
         >
           <ItemIcon size={16} class={item.iconClass} />{item.label}
+          {#if item.badge !== undefined}
+            <span
+              class="ml-auto bg-primary-500 text-white text-[0.6rem] leading-none min-w-3.5 h-3.5 flex items-center justify-center rounded-full px-0.5"
+            >{item.badge}</span>
+          {/if}
         </button>
       {/each}
     </div>

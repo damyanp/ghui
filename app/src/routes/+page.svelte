@@ -286,7 +286,6 @@
         onclose={() => (openDropdown = null)}
         icon={modeIcon}
         text={modeText}
-        iconClass="bg-primary-500"
         {disabled}
         items={[
           {
@@ -371,25 +370,21 @@
             disabled: updateButtonDisabled,
             onclick: () => { void onUpdateClicked(); },
           },
+          {
+            icon: ScrollText,
+            label: "Output",
+            badge: context.unreadErrorCount > 0 ? context.unreadErrorCount : undefined,
+            onclick: () => {
+              logPanelOpen = !logPanelOpen;
+              recordTelemetry({ event: "log_panel_toggled", open: logPanelOpen });
+              if (logPanelOpen) {
+                context.markErrorsAsRead();
+              }
+            },
+          },
         ]}
       />
 
-      <div class="w-3"></div>
-
-      <AppBarButton
-        text="Output"
-        icon={ScrollText}
-        badge={context.unreadErrorCount > 0
-          ? context.unreadErrorCount
-          : undefined}
-        onclick={() => {
-          logPanelOpen = !logPanelOpen;
-          recordTelemetry({ event: "log_panel_toggled", open: logPanelOpen });
-          if (logPanelOpen) {
-            context.markErrorsAsRead();
-          }
-        }}
-      />
     {/snippet}
 
     {#snippet trail()}
