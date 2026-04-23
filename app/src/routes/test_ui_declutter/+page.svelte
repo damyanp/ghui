@@ -255,11 +255,11 @@
               onclick={() => toggleMenu("mode")}
             >
               {#if selectedMode === "items"}
-                <ListTree size={18} />
+                <ListTree />
               {:else if selectedMode === "xtracker"}
-                <ChartGantt size={18} />
+                <ChartGantt />
               {:else}
-                <ChartColumnBig size={18} />
+                <ChartColumnBig />
               {/if}
               <span class="text-xs flex items-center gap-0.5">
                 {#if selectedMode === "items"}Items{:else if selectedMode === "xtracker"}X-tracker{:else}Statistics{/if}
@@ -307,7 +307,7 @@
               onkeydown={(event) => onMenuButtonKeydown(event, "actions")}
               onclick={() => toggleMenu("actions")}
             >
-              <Ellipsis size={18} />
+              <Ellipsis />
               <span class="text-xs flex items-center gap-0.5">More <ChevronDown size={10} /></span>
             </button>
             {#if isActionsMenuOpen}
