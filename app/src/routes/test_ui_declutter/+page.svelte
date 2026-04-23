@@ -1,10 +1,64 @@
 <script lang="ts">
+  import { AppBar } from "@skeletonlabs/skeleton-svelte";
+  import AppBarButton from "../../components/AppBarButton.svelte";
+  import {
+    ArrowDownToLine,
+    Bubbles,
+    ChartColumnBig,
+    ChartGantt,
+    ChevronDown,
+    Ellipsis,
+    GitBranch,
+    KeyRound,
+    ListTree,
+    ReceiptText,
+    RefreshCw,
+    Save,
+    ScrollText,
+    Search,
+    Undo2,
+  } from "@lucide/svelte";
   import { scenarios } from "./mockups";
 
   let selectedId = $state(scenarios[0].id);
   const selectedScenario = $derived(
     scenarios.find((scenario) => scenario.id === selectedId) ?? scenarios[0]
   );
+  let modeMenuOpen = $state(false);
+  let actionsMenuOpen = $state(false);
+  let selectedMode = $state<"items" | "xtracker" | "statistics">("items");
+
+  const currentScenarioBadge = $derived.by(() => {
+    if (selectedScenario.id === "editing") return 18;
+    if (selectedScenario.id === "cleanup") return 11;
+    return 0;
+  });
+
+  const conflictBadge = $derived.by(() => {
+    if (selectedScenario.id === "editing") return 2;
+    if (selectedScenario.id === "cleanup") return 7;
+    return 0;
+  });
+
+  function toggleModeMenu(): void {
+    modeMenuOpen = !modeMenuOpen;
+    if (modeMenuOpen) actionsMenuOpen = false;
+  }
+
+  function toggleActionsMenu(): void {
+    actionsMenuOpen = !actionsMenuOpen;
+    if (actionsMenuOpen) modeMenuOpen = false;
+  }
+
+  function selectMode(mode: "items" | "xtracker" | "statistics"): void {
+    selectedMode = mode;
+    modeMenuOpen = false;
+  }
+
+  function closeMenus(): void {
+    modeMenuOpen = false;
+    actionsMenuOpen = false;
+  }
 
   const groupClass: Record<string, string> = {
     load: "bg-primary-100-900",
@@ -85,6 +139,123 @@
         {/each}
       </ol>
     </article>
+  </section>
+
+  <section class="card p-3 space-y-3 relative">
+    <h2 class="h6">Proposed toolbar (interactive layout)</h2>
+    <div class="rounded border border-surface-300-700 overflow-hidden">
+      <AppBar padding="px-2 py-1">
+        {#snippet lead()}
+          <AppBarButton
+            icon={RefreshCw}
+            text="Refresh"
+            onclick={closeMenus}
+          />
+          <AppBarButton icon={Bubbles} text="Sanitize" onclick={closeMenus} />
+          <AppBarButton
+            icon={ReceiptText}
+            text="Review"
+            badge={currentScenarioBadge > 0 ? currentScenarioBadge : undefined}
+            onclick={closeMenus}
+          />
+          <AppBarButton
+            icon={GitBranch}
+            text="Conflicts"
+            badge={conflictBadge > 0 ? conflictBadge : undefined}
+            onclick={closeMenus}
+          />
+          <AppBarButton
+            icon={Save}
+            text="Save"
+            iconClass="bg-primary-500"
+            onclick={closeMenus}
+          />
+
+          <div class="relative mx-1">
+            <button
+              class="btn rounded p-1 flex items-center gap-1 h-11"
+              aria-haspopup="menu"
+              aria-expanded={modeMenuOpen}
+              onclick={toggleModeMenu}
+            >
+              {#if selectedMode === "items"}
+                <ListTree size={18} />
+                <span class="text-xs">Items</span>
+              {:else if selectedMode === "xtracker"}
+                <ChartGantt size={18} />
+                <span class="text-xs">X-tracker</span>
+              {:else}
+                <ChartColumnBig size={18} />
+                <span class="text-xs">Statistics</span>
+              {/if}
+              <ChevronDown size={14} />
+            </button>
+            {#if modeMenuOpen}
+              <div
+                class="absolute left-0 top-12 z-20 min-w-40 rounded border border-surface-300-700 bg-surface-100-900 p-1 shadow-lg"
+              >
+                <button
+                  class="btn w-full justify-start gap-2"
+                  onclick={() => selectMode("items")}
+                >
+                  <ListTree size={16} /> Items
+                </button>
+                <button
+                  class="btn w-full justify-start gap-2"
+                  onclick={() => selectMode("xtracker")}
+                >
+                  <ChartGantt size={16} /> X-tracker
+                </button>
+                <button
+                  class="btn w-full justify-start gap-2"
+                  onclick={() => selectMode("statistics")}
+                >
+                  <ChartColumnBig size={16} /> Statistics
+                </button>
+              </div>
+            {/if}
+          </div>
+
+          <div class="relative mx-1">
+            <button
+              class="btn rounded p-1 flex items-center gap-1 h-11"
+              aria-haspopup="menu"
+              aria-expanded={actionsMenuOpen}
+              onclick={toggleActionsMenu}
+            >
+              <Ellipsis size={18} />
+              <span class="text-xs">More</span>
+              <ChevronDown size={14} />
+            </button>
+            {#if actionsMenuOpen}
+              <div
+                class="absolute left-0 top-12 z-20 min-w-44 rounded border border-surface-300-700 bg-surface-100-900 p-1 shadow-lg"
+              >
+                <button class="btn w-full justify-start gap-2" onclick={closeMenus}>
+                  <Undo2 size={16} /> Undo / Redo
+                </button>
+                <button class="btn w-full justify-start gap-2" onclick={closeMenus}>
+                  <Search size={16} /> Find
+                </button>
+              </div>
+            {/if}
+          </div>
+        {/snippet}
+        {#snippet trail()}
+          <AppBarButton icon={ScrollText} text="Output" onclick={closeMenus} />
+          <AppBarButton
+            icon={ArrowDownToLine}
+            text="Updates"
+            onclick={closeMenus}
+          />
+          <AppBarButton icon={KeyRound} text="Pat" onclick={closeMenus} />
+        {/snippet}
+      </AppBar>
+    </div>
+    <p class="text-xs opacity-80">
+      PAT stays in the right-side action group; mode and low-frequency actions
+      are modeled as dropdowns with icons so interaction details are reviewable.
+    </p>
   </section>
 
   <section class="card p-3 space-y-2">
