@@ -24,40 +24,44 @@
   const selectedScenario = $derived(
     scenarios.find((scenario) => scenario.id === selectedId) ?? scenarios[0]
   );
-  let modeMenuOpen = $state(false);
-  let actionsMenuOpen = $state(false);
+  let isModeMenuOpen = $state(false);
+  let isActionsMenuOpen = $state(false);
   let selectedMode = $state<"items" | "xtracker" | "statistics">("items");
+  const reviewBadgeByScenario: Record<string, number> = {
+    editing: 18,
+    cleanup: 11,
+  };
+  const conflictBadgeByScenario: Record<string, number> = {
+    editing: 2,
+    cleanup: 7,
+  };
 
   const currentScenarioBadge = $derived.by(() => {
-    if (selectedScenario.id === "editing") return 18;
-    if (selectedScenario.id === "cleanup") return 11;
-    return 0;
+    return reviewBadgeByScenario[selectedScenario.id] ?? 0;
   });
 
   const conflictBadge = $derived.by(() => {
-    if (selectedScenario.id === "editing") return 2;
-    if (selectedScenario.id === "cleanup") return 7;
-    return 0;
+    return conflictBadgeByScenario[selectedScenario.id] ?? 0;
   });
 
-  function toggleModeMenu(): void {
-    modeMenuOpen = !modeMenuOpen;
-    if (modeMenuOpen) actionsMenuOpen = false;
-  }
-
-  function toggleActionsMenu(): void {
-    actionsMenuOpen = !actionsMenuOpen;
-    if (actionsMenuOpen) modeMenuOpen = false;
+  function toggleMenu(menu: "mode" | "actions"): void {
+    if (menu === "mode") {
+      isModeMenuOpen = !isModeMenuOpen;
+      if (isModeMenuOpen) isActionsMenuOpen = false;
+      return;
+    }
+    isActionsMenuOpen = !isActionsMenuOpen;
+    if (isActionsMenuOpen) isModeMenuOpen = false;
   }
 
   function selectMode(mode: "items" | "xtracker" | "statistics"): void {
     selectedMode = mode;
-    modeMenuOpen = false;
+    isModeMenuOpen = false;
   }
 
   function closeMenus(): void {
-    modeMenuOpen = false;
-    actionsMenuOpen = false;
+    isModeMenuOpen = false;
+    isActionsMenuOpen = false;
   }
 
   const groupClass: Record<string, string> = {
@@ -175,8 +179,8 @@
             <button
               class="btn rounded p-1 flex items-center gap-1 h-11"
               aria-haspopup="menu"
-              aria-expanded={modeMenuOpen}
-              onclick={toggleModeMenu}
+              aria-expanded={isModeMenuOpen}
+              onclick={() => toggleMenu("mode")}
             >
               {#if selectedMode === "items"}
                 <ListTree size={18} />
@@ -190,7 +194,7 @@
               {/if}
               <ChevronDown size={14} />
             </button>
-            {#if modeMenuOpen}
+            {#if isModeMenuOpen}
               <div
                 class="absolute left-0 top-12 z-20 min-w-40 rounded border border-surface-300-700 bg-surface-100-900 p-1 shadow-lg"
               >
@@ -220,14 +224,14 @@
             <button
               class="btn rounded p-1 flex items-center gap-1 h-11"
               aria-haspopup="menu"
-              aria-expanded={actionsMenuOpen}
-              onclick={toggleActionsMenu}
+              aria-expanded={isActionsMenuOpen}
+              onclick={() => toggleMenu("actions")}
             >
               <Ellipsis size={18} />
               <span class="text-xs">More</span>
               <ChevronDown size={14} />
             </button>
-            {#if actionsMenuOpen}
+            {#if isActionsMenuOpen}
               <div
                 class="absolute left-0 top-12 z-20 min-w-44 rounded border border-surface-300-700 bg-surface-100-900 p-1 shadow-lg"
               >
