@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { AppBar } from "@skeletonlabs/skeleton-svelte";
   import AppBarButton from "../../components/AppBarButton.svelte";
   import {
@@ -27,6 +28,8 @@
   let isModeMenuOpen = $state(false);
   let isActionsMenuOpen = $state(false);
   let selectedMode = $state<"items" | "xtracker" | "statistics">("items");
+  let modeMenuElement = $state<HTMLDivElement | null>(null);
+  let actionsMenuElement = $state<HTMLDivElement | null>(null);
   const reviewBadgeByScenario: Record<string, number> = {
     editing: 18,
     cleanup: 11,
@@ -62,6 +65,67 @@
   function closeMenus(): void {
     isModeMenuOpen = false;
     isActionsMenuOpen = false;
+  }
+
+  async function openAndFocusFirst(menu: "mode" | "actions"): Promise<void> {
+    toggleMenu(menu);
+    await tick();
+    const container = menu === "mode" ? modeMenuElement : actionsMenuElement;
+    const firstItem = container?.querySelector<HTMLElement>('[role="menuitem"]');
+    firstItem?.focus();
+  }
+
+  function onMenuButtonKeydown(
+    event: KeyboardEvent,
+    menu: "mode" | "actions"
+  ): void {
+    if (event.key === "Escape") {
+      closeMenus();
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      void openAndFocusFirst(menu);
+    }
+  }
+
+  function onMenuListKeydown(
+    event: KeyboardEvent,
+    menuElement: HTMLDivElement | null
+  ): void {
+    if (!menuElement) return;
+    const items = Array.from(
+      menuElement.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    );
+    if (items.length === 0) return;
+    const currentIndex = items.findIndex((item) => item === document.activeElement);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenus();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+      items[nextIndex]?.focus();
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      const nextIndex =
+        currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+      items[nextIndex]?.focus();
+      return;
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      items[0]?.focus();
+      return;
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    }
   }
 
   const groupClass: Record<string, string> = {
@@ -147,6 +211,13 @@
 
   <section class="card p-3 space-y-3 relative">
     <h2 class="h6">Proposed toolbar (interactive layout)</h2>
+    {#if isModeMenuOpen || isActionsMenuOpen}
+      <button
+        class="fixed inset-0 z-10"
+        aria-label="Close menu overlays"
+        onclick={closeMenus}
+      ></button>
+    {/if}
     <div class="rounded border border-surface-300-700 overflow-hidden">
       <AppBar padding="px-2 py-1">
         {#snippet lead()}
@@ -180,6 +251,7 @@
               class="btn rounded p-1 flex items-center gap-1 h-11"
               aria-haspopup="menu"
               aria-expanded={isModeMenuOpen}
+              onkeydown={(event) => onMenuButtonKeydown(event, "mode")}
               onclick={() => toggleMenu("mode")}
             >
               {#if selectedMode === "items"}
@@ -196,21 +268,28 @@
             </button>
             {#if isModeMenuOpen}
               <div
+                bind:this={modeMenuElement}
+                role="menu"
+                tabindex="-1"
                 class="absolute left-0 top-12 z-20 min-w-40 rounded border border-surface-300-700 bg-surface-100-900 p-1 shadow-lg"
+                onkeydown={(event) => onMenuListKeydown(event, modeMenuElement)}
               >
                 <button
+                  role="menuitem"
                   class="btn w-full justify-start gap-2"
                   onclick={() => selectMode("items")}
                 >
                   <ListTree size={16} /> Items
                 </button>
                 <button
+                  role="menuitem"
                   class="btn w-full justify-start gap-2"
                   onclick={() => selectMode("xtracker")}
                 >
                   <ChartGantt size={16} /> X-tracker
                 </button>
                 <button
+                  role="menuitem"
                   class="btn w-full justify-start gap-2"
                   onclick={() => selectMode("statistics")}
                 >
@@ -225,6 +304,7 @@
               class="btn rounded p-1 flex items-center gap-1 h-11"
               aria-haspopup="menu"
               aria-expanded={isActionsMenuOpen}
+              onkeydown={(event) => onMenuButtonKeydown(event, "actions")}
               onclick={() => toggleMenu("actions")}
             >
               <Ellipsis size={18} />
@@ -233,12 +313,24 @@
             </button>
             {#if isActionsMenuOpen}
               <div
+                bind:this={actionsMenuElement}
+                role="menu"
+                tabindex="-1"
                 class="absolute left-0 top-12 z-20 min-w-44 rounded border border-surface-300-700 bg-surface-100-900 p-1 shadow-lg"
+                onkeydown={(event) => onMenuListKeydown(event, actionsMenuElement)}
               >
-                <button class="btn w-full justify-start gap-2" onclick={closeMenus}>
+                <button
+                  role="menuitem"
+                  class="btn w-full justify-start gap-2"
+                  onclick={closeMenus}
+                >
                   <Undo2 size={16} /> Undo / Redo
                 </button>
-                <button class="btn w-full justify-start gap-2" onclick={closeMenus}>
+                <button
+                  role="menuitem"
+                  class="btn w-full justify-start gap-2"
+                  onclick={closeMenus}
+                >
                   <Search size={16} /> Find
                 </button>
               </div>
