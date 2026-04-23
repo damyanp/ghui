@@ -364,6 +364,13 @@
             disabled: disabled || mode !== "items",
             onclick: () => { void openFind(); },
           },
+          {
+            icon: ArrowDownToLine,
+            label: updateButtonText,
+            iconClass: updateIconClass,
+            disabled: updateButtonDisabled,
+            onclick: () => { void onUpdateClicked(); },
+          },
         ]}
       />
 
@@ -386,13 +393,6 @@
     {/snippet}
 
     {#snippet trail()}
-      <AppBarButton
-        text={updateButtonText}
-        icon={ArrowDownToLine}
-        iconClass={updateIconClass}
-        disabled={updateButtonDisabled}
-        onclick={onUpdateClicked}
-      />
       <Pat />
     {/snippet}
   </AppBar>

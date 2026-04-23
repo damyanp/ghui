@@ -5,6 +5,7 @@
   export type MenuItem = {
     icon: typeof Icon;
     label: string;
+    iconClass?: string;
     disabled?: boolean;
     onclick: () => void;
   };
@@ -138,7 +139,7 @@
             onclose();
           }}
         >
-          <ItemIcon size={16} />{item.label}
+          <ItemIcon size={16} class={item.iconClass} />{item.label}
         </button>
       {/each}
     </div>
