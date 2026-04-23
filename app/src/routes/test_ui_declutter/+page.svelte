@@ -218,8 +218,8 @@
         onclick={closeMenus}
       ></button>
     {/if}
-    <div class="rounded border border-surface-300-700 overflow-hidden">
-      <AppBar padding="px-2 py-1">
+    <div class="rounded border border-surface-300-700">
+      <AppBar padding="px-2 py-1" classes="rounded">
         {#snippet lead()}
           <AppBarButton
             icon={RefreshCw}
@@ -248,7 +248,7 @@
 
           <div class="relative mx-1">
             <button
-              class="btn rounded p-1 flex items-center gap-1 h-11"
+              class="btn rounded p-0.5 flex-col relative"
               aria-haspopup="menu"
               aria-expanded={isModeMenuOpen}
               onkeydown={(event) => onMenuButtonKeydown(event, "mode")}
@@ -256,15 +256,15 @@
             >
               {#if selectedMode === "items"}
                 <ListTree size={18} />
-                <span class="text-xs">Items</span>
               {:else if selectedMode === "xtracker"}
                 <ChartGantt size={18} />
-                <span class="text-xs">X-tracker</span>
               {:else}
                 <ChartColumnBig size={18} />
-                <span class="text-xs">Statistics</span>
               {/if}
-              <ChevronDown size={14} />
+              <span class="text-xs flex items-center gap-0.5">
+                {#if selectedMode === "items"}Items{:else if selectedMode === "xtracker"}X-tracker{:else}Statistics{/if}
+                <ChevronDown size={10} />
+              </span>
             </button>
             {#if isModeMenuOpen}
               <div
@@ -301,15 +301,14 @@
 
           <div class="relative mx-1">
             <button
-              class="btn rounded p-1 flex items-center gap-1 h-11"
+              class="btn rounded p-0.5 flex-col relative"
               aria-haspopup="menu"
               aria-expanded={isActionsMenuOpen}
               onkeydown={(event) => onMenuButtonKeydown(event, "actions")}
               onclick={() => toggleMenu("actions")}
             >
               <Ellipsis size={18} />
-              <span class="text-xs">More</span>
-              <ChevronDown size={14} />
+              <span class="text-xs flex items-center gap-0.5">More <ChevronDown size={10} /></span>
             </button>
             {#if isActionsMenuOpen}
               <div
