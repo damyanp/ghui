@@ -87,7 +87,7 @@
 
   async function openFind(): Promise<void> {
     await tick();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "f" }));
+    document.dispatchEvent(new CustomEvent("ghui:open-find"));
   }
 
   // Update check state

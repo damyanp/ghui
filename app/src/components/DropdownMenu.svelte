@@ -34,6 +34,7 @@
   }: Props = $props();
 
   let menuElement = $state<HTMLDivElement | null>(null);
+  let triggerButton = $state<HTMLButtonElement | null>(null);
 
   async function openAndFocusFirst(): Promise<void> {
     onopen();
@@ -76,6 +77,7 @@
     if (event.key === "Escape") {
       event.preventDefault();
       onclose();
+      triggerButton?.focus();
       return;
     }
     if (event.key === "ArrowDown") {
@@ -108,6 +110,7 @@
 
 <div class="relative mx-1">
   <button
+    bind:this={triggerButton}
     class="btn rounded p-0.5 flex-col relative"
     aria-haspopup="menu"
     aria-expanded={open}
@@ -143,6 +146,7 @@
           <ItemIcon size={16} class={item.iconClass} />{item.label}
           {#if item.badge !== undefined}
             <span
+              aria-label="{item.badge} {item.label}"
               class="ml-auto bg-primary-500 text-white text-[0.6rem] leading-none min-w-3.5 h-3.5 flex items-center justify-center rounded-full px-0.5"
             >{item.badge}</span>
           {/if}
