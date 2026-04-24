@@ -138,6 +138,7 @@
           role="menuitem"
           class="btn w-full justify-start gap-2 relative"
           disabled={item.disabled}
+          aria-label={item.badge !== undefined ? `${item.label} (${item.badge})` : undefined}
           onclick={() => {
             item.onclick();
             onclose();
@@ -146,7 +147,7 @@
           <ItemIcon size={16} class={item.iconClass} />{item.label}
           {#if item.badge !== undefined}
             <span
-              aria-label="{item.badge} {item.label}"
+              aria-hidden="true"
               class="ml-auto bg-primary-500 text-white text-[0.6rem] leading-none min-w-3.5 h-3.5 flex items-center justify-center rounded-full px-0.5"
             >{item.badge}</span>
           {/if}

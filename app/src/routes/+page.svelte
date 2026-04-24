@@ -329,7 +329,6 @@
         onclose={() => (openDropdown = null)}
         icon={Ellipsis}
         text="More"
-        {disabled}
         items={[
           {
             icon: Undo2,
