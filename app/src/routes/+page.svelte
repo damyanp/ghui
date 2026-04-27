@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
+  import { onDestroy, tick } from "svelte";
   import { AppBar } from "@skeletonlabs/skeleton-svelte";
   import Pat from "../components/Pat.svelte";
   import WorkItemTree from "../components/WorkItemTree.svelte";
@@ -14,6 +14,7 @@
     Bubbles,
     ChartColumnBig,
     ChartGantt,
+    Ellipsis,
     Eye,
     EyeOff,
     GitBranch,
@@ -23,11 +24,13 @@
     ReceiptText,
     Save,
     ScrollText,
+    Search,
     Trash2,
     Undo2,
     ArrowDownToLine,
   } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
+  import DropdownMenu from "../components/DropdownMenu.svelte";
   import LogPanel from "../components/LogPanel.svelte";
   import PendingChangesDialog from "../components/PendingChangesDialog.svelte";
   import AddItemDialog from "../components/AddItemDialog.svelte";
@@ -57,12 +60,11 @@
   let statisticsSeriesPivotField =
     $state<StatisticsSeriesPivotField>("none");
 
-  const itemsIconClass = $derived(mode === "items" ? "bg-primary-500" : "");
-  const xtrackerIconClass = $derived(
-    mode === "xtracker" ? "bg-primary-500" : ""
+  const modeIcon = $derived(
+    mode === "items" ? ListTree : mode === "xtracker" ? ChartGantt : ChartColumnBig
   );
-  const statisticsIconClass = $derived(
-    mode === "statistics" ? "bg-primary-500" : ""
+  const modeText = $derived(
+    mode === "items" ? "Items" : mode === "xtracker" ? "X-tracker" : "Statistics"
   );
 
   // Changes toolbar state
@@ -80,6 +82,13 @@
   let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
+
+  let openDropdown = $state<"mode" | "more" | null>(null);
+
+  async function openFind(): Promise<void> {
+    await tick();
+    document.dispatchEvent(new CustomEvent("ghui:open-find"));
+  }
 
   // Update check state
   let updateInfo = $state<ReleaseInfo | null>(null);
@@ -202,6 +211,14 @@
 </script>
 
 <div class="flex flex-col h-full w-full fixed">
+  {#if openDropdown !== null}
+    <button
+      class="fixed inset-0 z-40 cursor-default"
+      aria-label="Close menu"
+      tabindex="-1"
+      onclick={() => (openDropdown = null)}
+    ></button>
+  {/if}
   <AppBar padding="px-4 py-1">
     {#snippet lead()}
       <div
@@ -225,15 +242,6 @@
         onclick={saveChanges}
       />
       <AppBarButton
-        icon={Trash2}
-        text="Discard"
-        disabled={!numChanges || disabled}
-        onclick={() => runBusy(() => context.deleteChanges())}
-      />
-
-      <div class="w-3"></div>
-
-      <AppBarButton
         text="Details"
         icon={ReceiptText}
         disabled={!numChanges || disabled}
@@ -255,15 +263,6 @@
       <div class="w-3"></div>
 
       <AppBarButton
-        icon={LinkIcon}
-        text="Add"
-        disabled={disabled}
-        onclick={() => {
-          addItemDialogOpen = true;
-        }}
-      />
-
-      <AppBarButton
         icon={Bubbles}
         text="Sanitize"
         disabled={disabled}
@@ -281,84 +280,113 @@
 
       <div class="w-3"></div>
 
-      <AppBarButton
-        icon={Undo2}
-        text="Undo"
-        disabled={!canUndo || disabled}
-        onclick={() => runBusy(() => context.undoChange())}
+      <DropdownMenu
+        open={openDropdown === "mode"}
+        onopen={() => (openDropdown = "mode")}
+        onclose={() => (openDropdown = null)}
+        icon={modeIcon}
+        text={modeText}
+        {disabled}
+        items={[
+          {
+            icon: ListTree,
+            label: "Items",
+            disabled,
+            onclick: () => {
+              if (mode !== "items") {
+                recordTelemetry({ event: "mode_switched", to: "items" });
+              }
+              mode = "items";
+            },
+          },
+          {
+            icon: ChartGantt,
+            label: "X-tracker",
+            disabled,
+            onclick: () => {
+              if (mode !== "xtracker") {
+                recordTelemetry({ event: "mode_switched", to: "xtracker" });
+              }
+              mode = "xtracker";
+            },
+          },
+          {
+            icon: ChartColumnBig,
+            label: "Statistics",
+            disabled,
+            onclick: () => {
+              if (mode !== "statistics") {
+                recordTelemetry({ event: "mode_switched", to: "statistics" });
+              }
+              mode = "statistics";
+            },
+          },
+        ]}
       />
-      <AppBarButton
-        icon={Redo2}
-        text="Redo"
-        disabled={!canRedo || disabled}
-        onclick={() => runBusy(() => context.redoChange())}
+      <DropdownMenu
+        open={openDropdown === "more"}
+        onopen={() => (openDropdown = "more")}
+        onclose={() => (openDropdown = null)}
+        icon={Ellipsis}
+        text="More"
+        items={[
+          {
+            icon: Undo2,
+            label: "Undo",
+            disabled: !canUndo || disabled,
+            onclick: () => { void runBusy(() => context.undoChange()); },
+          },
+          {
+            icon: Redo2,
+            label: "Redo",
+            disabled: !canRedo || disabled,
+            onclick: () => { void runBusy(() => context.redoChange()); },
+          },
+          {
+            icon: LinkIcon,
+            label: "Add",
+            disabled,
+            onclick: () => {
+              addItemDialogOpen = true;
+            },
+          },
+          {
+            icon: Trash2,
+            label: "Discard",
+            disabled: !numChanges || disabled,
+            onclick: () => { void runBusy(() => context.deleteChanges()); },
+          },
+          {
+            icon: Search,
+            label: "Find",
+            disabled: disabled || mode !== "items",
+            onclick: () => { void openFind(); },
+          },
+          {
+            icon: ArrowDownToLine,
+            label: updateButtonText,
+            iconClass: updateIconClass,
+            disabled: updateButtonDisabled,
+            onclick: () => { void onUpdateClicked(); },
+          },
+          {
+            icon: ScrollText,
+            label: "Output",
+            badge: context.unreadErrorCount > 0 ? context.unreadErrorCount : undefined,
+            onclick: () => {
+              logPanelOpen = !logPanelOpen;
+              recordTelemetry({ event: "log_panel_toggled", open: logPanelOpen });
+              if (logPanelOpen) {
+                context.markErrorsAsRead();
+              }
+            },
+          },
+        ]}
       />
 
-      <div class="w-3"></div>
-
-      <AppBarButton
-        text="Items"
-        icon={ListTree}
-        iconClass={itemsIconClass}
-        disabled={disabled}
-        onclick={() => {
-          if (mode !== "items") {
-            recordTelemetry({ event: "mode_switched", to: "items" });
-          }
-          mode = "items";
-        }}
-      />
-      <AppBarButton
-        text="X-tracker"
-        icon={ChartGantt}
-        iconClass={xtrackerIconClass}
-        disabled={disabled}
-        onclick={() => {
-          if (mode !== "xtracker") {
-            recordTelemetry({ event: "mode_switched", to: "xtracker" });
-          }
-          mode = "xtracker";
-        }}
-      />
-      <AppBarButton
-        text="Statistics"
-        icon={ChartColumnBig}
-        iconClass={statisticsIconClass}
-        disabled={disabled}
-        onclick={() => {
-          if (mode !== "statistics") {
-            recordTelemetry({ event: "mode_switched", to: "statistics" });
-          }
-          mode = "statistics";
-        }}
-      />
-
-      <div class="w-3"></div>
-
-      <AppBarButton
-        text="Output"
-        icon={ScrollText}
-        badge={context.unreadErrorCount > 0
-          ? context.unreadErrorCount
-          : undefined}
-        onclick={() => {
-          logPanelOpen = !logPanelOpen;
-          recordTelemetry({ event: "log_panel_toggled", open: logPanelOpen });
-          if (logPanelOpen) {
-            context.markErrorsAsRead();
-          }
-        }}
-      />
     {/snippet}
 
     {#snippet trail()}
-      <AppBarButton
-        text={updateButtonText}
-        icon={ArrowDownToLine}
-        iconClass={updateIconClass}
-        disabled={updateButtonDisabled}
-        onclick={onUpdateClicked}
-      />
       <Pat />
     {/snippet}
   </AppBar>

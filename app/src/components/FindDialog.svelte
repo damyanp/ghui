@@ -13,15 +13,8 @@
 
   let open = $state(false);
 
-  onMount(() => {
-    document.addEventListener("keydown", onkeydown);
-    return () => {
-      document.removeEventListener("keydown", onkeydown);
-    };
-  });
-
-  function onkeydown(e: KeyboardEvent) {
-    if (!open && e.key.trim().length === 1) {
+  function openDialog(): void {
+    if (!open) {
       text = "";
       open = true;
       recordTelemetry({ event: "find_dialog" });
@@ -29,6 +22,21 @@
         const input = document.getElementById(id);
         input?.focus();
       });
+    }
+  }
+
+  onMount(() => {
+    document.addEventListener("keydown", onkeydown);
+    document.addEventListener("ghui:open-find", openDialog);
+    return () => {
+      document.removeEventListener("keydown", onkeydown);
+      document.removeEventListener("ghui:open-find", openDialog);
+    };
+  });
+
+  function onkeydown(e: KeyboardEvent) {
+    if (!open && e.key.trim().length === 1) {
+      openDialog();
     } else {
       if (e.key === "Escape") {
         text = "";
