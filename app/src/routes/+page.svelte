@@ -15,13 +15,10 @@
     ChartColumnBig,
     ChartGantt,
     Ellipsis,
-    Eye,
-    EyeOff,
-    GitBranch,
     ListTree,
     LinkIcon,
     Redo2,
-    ReceiptText,
+    ClipboardList,
     Save,
     ScrollText,
     Search,
@@ -32,9 +29,8 @@
   import AppBarButton from "../components/AppBarButton.svelte";
   import DropdownMenu from "../components/DropdownMenu.svelte";
   import LogPanel from "../components/LogPanel.svelte";
-  import PendingChangesDialog from "../components/PendingChangesDialog.svelte";
+  import ReviewChangesPanel from "../components/ReviewChangesPanel.svelte";
   import AddItemDialog from "../components/AddItemDialog.svelte";
-  import EpicConflictsPanel from "../components/EpicConflictsPanel.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
     WorkItemExecutionTrackerContext,
@@ -76,9 +72,8 @@
   let saveProgress = $state(0);
   let refreshSummaryMessage = $state<string | null>(null);
   let refreshSummaryTimer: ReturnType<typeof setTimeout> | null = null;
-  let pendingChangesOpen = $state(false);
+  let reviewChangesOpen = $state(false);
   let addItemDialogOpen = $state(false);
-  let epicConflictsOpen = $state(false);
   let logPanelOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
@@ -242,21 +237,13 @@
         onclick={saveChanges}
       />
       <AppBarButton
-        text="Details"
-        icon={ReceiptText}
-        disabled={!numChanges || disabled}
-        badge={numChanges > 0 ? numChanges : undefined}
+        icon={ClipboardList}
+        text="Review Changes"
+        disabled={!(numChanges || numEpicConflicts) || disabled}
+        badge={numChanges + numEpicConflicts || undefined}
         onclick={() => {
-          pendingChangesOpen = true;
+          reviewChangesOpen = true;
           recordTelemetry({ event: "pending_changes_opened" });
-        }}
-      />
-      <AppBarButton
-        text="Preview"
-        icon={context.previewChanges ? Eye : EyeOff}
-        disabled={!numChanges || disabled}
-        onclick={() => {
-          context.setPreviewChanges(!context.previewChanges);
         }}
       />
 
@@ -267,15 +254,6 @@
         text="Sanitize"
         disabled={disabled}
         onclick={() => runBusy(() => context.sanitize())}
-      />
-      <AppBarButton
-        icon={GitBranch}
-        text="Epic Conflicts"
-        disabled={!numEpicConflicts || disabled}
-        badge={numEpicConflicts > 0 ? numEpicConflicts : undefined}
-        onclick={() => {
-          epicConflictsOpen = true;
-        }}
       />
 
       <div class="w-3"></div>
@@ -391,9 +369,8 @@
     {/snippet}
   </AppBar>
 
-  <PendingChangesDialog bind:open={pendingChangesOpen} />
+  <ReviewChangesPanel bind:open={reviewChangesOpen} />
   <AddItemDialog bind:open={addItemDialogOpen} />
-  <EpicConflictsPanel bind:open={epicConflictsOpen} />
 
   <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
     {#if mode === "items"}
