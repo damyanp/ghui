@@ -4,13 +4,12 @@
     getWorkItemContext,
     linkTitle,
   } from "$lib/WorkItemContext.svelte";
-  import { Eye, EyeOff } from "@lucide/svelte";
   import type { Change } from "$lib/bindings/Change";
   import type { Fields } from "$lib/bindings/Fields";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
 
-  type Tab = "changes" | "preview" | "conflicts";
+  type Tab = "changes" | "conflicts";
 
   type Props = {
     open?: boolean;
@@ -206,16 +205,6 @@
       <button
         type="button"
         class="px-3 py-1.5 text-sm rounded-t font-medium transition-colors
-          {activeTab === 'preview'
-          ? 'border-b-2 border-primary-500 text-primary-500'
-          : 'opacity-60 hover:opacity-100'}"
-        onclick={() => (activeTab = "preview")}
-      >
-        Preview
-      </button>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm rounded-t font-medium transition-colors
           {activeTab === 'conflicts'
           ? 'border-b-2 border-primary-500 text-primary-500'
           : 'opacity-60 hover:opacity-100'}"
@@ -249,41 +238,6 @@
           {/each}
         </div>
       {/if}
-
-    <!-- Tab: Preview -->
-    {:else if activeTab === "preview"}
-      <div class="flex-1 space-y-4">
-        <p class="text-sm opacity-70">
-          When preview is on, the item list shows how items will look after
-          your pending changes are saved.
-        </p>
-        <button
-          type="button"
-          class="btn variant-filled-primary flex items-center gap-2"
-          disabled={changes.length === 0}
-          onclick={async () => {
-            await context.setPreviewChanges(!context.previewChanges);
-          }}
-        >
-          {#if context.previewChanges}
-            <EyeOff class="w-4 h-4" />
-            Turn Off Preview
-          {:else}
-            <Eye class="w-4 h-4" />
-            Turn On Preview
-          {/if}
-        </button>
-        {#if context.previewChanges}
-          <p class="text-sm text-success-600-400">
-            Preview is currently <strong>on</strong>. The item list reflects
-            your pending changes.
-          </p>
-        {:else}
-          <p class="text-sm opacity-70">
-            Preview is currently <strong>off</strong>.
-          </p>
-        {/if}
-      </div>
 
     <!-- Tab: Epic Conflicts -->
     {:else if activeTab === "conflicts"}

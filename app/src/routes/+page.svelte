@@ -15,6 +15,8 @@
     ChartColumnBig,
     ChartGantt,
     Ellipsis,
+    Eye,
+    EyeOff,
     ListTree,
     LinkIcon,
     Redo2,
@@ -244,6 +246,14 @@
         onclick={() => {
           reviewChangesOpen = true;
           recordTelemetry({ event: "pending_changes_opened" });
+        }}
+      />
+      <AppBarButton
+        text="Preview"
+        icon={context.previewChanges ? Eye : EyeOff}
+        disabled={!numChanges || disabled}
+        onclick={() => {
+          context.setPreviewChanges(!context.previewChanges);
         }}
       />
 
