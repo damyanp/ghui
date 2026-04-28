@@ -3,10 +3,20 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "New version number (e.g. 0.3.0)"
+      bump:
+        description: "Version bump type (ignored if 'version' override is provided)"
         required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: "Optional explicit version (e.g. 0.3.0). Overrides 'bump' when set."
+        required: false
         type: string
+        default: ""
 
 permissions:
   contents: write
@@ -24,10 +34,53 @@ jobs:
         # Need a PAT to push back to main (bypasses rulesets)
         token: ${{ secrets.RELEASE_PAT }}
 
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Compute new version
+      id: version
+      shell: pwsh
+      run: |
+        $override = "${{ inputs.version }}".Trim()
+        $bump = "${{ inputs.bump }}"
+
+        $conf = Get-Content app/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+        $current = [string]$conf.version
+        if ($current -notmatch '^\d+\.\d+\.\d+$') {
+          Write-Error "Current version '$current' in tauri.conf.json does not match X.Y.Z"
+          exit 1
+        }
+
+        if ($override -ne "") {
+          if ($override -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "Override version '$override' does not match X.Y.Z"
+            exit 1
+          }
+          $new = $override
+        }
+        else {
+          $parts = $current.Split('.') | ForEach-Object { [int]$_ }
+          switch ($bump) {
+            'patch' { $parts[2] += 1 }
+            'minor' { $parts[1] += 1; $parts[2] = 0 }
+            'major' { $parts[0] += 1; $parts[1] = 0; $parts[2] = 0 }
+            default {
+              Write-Error "Unknown bump type '$bump'"
+              exit 1
+            }
+          }
+          $new = "$($parts[0]).$($parts[1]).$($parts[2])"
+        }
+
+        Write-Host "Current version: $current"
+        Write-Host "New version:     $new"
+        "new_version=$new" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "## Release version`n`n- Previous: ``$current```n- New:      ``$new```n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
     - name: Bump version numbers
       shell: pwsh
       run: |
-        $v = "${{ inputs.version }}"
+        $v = "${{ steps.version.outputs.new_version }}"
 
         # tauri.conf.json
         $conf = Get-Content app/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
@@ -44,9 +97,17 @@ jobs:
           (Get-Content $toml) -replace '^version = ".*"', "version = `"$v`"" | Set-Content $toml
         }
 
+        # Refresh Cargo.lock so workspace crate entries match the bumped manifests.
+        # See copilot-instructions.md: "Workspace version bumps and Cargo.lock".
+        cargo update --workspace
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "cargo update --workspace failed"
+          exit 1
+        }
+
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml ghui-app/Cargo.toml github-graphql/Cargo.toml ghui-util/Cargo.toml
+        git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml ghui-app/Cargo.toml github-graphql/Cargo.toml ghui-util/Cargo.toml Cargo.lock
 
         git diff --cached --quiet
         if ($LASTEXITCODE -eq 0) {
@@ -75,7 +136,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        $tag = "v${{ inputs.version }}"
+        $tag = "v${{ steps.version.outputs.new_version }}"
         $nsis = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
         if ($null -eq $nsis) {
           Write-Error "No NSIS installer found in target/release/bundle/nsis/"
