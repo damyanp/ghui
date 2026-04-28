@@ -245,7 +245,9 @@
         badge={numChanges + numEpicConflicts || undefined}
         onclick={() => {
           reviewChangesOpen = true;
-          recordTelemetry({ event: "pending_changes_opened" });
+          if (numChanges) {
+            recordTelemetry({ event: "pending_changes_opened" });
+          }
         }}
       />
       <AppBarButton

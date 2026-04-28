@@ -156,16 +156,20 @@
   // ── Tab state ────────────────────────────────────────────────────────────────
 
   let activeTab = $state<Tab>("changes");
+  let wasOpen = $state(false);
 
-  // Switch to conflicts tab when panel is opened with conflicts present and no changes
+  // Only choose the initial tab when the panel opens so later reactive updates
+  // do not override a tab the user selected manually.
   $effect(() => {
-    if (open) {
+    if (open && !wasOpen) {
       if (changes.length === 0 && conflicts.length > 0) {
         activeTab = "conflicts";
       } else {
         activeTab = "changes";
       }
     }
+
+    wasOpen = open;
   });
 </script>
 
