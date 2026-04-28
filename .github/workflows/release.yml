@@ -75,7 +75,13 @@ jobs:
         Write-Host "Current version: $current"
         Write-Host "New version:     $new"
         "new_version=$new" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-        "## Release version`n`n- Previous: ``$current```n- New:      ``$new```n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+        $summary = @"
+        ## Release version
+
+        - Previous: ``$current``
+        - New:      ``$new``
+        "@
+        $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
     - name: Bump version numbers
       shell: pwsh
@@ -97,11 +103,12 @@ jobs:
           (Get-Content $toml) -replace '^version = ".*"', "version = `"$v`"" | Set-Content $toml
         }
 
-        # Refresh Cargo.lock so workspace crate entries match the bumped manifests.
+        # Refresh Cargo.lock so workspace crate entries match the bumped manifests
+        # without upgrading dependencies during the release workflow.
         # See copilot-instructions.md: "Workspace version bumps and Cargo.lock".
-        cargo update --workspace
+        cargo check --workspace
         if ($LASTEXITCODE -ne 0) {
-          Write-Error "cargo update --workspace failed"
+          Write-Error "cargo check --workspace failed"
           exit 1
         }
 
