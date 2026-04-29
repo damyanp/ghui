@@ -10,6 +10,16 @@ import { type DataUpdate } from "./bindings/DataUpdate";
 import { ItemUpdateBatcher } from "./ItemUpdater";
 import type { WorkItem } from "./bindings/WorkItem";
 import type { Filters } from "./bindings/Filters";
+
+/**
+ * The subset of `Filters` whose values are arrays of field option IDs.
+ * Excludes boolean/scalar filters such as `hideClosed`.
+ */
+type FieldOptionFilters = {
+  [K in keyof Filters as Filters[K] extends Array<FieldOptionId | null>
+    ? K
+    : never]: Filters[K];
+};
 import type { SingleSelect } from "./bindings/SingleSelect";
 import type { Iteration } from "./bindings/Iteration";
 import type { ProjectItem } from "./bindings/ProjectItem";
@@ -48,6 +58,7 @@ export class WorkItemContext {
       workstream: [],
       estimate: [],
       priority: [],
+      hideClosed: false,
     },
     originalWorkItems: {},
     changes: { data: {} },
@@ -220,14 +231,23 @@ export class WorkItemContext {
   }
 
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {
-    return this.data.filters[fieldName as keyof Filters];
+    return this.data.filters[
+      fieldName as keyof FieldOptionFilters
+    ] as Array<FieldOptionId | null>;
   }
 
   public setFilter(
     fieldName: keyof Fields,
     filter: Array<FieldOptionId | null>
   ): void {
-    this.data.filters[fieldName as keyof Filters] = filter;
+    (this.data.filters as FieldOptionFilters)[
+      fieldName as keyof FieldOptionFilters
+    ] = filter;
+    invoke("set_filters", { filters: this.data.filters });
+  }
+
+  public setHideClosed(hideClosed: boolean): void {
+    this.data.filters.hideClosed = hideClosed;
     invoke("set_filters", { filters: this.data.filters });
   }
 

@@ -14,6 +14,8 @@
     Bubbles,
     ChartColumnBig,
     ChartGantt,
+    CircleCheck,
+    CircleSlash,
     Ellipsis,
     Eye,
     EyeOff,
@@ -256,6 +258,14 @@
         disabled={!numChanges || disabled}
         onclick={() => {
           context.setPreviewChanges(!context.previewChanges);
+        }}
+      />
+      <AppBarButton
+        text="Hide Closed"
+        icon={context.data.filters.hideClosed ? CircleSlash : CircleCheck}
+        disabled={disabled}
+        onclick={() => {
+          context.setHideClosed(!context.data.filters.hideClosed);
         }}
       />
 
