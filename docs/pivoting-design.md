@@ -49,6 +49,9 @@ The relevant pivotable fields on a `WorkItem` today are:
 | `state`      | Issue/PR (open/closed/…)    | exactly 1            |
 | `kind` of repo (`owner/name`) | derived         | exactly 1            |
 
+(Throughout this doc, "Repository" refers to the derived `owner/name` of the
+backing GitHub repository.)
+
 ## 2. Problem statement
 
 We want a single, consistent pivoting concept that:
@@ -496,7 +499,8 @@ within the current architecture.
        Kind,
        Iteration,
        Assignee,
-       ItemType,     // GitHub issue/PR/draft
+       IssueType,    // GitHub-native issue type ("Bug", "Feature", …)
+       WorkItemKind, // Issue / PullRequest / DraftIssue variant
        Repository,
    }
 
