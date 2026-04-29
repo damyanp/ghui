@@ -73,6 +73,27 @@
   const canRedo = $derived(context.data.canRedo);
   const numEpicConflicts = $derived(context.data.epicConflicts.length);
 
+  // "Hide Closed" toggle is a convenience UI on top of the existing status
+  // filter: when active, the "Closed" status option id is included in
+  // `filters.status`, which already filters those items out via the existing
+  // filter pipeline.
+  const closedStatusOptionId = $derived(
+    context.data.fields.status.options.find((o) => o.value === "Closed")?.id ??
+      null,
+  );
+  const hideClosed = $derived(
+    closedStatusOptionId !== null &&
+      context.data.filters.status.some((id) => id === closedStatusOptionId),
+  );
+  function toggleHideClosed(): void {
+    if (closedStatusOptionId === null) return;
+    const current = context.getFilter("status");
+    const next = hideClosed
+      ? current.filter((id) => id !== closedStatusOptionId)
+      : [...current, closedStatusOptionId];
+    context.setFilter("status", next);
+  }
+
   let saveProgress = $state(0);
   let refreshSummaryMessage = $state<string | null>(null);
   let refreshSummaryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -262,11 +283,9 @@
       />
       <AppBarButton
         text="Hide Closed"
-        icon={context.data.filters.hideClosed ? CircleSlash : CircleCheck}
-        disabled={disabled}
-        onclick={() => {
-          context.setHideClosed(!context.data.filters.hideClosed);
-        }}
+        icon={hideClosed ? CircleSlash : CircleCheck}
+        disabled={disabled || closedStatusOptionId === null}
+        onclick={toggleHideClosed}
       />
 
       <div class="w-3"></div>

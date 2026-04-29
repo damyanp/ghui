@@ -239,7 +239,6 @@
       workstream: [],
       estimate: [],
       priority: [],
-      hideClosed: false,
     },
     changes: { data: {} },
     canUndo: false,

@@ -5,8 +5,8 @@ use github_graphql::{
         custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
     },
     data::{
-        Change, ChangeData, Changes, DelayLoad, FieldOptionId, Fields, ProjectItemId,
-        SanitizeConflict, SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
+        Change, ChangeData, Changes, FieldOptionId, Fields, ProjectItemId, SanitizeConflict,
+        SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
     },
 };
 use log::{debug, error, info, warn};
@@ -62,21 +62,11 @@ pub struct Filters {
     workstream: Vec<Option<FieldOptionId>>,
     estimate: Vec<Option<FieldOptionId>>,
     priority: Vec<Option<FieldOptionId>>,
-    /// When true, hide closed work items from the tree. The hierarchical
-    /// visibility logic in `NodeBuilder::should_include` still applies, so a
-    /// closed ancestor remains visible if it has any descendant that is not
-    /// hidden by this filter.
-    #[serde(default)]
-    pub(crate) hide_closed: bool,
 }
 
 impl Filters {
     fn should_include(&self, work_item: &WorkItem) -> bool {
         let p = &work_item.project_item;
-
-        if self.hide_closed && matches!(work_item.is_closed(), DelayLoad::Loaded(true)) {
-            return false;
-        }
 
         !(self.status.contains(&p.status)
             || self.blocked.contains(p.blocked.flatten())

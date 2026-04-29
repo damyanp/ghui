@@ -322,46 +322,6 @@ mod nodebuilder_tests {
     }
 
     #[test]
-    fn test_node_builder_hide_closed() {
-        use github_graphql::data::IssueState;
-
-        let mut data = TestData::default();
-
-        // A standalone open issue.
-        let open_id = data.build().add();
-        // A standalone closed issue (state == CLOSED).
-        let closed_id = data.build().issue_state(IssueState::CLOSED).add();
-
-        // A closed parent with an open child — the parent should still be
-        // visible because its descendant is visible (matches the existing
-        // ancestor-visibility behavior of `should_include`).
-        let open_grandchild_id = data.build().add();
-        let closed_parent_id = data
-            .build()
-            .sub_issues(&[&open_grandchild_id])
-            .issue_state(IssueState::CLOSED)
-            .add();
-
-        let work_items = data.work_items;
-        let filters = Filters {
-            hide_closed: true,
-            ..Filters::default()
-        };
-        let original_work_items = HashMap::new();
-        let mut builder =
-            NodeBuilder::new(&data.fields, &work_items, &filters, &original_work_items);
-        let nodes = builder.build();
-
-        // Open standalone item is visible; closed standalone item is hidden.
-        assert!(nodes.iter().any(|n| n.id == open_id.0));
-        assert!(!nodes.iter().any(|n| n.id == closed_id.0));
-
-        // Closed parent is kept because of its open descendant.
-        assert!(nodes.iter().any(|n| n.id == closed_parent_id.0));
-        assert!(nodes.iter().any(|n| n.id == open_grandchild_id.0));
-    }
-
-    #[test]
     fn test_node_builder_new_item_after_update_appears() {
         let mut data = TestData::default();
         let existing_id = data.build().epic("EpicA").add();

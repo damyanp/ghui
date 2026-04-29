@@ -10,11 +10,4 @@ export type Filters = {
   workstream: Array<FieldOptionId | null>;
   estimate: Array<FieldOptionId | null>;
   priority: Array<FieldOptionId | null>;
-  /**
-   * When true, hide closed work items from the tree. The hierarchical
-   * visibility logic in `NodeBuilder::should_include` still applies, so a
-   * closed ancestor remains visible if it has any descendant that is not
-   * hidden by this filter.
-   */
-  hideClosed: boolean;
 };
