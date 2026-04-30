@@ -19,6 +19,7 @@
   import { type IssueState } from "$lib/bindings/IssueState";
   import { type PullRequestState } from "$lib/bindings/PullRequestState";
   import { type Fields } from "$lib/bindings/Fields";
+  import type { Filters } from "$lib/bindings/Filters";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
   import TableFieldSelect from "./TableFieldSelect.svelte";
@@ -61,8 +62,74 @@
     addItemDialogOpen = true;
   }
 
-  function getContextMenuItems(node: Node): MenuItem[] {
+  function getContextMenuItems(
+    node: Node,
+    column?: Column<WorkItem>
+  ): MenuItem[] {
     let items: MenuItem[] = [];
+
+    // The Filters struct enumerates which fields support filtering. Column
+    // names (other than "Title", "Assigned", "#Tracked", "Type", "Updated")
+    // already match the lowercase field name, so we just check membership.
+    const filterableFields: ReadonlyArray<keyof Filters> = [
+      "status",
+      "blocked",
+      "epic",
+      "iteration",
+      "kind",
+      "workstream",
+      "estimate",
+      "priority",
+    ];
+
+    function getFilterableField(
+      column: Column<WorkItem> | undefined
+    ): keyof Filters | undefined {
+      if (!column) return undefined;
+      const name = column.name as keyof Filters;
+      return filterableFields.includes(name) ? name : undefined;
+    }
+
+    function quickFilterItems(
+      field: keyof Filters,
+      item: WorkItem
+    ): MenuItem[] {
+      const value = context.getFilterableFieldValue(field, item);
+      const label = value
+        ? (context.getFieldOption(field, value) ?? "(unknown)")
+        : "(none)";
+      const allOptionIds = context.getFilterableFieldOptionIds(field);
+      const currentFilter = context.getFilter(field);
+      const filterItems: MenuItem[] = [
+        {
+          type: "action",
+          title: `Show only ${field} = "${label}"`,
+          action: () =>
+            context.setFilter(
+              field,
+              allOptionIds.filter((id) => id !== value)
+            ),
+        },
+        {
+          type: "action",
+          title: `Hide all ${field} = "${label}"`,
+          action: () => {
+            const next = new Set(currentFilter);
+            next.add(value);
+            context.setFilter(field, Array.from(next));
+          },
+        },
+      ];
+      if (currentFilter.length > 0) {
+        filterItems.push({
+          type: "action",
+          title: `Clear ${field} filter`,
+          action: () => context.setFilter(field, []),
+        });
+      }
+      filterItems.push({ type: "separator" });
+      return filterItems;
+    }
 
     function getDisplayName(workItem: WorkItem | undefined): string {
       if (!workItem || !workItem.resourcePath) return workItem?.title || "?";
@@ -100,6 +167,11 @@
     if (node.data.type === "workItem") {
       let item = context.data.workItems[node.id];
       if (item) {
+        const filterField = getFilterableField(column);
+        if (filterField) {
+          items.push(...quickFilterItems(filterField, item));
+        }
+
         items.push({
           type: "action",
           title: "Refresh",

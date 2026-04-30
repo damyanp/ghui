@@ -219,6 +219,47 @@ export class WorkItemContext {
     }
   }
 
+  /** Returns the FieldOptionId currently set on `workItem` for any filterable
+   * field (covers single-select fields and iteration). Returns `null` when the
+   * field is unset or not yet loaded. Throws for fields that aren't filterable. */
+  public getFilterableFieldValue(
+    fieldName: keyof Filters,
+    workItem: WorkItem
+  ): FieldOptionId | null {
+    const p = workItem.projectItem;
+    switch (fieldName) {
+      case "status":
+        return p.status;
+      case "epic":
+        return p.epic;
+      case "estimate":
+        return p.estimate;
+      case "priority":
+        return p.priority;
+      case "iteration":
+        return p.iteration.loadState === "loaded" ? p.iteration.value : null;
+      case "blocked":
+        return p.blocked.loadState === "loaded" ? p.blocked.value : null;
+      case "kind":
+        return p.kind.loadState === "loaded" ? p.kind.value : null;
+      case "workstream":
+        return p.workstream.loadState === "loaded" ? p.workstream.value : null;
+    }
+  }
+
+  /** Returns all option ids (including `null` for "unset") for a filterable
+   * field. Used by quick filter actions that need to express "everything
+   * except this value". */
+  public getFilterableFieldOptionIds(
+    fieldName: keyof Filters
+  ): Array<FieldOptionId | null> {
+    const field =
+      fieldName === "iteration"
+        ? this.getIterationField(fieldName)
+        : this.getSingleSelectField(fieldName);
+    return [null, ...field.options.map((o) => o.id)];
+  }
+
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {
     return this.data.filters[fieldName as keyof Filters];
   }
