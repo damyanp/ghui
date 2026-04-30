@@ -263,7 +263,7 @@
       />
       <AppBarButton
         icon={ClipboardList}
-        text="Review Changes"
+        text="Review"
         disabled={!(numChanges || numEpicConflicts) || disabled}
         badge={numChanges + numEpicConflicts || undefined}
         onclick={() => {
