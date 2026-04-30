@@ -284,6 +284,7 @@
       <AppBarButton
         text="Hide Closed"
         icon={hideClosed ? CircleSlash : CircleCheck}
+        active={hideClosed}
         disabled={disabled || closedStatusOptionId === null}
         onclick={toggleHideClosed}
       />
