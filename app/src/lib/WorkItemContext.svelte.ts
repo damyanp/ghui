@@ -219,45 +219,37 @@ export class WorkItemContext {
     }
   }
 
+  /** Names of all fields that support filtering, derived from the `Filters`
+   * struct. This is the single source of truth used wherever code needs to
+   * enumerate or test for filterable fields. */
+  public get filterableFields(): Array<keyof Filters> {
+    return Object.keys(this.data.filters) as Array<keyof Filters>;
+  }
+
+  public isFilterableField(name: string): name is keyof Filters {
+    return name in this.data.filters;
+  }
+
   /** Returns the FieldOptionId currently set on `workItem` for any filterable
-   * field (covers single-select fields and iteration). Returns `null` when the
-   * field is unset or not yet loaded. Throws for fields that aren't filterable. */
+   * field. The corresponding `projectItem[fieldName]` is either a raw
+   * `FieldOptionId | null` or a `DelayLoad`-wrapped one; both are unwrapped
+   * here so callers don't have to care. */
   public getFilterableFieldValue(
     fieldName: keyof Filters,
     workItem: WorkItem
   ): FieldOptionId | null {
-    const p = workItem.projectItem;
-    switch (fieldName) {
-      case "status":
-        return p.status;
-      case "epic":
-        return p.epic;
-      case "estimate":
-        return p.estimate;
-      case "priority":
-        return p.priority;
-      case "iteration":
-        return p.iteration.loadState === "loaded" ? p.iteration.value : null;
-      case "blocked":
-        return p.blocked.loadState === "loaded" ? p.blocked.value : null;
-      case "kind":
-        return p.kind.loadState === "loaded" ? p.kind.value : null;
-      case "workstream":
-        return p.workstream.loadState === "loaded" ? p.workstream.value : null;
-    }
+    const v = workItem.projectItem[fieldName];
+    if (v === null || typeof v === "string") return v;
+    return v.loadState === "loaded" ? v.value : null;
   }
 
   /** Returns all option ids (including `null` for "unset") for a filterable
-   * field. Used by quick filter actions that need to express "everything
-   * except this value". */
+   * field. `Field<SingleSelect>` and `Field<Iteration>` share the `options`
+   * shape so they can be handled uniformly. */
   public getFilterableFieldOptionIds(
     fieldName: keyof Filters
   ): Array<FieldOptionId | null> {
-    const field =
-      fieldName === "iteration"
-        ? this.getIterationField(fieldName)
-        : this.getSingleSelectField(fieldName);
-    return [null, ...field.options.map((o) => o.id)];
+    return [null, ...this.data.fields[fieldName].options.map((o) => o.id)];
   }
 
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {

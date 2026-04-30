@@ -68,26 +68,13 @@
   ): MenuItem[] {
     let items: MenuItem[] = [];
 
-    // The Filters struct enumerates which fields support filtering. Column
-    // names (other than "Title", "Assigned", "#Tracked", "Type", "Updated")
-    // already match the lowercase field name, so we just check membership.
-    const filterableFields: ReadonlyArray<keyof Filters> = [
-      "status",
-      "blocked",
-      "epic",
-      "iteration",
-      "kind",
-      "workstream",
-      "estimate",
-      "priority",
-    ];
-
     function getFilterableField(
       column: Column<WorkItem> | undefined
     ): keyof Filters | undefined {
-      if (!column) return undefined;
-      const name = column.name as keyof Filters;
-      return filterableFields.includes(name) ? name : undefined;
+      if (column && context.isFilterableField(column.name)) {
+        return column.name;
+      }
+      return undefined;
     }
 
     function quickFilterItems(
