@@ -21,7 +21,7 @@
     text,
     iconClass,
     badge,
-    active = false,
+    active,
     ...otherProps
   }: Props = $props();
 </script>
@@ -30,7 +30,7 @@
   class="btn rounded p-0.5 mx-1 flex-col relative {active
     ? 'preset-filled-primary-500'
     : ''}"
-  aria-pressed={active}
+  aria-pressed={active === undefined ? undefined : active}
   {...otherProps}
 >
   <MyIcon class={iconClass} />

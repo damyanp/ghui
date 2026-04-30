@@ -88,7 +88,8 @@
   function toggleHideClosed(): void {
     if (closedStatusOptionId === null) return;
     const current = context.getFilter("status");
-    const next = hideClosed
+    const isHidden = current.includes(closedStatusOptionId);
+    const next = isHidden
       ? current.filter((id) => id !== closedStatusOptionId)
       : [...current, closedStatusOptionId];
     context.setFilter("status", next);
