@@ -10,6 +10,47 @@
 > `ghui-util get-all-items` produces from our HLSL working group project
 > (titles, parent / sub-issue relationships, mixed-value patterns, and a
 > real multi-assignee item are all genuine).
+>
+> ⚠️ The cached `all_items.json` checked into the repo was produced on
+> 2026-04-27 and **may lag the live project by a few days**. Field-option
+> *names* (e.g. *SM 6.10 (preview2)*, *DXIL Shader Flags*, …) come from
+> the project's field configuration, not from the cached items file —
+> they have been cross-referenced against the wording reviewers used in
+> review comments rather than guessed. To regenerate from scratch, run
+> `ghui-util get-all-items` locally with a PAT that has `project` scope;
+> the sandbox that produced this PR can't reach `api.github.com` to
+> refresh the file itself.
+>
+> A live, in-browser **prototype** of the four grouping modes (Hierarchy
+> first, Pivot at top + ghost rows, Pivot at top no ghosts, Flat) using a
+> curated subset of the real data lives at
+> [`docs/pivoting-prototype.html`](./pivoting-prototype.html). Open it in
+> any browser to play with the trade-offs side-by-side.
+>
+> ### Areas that need special attention
+>
+> Per review feedback (commit `6f74f7f` and follow-up), the following
+> assumptions in earlier drafts have been retracted; reviewers should
+> double-check that they are not silently relied on elsewhere in the
+> document or in any follow-up issues:
+>
+> 1. **"Children inherit their parent's Epic in the current view."** They
+>    don't — `NodeBuilder` re-groups at every level. See §4.1 for the
+>    real behaviour and a concrete example.
+> 2. **"`sanitize_issue_hierarchy` keeps parent and children aligned, so
+>    we can lean on it as the data model."** A planned future change will
+>    *intentionally* allow children to disagree with their parent on
+>    Epic / Workstream. The pivoting design must therefore handle mixed
+>    values directly, not assume sanitize will smooth them out. See
+>    §3 N4.
+> 3. **"We can unify the items view and the statistics view on a shared
+>    `PivotField` enum."** That is now an explicit non-goal (§3 N3). The
+>    items view stands on its own.
+> 4. **Recommendation has shifted** from "Option B (hierarchy first) +
+>    badge" to **Option E (pivot at top, ghost rows for parents,
+>    duplicate when needed)**, because the latter keeps the *pivot* axis
+>    as the dominant visual organisation regardless of where in the tree
+>    a value lives. See §6.5 (new option E), §11, and the prototype.
 
 ## 1. Background
 
@@ -99,28 +140,61 @@ Out of scope for this doc:
   purely a view concern.
 - N2. Moving away from GitHub's parent/sub-issue model as the source of
   truth.
+- N3. **Unifying the items view with the statistics view.** They have
+  different ergonomics — the items view is a tree with editing and
+  drag‑and‑drop; the stats view is a chart-oriented pivot. The two can
+  evolve independently. (Earlier drafts of this doc proposed reusing a
+  single `PivotField` enum across both; we now treat that as out of
+  scope, per review feedback.)
+- N4. **Relying on the current `sanitize_issue_hierarchy` propagation of
+  Epic / Workstream from parent to child.** That pass is itself slated
+  to be relaxed in a follow-up so children can legitimately disagree
+  with their parents on these fields. The pivoting design must therefore
+  treat **mixed values across a parent and its descendants as a
+  first-class case**, not a hygiene violation that gets sanitized away.
 
 ## 4. Current behaviour, in detail
 
 ### 4.1 Tree view (`NodeBuilder`)
 
-- `NodeBuilder::add_nodes` is called with the project roots.
-- It groups consecutive items by `project_item.epic` and, when there's more
-  than one distinct value, emits a `NodeData::Group { name, field_option_id }`
-  before each run.
-- For each item it then recurses into `issue.sub_issues` — children are *not*
-  re-grouped by Epic, they just inherit the Epic of their parent group.
-- Sort order inside a group is the project's "ordered_items" order.
+- `NodeBuilder::add_nodes` is called with the project roots and is then
+  recursively re-entered for each item's `sub_issues`.
+- At every level it groups consecutive items by `project_item.epic` and,
+  when there's more than one distinct value, emits a
+  `NodeData::Group { name, field_option_id }` before each run.
+- Because the recursion re-applies the same Epic-grouping logic, **a
+  parent whose children disagree on Epic already shows them as nested
+  Epic groups under the parent** (not as a flat list). For example,
+  `microsoft/DirectXShaderCompiler#7838` — whose direct children span
+  *SM 6.10 (preview2)* and *SM 6.10 (retail)* — currently renders as:
+
+  ```
+  ▾ #7838  Implement HLSL `__builtin` intrinsics and DXIL Ops
+    ▾ Epic: SM 6.10 (preview2)
+        #8271 …
+        #8416 …
+    ▾ Epic: SM 6.10 (retail)
+        #8270 …
+        #8313 …
+        …
+  ```
+
+- Sort order inside a group is the project's "ordered_items" order; the
+  Epic option order comes from `Fields::epic.option_index`.
 
 Implications:
 
-- Children with a *different* Epic from their parent are simply rendered
-  underneath their parent without any visual indication that they "belong"
-  somewhere else in the Epic axis.
-- The `sanitize` pass (`work_items.rs::sanitize_issue_hierarchy`) tries to
-  push the parent's Epic onto its children, and reports `epic_conflicts` for
-  items that already have a different Epic — so we know there's already a
-  data model for "child disagrees with parent on Epic".
+- The hardcoded axis is **Epic**. Picking a different axis (Workstream,
+  Status, Iteration, …) requires a code change. There is no UI surface
+  for it.
+- The grouping happens *only* on the Epic axis. If we want a multi-axis
+  pivot (e.g. *Workstream → Epic*), this code can't express it.
+- Today's behaviour for "child disagrees with parent on Epic" is the
+  nested-groups rendering above. That's a reasonable answer for one
+  axis, but it doesn't extend obviously to "children disagree across
+  multiple axes" or to non-Epic fields, and it gives no top-level
+  visibility — you only see the disagreement after expanding the
+  parent.
 
 ### 4.2 Stats panel
 
@@ -130,20 +204,21 @@ Implications:
   *list* of values per item — i.e. it's prepared for multi-valued pivots
   (assignees) by emitting one bucket per assignee.
 
-Today this is a parallel pivot system that doesn't share types or state with
-the tree. We want to unify them.
+The stats panel is **out of scope** for this design (see §3 N3); it's
+described here only because it gives a useful precedent for multi-valued
+pivots, not because we plan to share code or types with it.
 
 ## 5. Concrete example scenarios (real data)
 
 These scenarios all use **real items** from our project (titles and parent
 relationships pulled from the data the in-repo tooling fetches —
 `ghui-util get-all-items` writes `all_items.json`). Field-option names
-shown ("SM 6.10 (preview)", "DXIL Shader Flags", etc.) are the human
+shown ("SM 6.10 (preview2)", "DXIL Shader Flags", etc.) are the human
 labels for the option IDs that appear in the raw data.
 
 The three Epics referenced throughout are:
 
-- **SM 6.10 (preview)**
+- **SM 6.10 (preview2)**
 - **SM 6.10 (retail)**
 - **Alpha**
 
@@ -159,8 +234,8 @@ Project items                                       Epic              Workstream
 ▾ Epic: SM 6.10 (retail)
     [Scenario] Buffer Resources                     SM 6.10 (retail)  (none)
     [HLSL] Add Root Signatures into DX Container    SM 6.10 (retail)  Root Sigs
-▾ Epic: SM 6.10 (preview)
-    [Scenario] Dynamic Resources                    SM 6.10 (preview) (none)
+▾ Epic: SM 6.10 (preview2)
+    [Scenario] Dynamic Resources                    SM 6.10 (preview2) (none)
 ▾ Epic: Alpha
     Execution Tests for Long Vectors                Alpha             Long Vec
 ```
@@ -260,7 +335,7 @@ Pivot list: **[Workstream, Epic]**. Real data (sub-issues of
   ▾ Epic: SM 6.10 (retail)
       [DirectX] Implement Shader Flag Analysis for RequiresGroup
       [DirectX] Update DXContainerGlobals to get shader flags from metadata
-  ▾ Epic: SM 6.10 (preview)
+  ▾ Epic: SM 6.10 (preview2)
       [DirectX] Collect Shader Flags Mask based on Resource properties
   ▾ Epic: (none)
       [DirectX] Implement Shader Flag Analysis for `DX11_1_ShaderExtensions`
@@ -290,7 +365,7 @@ Real example: **`[workstream] DXIL Shader Flags`** (in `llvm/wg-hlsl`) →
 **`[DirectX] Collect Shader Flags Mask based on Instructions Used and
 Shader Kind`** → **`[DirectX] Implement Shader Flag Analysis for
 ResourceDescriptorHeapIndexing`** is a 3-deep chain. The intermediate
-parent has 11 sub-issues spanning 2 Epics (some `SM 6.10 (preview)`, some
+parent has 11 sub-issues spanning 2 Epics (some `SM 6.10 (preview2)`, some
 unset).
 
 Pivot list: **[Epic]**.
@@ -357,7 +432,7 @@ their parent in the view. Needs the `⊕ children` badge to make that
 discoverable. Becomes problematic when the multiplier is large (55 items
 ×  7 workstreams).
 
-### 6.2 Option B — "Hierarchy first, pivot inside" *(recommended default)*
+### 6.2 Option B — "Hierarchy first, pivot inside"
 
 The top level is the existing root tree. *Within* each subtree, children
 are grouped by the pivot list (single or multi). This is the smallest
@@ -466,6 +541,105 @@ We'd ship a curated set of presets first and expose the "custom recipe"
 UI later. The recipe representation should still be the underlying data
 model from day one so presets are just named recipes.
 
+### 6.4a Option E — "Pivot at top with ghost rows" *(new recommended default)*
+
+Suggested in review (comment on §6 of the previous draft). Always group
+at the top by the pivot list. Within each pivot bucket, render the
+hierarchy of items whose own pivot value matches the bucket — but where
+a matching child has a parent *not* in this bucket, render the parent
+too as a **ghost row** so the child stays visually attached to it.
+Ghost rows are visually muted and labelled; the same parent may appear
+ghosted in several buckets.
+
+Abstract example (verbatim from review):
+
+| Parent | Item | Pivot Field |
+| ------ | ---- | ----------- |
+|  —     | A    | X           |
+|  —     | B    | Y           |
+| A      | AA   | X           |
+| A      | AB   | Y           |
+| B      | BA   | X           |
+| B      | BB   | Y           |
+
+Pivot list: **[Pivot Field]**:
+
+```
+▾ X
+  ▾ A
+      AA
+  ▾ (B)         ← ghost: B's pivot value is Y, but BA lives in X
+      BA
+▾ Y
+  ▾ (A)         ← ghost: A's pivot value is X, but AB lives in Y
+      AB
+  ▾ B
+      BB
+```
+
+`(B)` and `(A)` are ghosts: they appear in a bucket where their own
+value disagrees, purely so their child stays attached. They are not
+selectable for editing, dragging, or change-tracking — any action on a
+ghost row routes to its primary entry in the matching bucket.
+
+Real-data example, pivot `[Epic]`, using
+**`/llvm/llvm-project/issues/116143`** ("[DirectX] Collect Shader Flags
+Mask based on Resource properties in the Shader", Epic = *SM 6.10
+(preview2)*) and its 4 direct sub-issues, two of which have Epic = *SM
+6.10 (preview2)* and two of which have no Epic set:
+
+```
+▾ Epic: SM 6.10 (preview2)
+  ▾ [DirectX] Collect Shader Flags Mask based on Resource properties …
+      [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnTypedResource`
+      [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnHeapResource`
+▾ Epic: (none)
+  ▾ ([DirectX] Collect Shader Flags Mask based on Resource properties …)   ← ghost
+      [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnGroupShared`
+      [DirectX] Implement shader flag analysis for EnableRawAndStructuredBuffers
+```
+
+The same pattern with the larger Scenario B parent (*[Scenario] DML Demo
+finalization*, Epic = *SM 6.10 (retail)*, 55 sub-issues spanning multiple
+Epics): the parent appears as primary under *SM 6.10 (retail)* with the
+matching children, and as a ghost row under each other Epic that owns at
+least one child, with just those children listed beneath. With a
+multi-axis pivot `[Workstream, Epic]`, ghosts can appear at any of the
+nested levels — the parent is ghosted into each `(Workstream, Epic)`
+bucket whose contents include one of its descendants.
+
+Pros:
+
+- The pivot axis is always dominant — buckets contain only items whose
+  own value matches.
+- Mixed-children parents become *highly* visible because they appear in
+  multiple buckets simultaneously.
+- Works uniformly for any pivot field, single or multi-axis, without
+  caring whether the field "naturally" lives on parents or on children.
+- Doesn't depend on sanitize behaviour at all (§3 N4).
+
+Cons / things to design carefully:
+
+- **Duplication.** A parent with descendants in N buckets appears N
+  times. Counts at the bucket headers must be unambiguous: we'll show
+  *primary* counts (items whose own value matches) and not double-count
+  ghost rows.
+- **Editing & drag-and-drop on ghosts.** Ghosts must be obviously
+  non-editable. A drag of an item out of its bucket means "set the
+  pivot value"; a drag *of a ghost* must be disabled (or routed to the
+  primary).
+- **Change tracking / undo.** A ghost row showing a modified item
+  should still display the modified marker, but `Changes` is keyed on
+  the underlying `WorkItemId` so this is purely a render concern.
+- **Selection.** Single-click on a ghost should focus the primary
+  occurrence (jump to it) rather than treat the ghost as the
+  selection.
+- **Performance.** Worst case the rendered node count is `O(items × N
+  buckets per parent)`. In practice the ghost duplication is bounded
+  by the parent's own descendant count, but this needs to be measured
+  against our largest scenarios (DML Demo finalization × 7 Workstream
+  buckets ≈ 60 extra nodes; manageable).
+
 ### 6.5 Handling "mixed children"
 
 Independent of which option we choose, we need a story for items whose
@@ -499,11 +673,14 @@ children disagree with them on the pivoted field(s). Candidates:
    children.
    - This is essentially Option C applied selectively.
 
-Recommended default: **(1) stay put with a badge** in Option B, since the
-nested sub-grouping already makes the disagreement visible structurally.
-Offer **(2) ghost rows** as an opt-in for users who want maximum
-visibility in Option A. **(3)** is attractive for status/assignee but
-less so for hierarchy-defining fields like Epic.
+Recommended default: **(2) ghost rows** as embodied by Option E (§6.4a).
+Ghost rows are the suggestion explicitly raised in review and they keep
+the pivot axis dominant for every field (Epic, Workstream, Iteration,
+…) without depending on whether the field "naturally" lives on parents
+or on children. **(1) Stay-put + badge** is offered as a lower-density
+alternative for Option B users. **(3) Mixed bucket** is attractive for
+status/assignee but less so for hierarchy-defining fields like Epic, and
+**(4) Promote-children** is essentially a special case of Option C.
 
 ### 6.6 Multi-valued pivots (assignees) — synthetic combined groups
 
@@ -632,15 +809,15 @@ produced by the new pivoting layer should make it cheap to build.)
   `field_option_id`, and we extend it with an axis tag and an optional
   set of field-option IDs to support combined groups).
 - **Sanitize rules.** Today `sanitize_issue_hierarchy` propagates Epic
-  and Workstream from parent to child. With explicit pivoting, the
-  "mixed children" badges become a UI surface for the same conflicts
-  the sanitize pass already reports (`epic_conflicts`). We can offer a
-  "sanitize from this view" action that uses the current pivot list as
-  the propagation order.
-- **Stats panel.** Switch its `PivotField` enum to reuse the same enum
-  we introduce for the tree, so "row" and "group by" are the same
-  concept. The stats panel keeps its explode-by-assignee behaviour for
-  charting; the tree uses combined groups (§6.6).
+  and Workstream from parent to child. **A planned future change will
+  relax that** so children may legitimately disagree with their parent
+  (§3 N4). The pivoting design therefore must not assume the sanitize
+  pass will keep things aligned: ghost rows / badges have to work
+  correctly on data where mixed values are the norm, not the
+  exception.
+- **Stats panel.** Out of scope (§3 N3). The stats panel keeps its
+  current implementation; we are deliberately *not* sharing types with
+  it in this round.
 
 ## 9. Implementation sketch
 
@@ -670,7 +847,7 @@ within the current architecture.
 
        /// How to render a parent whose descendants disagree with it on
        /// one of the pivot axes.
-       pub mixed_strategy: MixedStrategy,    // Badge | Ghost | Mixed
+       pub mixed_strategy: MixedStrategy,    // GhostRows | Badge | MixedBucket
 
        /// How to render multi-valued items (assignees).
        pub multi_value_strategy: MultiValueStrategy, // Combined | Explode
@@ -695,13 +872,12 @@ within the current architecture.
 5. Export `PivotField` / `PivotConfig` to TypeScript via `ts-rs`, like
    the existing field enums.
 
-6. Replace the `WorkItemStatistics.svelte` pivot enum with the
-   generated one so both surfaces share field names; keep its
-   explode-by-assignee behaviour locally for charting.
-
-7. Default `PivotConfig` is `{ axes: vec![Epic], mixed: Badge,
-   multi_value: Combined }` so nothing changes for existing users on
-   first launch.
+6. Default `PivotConfig` is `{ axes: vec![Epic], mixed: GhostRows,
+   multi_value: Combined }`. With `axes = [Epic]` and ghost-rows mode,
+   the default view is *very close* to today's behaviour for items
+   whose Epic agrees with their parent's, and it makes the existing
+   mixed-Epic cases (e.g. DXC#7838) more visible by hoisting them into
+   the matching top-level Epic bucket.
 
 ## 10. Open questions
 
@@ -726,23 +902,32 @@ within the current architecture.
 
 For an initial implementation:
 
-1. Adopt **Option B** ("hierarchy first, pivot inside") as the default
-   tree behaviour, parameterised by a *list* of pivot fields. This is
-   the smallest step from today, naturally surfaces mixed children as
-   visible sub-groups, and supports multi-pivot (e.g. `[Workstream,
-   Epic]`) without any extra model gymnastics.
+1. Adopt **Option E** ("pivot at top with ghost rows", §6.4a) as the
+   default tree behaviour, parameterised by a *list* of pivot fields.
+   This keeps the pivot axis dominant, surfaces mixed-child cases
+   prominently (a parent appears in every bucket whose contents
+   include one of its descendants), and works uniformly across all
+   pivot fields without depending on the sanitize pass (which is
+   itself slated to relax — see §3 N4).
 2. Add a top-level "Group by" chip control driven by `PivotConfig`;
-   default to `[Epic]` so the existing experience is unchanged.
-3. Use **mixed-strategy = Badge** initially (§6.5 option 1). Defer
-   ghost rows until we have user feedback.
+   default the axis list to `[Epic]` so the experience for items where
+   parent and children agree on Epic is visually close to today's.
+3. Use **mixed-strategy = GhostRows** initially (§6.5 option 2 / §6.4a).
+   Offer **Badge** as an alternative for users who prefer Option B's
+   shape; defer **Mixed bucket** and **Promote-children**.
 4. Use **multi-value strategy = Combined** for assignees (§6.6, per
    review feedback). Defer the "explode" alternative.
-5. Reuse the same `PivotField` / `PivotConfig` in `WorkItemStatistics`
-   so the stats and tree always agree on the available axes; keep its
-   explode-by-assignee behaviour locally for charting.
+5. Treat the **statistics view as out of scope** (§3 N3). It keeps its
+   current independent implementation.
 6. Defer Option C / board view and Option D / composable recipes to a
    follow-up, but keep the data layer (axis list, multi-valued group
    keys, mixed strategy enum) general enough to support them later.
+
+A live in-browser prototype demonstrating Options B, E, A, and C side
+by side over a curated subset of real data is checked in at
+[`docs/pivoting-prototype.html`](./pivoting-prototype.html); use it to
+sanity-check the recommendation against the trade-offs before we
+commit.
 
 ## 12. Acceptance for this design exercise
 
@@ -751,7 +936,7 @@ let us:
 
 - Decide which option to implement first (a recommendation is in §11).
 - Open follow-up issues for: data-model changes (`PivotField`,
-  `PivotConfig`, generalised `NodeBuilder`), UI changes (toolbar chips,
-  badges, mixed-mode toggle), and stats-panel reuse.
+  `PivotConfig`, generalised `NodeBuilder`) and UI changes (toolbar
+  chips, ghost rendering, mixed-mode toggle).
 - Re-read this doc when the inevitable second wave of pivoting features
   shows up (board view, recipes, saved views).

@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ghui — Pivoting prototype</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #e1e4e8;
+    --muted: #6a737d;
+    --ghost: #b0b6bd;
+    --accent: #0366d6;
+    --group: #f1f4f8;
+    --group2: #e7ecf2;
+    --group3: #dde3ea;
+    --group4: #d3dae3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: #24292e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px; }
+  header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 14px 20px; }
+  h1 { margin: 0 0 6px 0; font-size: 16px; font-weight: 600; }
+  .blurb { color: var(--muted); font-size: 12px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 20px; background: var(--panel);
+              border-bottom: 1px solid var(--border); align-items: center; }
+  .controls fieldset { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin: 0; }
+  .controls legend { font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+                     color: var(--muted); padding: 0 4px; }
+  .controls label { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; cursor: pointer; }
+  .controls input[type=checkbox], .controls input[type=radio] { accent-color: var(--accent); }
+  .axes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .axes button.chip { background: #eef3f8; border: 1px solid #cdd5dd; border-radius: 999px;
+                       padding: 2px 10px; font-size: 12px; cursor: pointer; }
+  .axes button.chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .axes .arrow { color: var(--muted); }
+  main { padding: 16px 20px; }
+  .summary { color: var(--muted); margin-bottom: 8px; font-size: 12px; }
+  .tree { background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+          overflow: hidden; }
+  .row { display: flex; align-items: baseline; padding: 4px 8px; border-bottom: 1px solid #f1f1f3;
+         line-height: 1.35; }
+  .row:last-child { border-bottom: none; }
+  .row .indent { display: inline-block; width: 16px; flex-shrink: 0; }
+  .row .title { flex: 1; }
+  .row .meta { color: var(--muted); font-size: 11px; margin-left: 12px; white-space: nowrap; }
+  .row.group { font-weight: 600; }
+  .row.group.lvl0 { background: var(--group); }
+  .row.group.lvl1 { background: var(--group2); }
+  .row.group.lvl2 { background: var(--group3); }
+  .row.group.lvl3 { background: var(--group4); }
+  .row.group .count { color: var(--muted); font-weight: normal; margin-left: 6px; font-size: 12px; }
+  .row.ghost .title { color: var(--ghost); font-style: italic; }
+  .row.ghost .title::before { content: "(ghost) "; color: var(--ghost); font-style: italic; }
+  .row.ghost .meta { color: var(--ghost); }
+  .row .badge { display: inline-block; background: #fff3cd; color: #6a4f00; border: 1px solid #f0d878;
+                border-radius: 4px; padding: 0 6px; font-size: 11px; margin-left: 8px; }
+  .item-path { color: var(--muted); font-family: ui-monospace, SFMono-Regular, monospace;
+               font-size: 11px; margin-right: 8px; }
+  .legend { font-size: 11px; color: var(--muted); margin-top: 12px; }
+  code { background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ghui — Pivoting prototype</h1>
+  <div class="blurb">
+    Companion to <a href="./pivoting-design.md">pivoting-design.md</a>. Real subset of project data
+    (curated from <code>ghui-util get-all-items</code>). Switch the grouping
+    mode and pivot axes below to compare options side-by-side. Nothing is fetched at
+    runtime; the dataset is embedded in this file.
+  </div>
+</header>
+
+<div class="controls">
+  <fieldset>
+    <legend>Mode</legend>
+    <label><input type="radio" name="mode" value="hierarchy-first" checked> Option B — Hierarchy first</label>
+    <label><input type="radio" name="mode" value="pivot-ghost"> Option E — Pivot at top (ghost rows)</label>
+    <label><input type="radio" name="mode" value="pivot-no-ghost"> Option A — Pivot at top (no ghosts)</label>
+    <label><input type="radio" name="mode" value="flat"> Option C — Flat / Board</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Pivot axes (click to toggle / reorder)</legend>
+    <div class="axes" id="axes"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Multi-valued (Assignee)</legend>
+    <label><input type="radio" name="multi" value="combined" checked> Combined groups</label>
+    <label><input type="radio" name="multi" value="explode"> Explode</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Display</legend>
+    <label><input type="checkbox" id="showCounts" checked> Show counts</label>
+    <label><input type="checkbox" id="collapseSingleton" checked> Collapse single-valued groups</label>
+  </fieldset>
+</div>
+
+<main>
+  <div class="summary" id="summary"></div>
+  <div class="tree" id="tree"></div>
+  <div class="legend">
+    Ghost rows are shown in muted italic with a <em>(ghost)</em> prefix; they represent a
+    parent whose own pivot value disagrees with the bucket but who has at least one
+    descendant in the bucket. Real items are linked by <code>resourcePath</code>.
+  </div>
+</main>
+
+<script>
+const DATA = [{"id":"I_kwDOMbLzis6VOWsO","title":"[workstream] DXIL Shader Flags","path":"/llvm/wg-hlsl/issues/57","repo":"llvm/wg-hlsl","epic":null,"workstream":"DXIL Shader Flags","assignees":[],"children":["I_kwDOBITxeM6ei7fR","I_kwDOBITxeM6ecvlg","I_kwDOBITxeM6eYrHA","I_kwDOBITxeM6bkbru","I_kwDOBITxeM6jhsq9","I_kwDOBITxeM6ecz-8","I_kwDOBITxeM6eYS-a","I_kwDOBITxeM6Z6A2k"],"isRoot":true},{"id":"I_kwDOBITxeM6eYrHA","title":"[DirectX] Collect Shader Flags Mask based on Resource properties in the Shader","path":"/llvm/llvm-project/issues/116143","repo":"llvm/llvm-project","epic":"SM 6.10 (preview2)","workstream":"DXIL Shader Flags","assignees":[],"children":["I_kwDOBITxeM6eY_7J","I_kwDOBITxeM6eZAbd","I_kwDOBITxeM6eZA95","I_kwDOBITxeM6l4Jdd"],"isRoot":false},{"id":"I_kwDOBITxeM6iOKWQ","title":"[HLSL] Add Root Signatures into DX Container","path":"/llvm/llvm-project/issues/118897","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":"Root Signatures","assignees":["joaosaffran"],"children":["I_kwDOBITxeM6k4W8G","I_kwDOBITxeM6phF7z","I_kwDOBITxeM6phIh5","I_kwDOBITxeM687sNf","I_kwDOBITxeM687njW","I_kwDOBITxeM687pSq","I_kwDOBITxeM7CjV2w","I_kwDOBITxeM7FW3Wa","I_kwDOBITxeM7FWtFO","I_kwDOBITxeM7LJX-m","I_kwDOBITxeM7MS4r6","I_kwDOBITxeM7PIHKr"],"isRoot":true},{"id":"I_kwDOBIRuvs6mLn6Q","title":"Execution Tests for Long Vectors","path":"/microsoft/DirectXShaderCompiler/issues/7069","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":["I_kwDOBIRuvs6pf-yG","I_kwDOBIRuvs63dh0I","I_kwDOBIRuvs60yvZZ","I_kwDOBIRuvs7CZ8K_","I_kwDOBIRuvs63dZtM","I_kwDOBIRuvs6-Y6Lt","I_kwDOBIRuvs6-Y6p2","I_kwDOBIRuvs63dXK8","I_kwDOBIRuvs6-ZPFj","I_kwDOBIRuvs63dYc8","I_kwDOBIRuvs7M0IKu","I_kwDOBIRuvs7biNZ0"],"isRoot":true},{"id":"I_kwDOMbLzis6z3piN","title":"[Scenario] DML Demo finalization","path":"/llvm/wg-hlsl/issues/235","repo":"llvm/wg-hlsl","epic":"SM 6.10 (retail)","workstream":"DML demo","assignees":["farzonl"],"children":["I_kwDOBITxeM60vLAN","I_kwDOBITxeM61pEt6","I_kwDOBITxeM65sRFV","I_kwDOBITxeM6849Bp","I_kwDOBITxeM6_8hFy","I_kwDOK1nZ5c7EjFMm","I_kwDOK1nZ5c7ExBnm","I_kwDOBITxeM63suA-","I_kwDOBITxeM6yTu65","I_kwDOMbLzis7Axsvi","I_kwDOBITxeM7FZTxi","I_kwDOBITxeM7Fpn-J"],"isRoot":true},{"id":"I_kwDOMbLzis60Yisu","title":"[Scenario] Buffer Resources","path":"/llvm/wg-hlsl/issues/259","repo":"llvm/wg-hlsl","epic":"SM 6.10 (retail)","workstream":null,"assignees":["bogner"],"children":["I_kwDOBITxeM61lYnn","I_kwDOK1nZ5c6-fWx4","I_kwDOMbLzis7IUyd3","I_kwDOBITxeM64rfNH","I_kwDOBITxeM64rhst","I_kwDOMbLzis68BPl5","I_kwDOBITxeM63fa4J","I_kwDOBITxeM6-hQkd","I_kwDOBITxeM7IvBkE","I_kwDOBITxeM7FBXwH","I_kwDOBITxeM7JU3z3","I_kwDOBITxeM7Mk-34"],"isRoot":true},{"id":"I_kwDOBITxeM6ecvlg","title":"[DirectX] Collect Shader Flags Mask based on Input/Output Entry Signature","path":"/llvm/llvm-project/issues/116200","repo":"llvm/llvm-project","epic":null,"workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6bkbru","title":"[DirectX] Implement Shader Flag Analysis to collect properties of DML shaders","path":"/llvm/llvm-project/issues/113505","repo":"llvm/llvm-project","epic":null,"workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6eYS-a","title":"[DirectX] Collect Shader Flags Mask based on Instructions Used and Shader Kind","path":"/llvm/llvm-project/issues/116125","repo":"llvm/llvm-project","epic":null,"workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6Z6A2k","title":"[DirectX] Collect shader flags based on module properties, target shader stage or validator version","path":"/llvm/llvm-project/issues/112044","repo":"llvm/llvm-project","epic":null,"workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6ecz-8","title":"[DirectX] Implement Shader Flags Analysis for WriteableMSAATextures","path":"/llvm/llvm-project/issues/116203","repo":"llvm/llvm-project","epic":"SM 6.10 (preview2)","workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6ei7fR","title":"[DirectX] Implement Shader Flag Analysis for RequiresGroup","path":"/llvm/llvm-project/issues/116276","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6jhsq9","title":"[DirectX] Update DXContainerGlobals to get the shader flags from metadata rather than analysis","path":"/llvm/llvm-project/issues/120152","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6eZAbd","title":"[DirectX] Implement Shader Flags Analysis for `AtomicInt64OnGroupShared`","path":"/llvm/llvm-project/issues/116150","repo":"llvm/llvm-project","epic":null,"workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6l4Jdd","title":"[DirectX] Implement shader flag analysis for EnableRawAndStructuredBuffers","path":"/llvm/llvm-project/issues/122663","repo":"llvm/llvm-project","epic":null,"workstream":"DXIL Shader Flags","assignees":["bogner"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6eY_7J","title":"[DirectX] Implement Shader Flags Analysis for `AtomicInt64OnTypedResource`","path":"/llvm/llvm-project/issues/116148","repo":"llvm/llvm-project","epic":"SM 6.10 (preview2)","workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6eZA95","title":"[DirectX] Implement Shader Flags Analysis for `AtomicInt64OnHeapResource`","path":"/llvm/llvm-project/issues/116152","repo":"llvm/llvm-project","epic":"SM 6.10 (preview2)","workstream":"DXIL Shader Flags","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM687sNf","title":"[DirectX] Root signature's `DescriptorTableView` has undefined behaviour for version 1.0 root signatures.","path":"/llvm/llvm-project/issues/145439","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM687njW","title":"[DirectX] dx.rootsignatures metadata is left around, causing validation failure","path":"/llvm/llvm-project/issues/145437","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["inbelic"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM687pSq","title":"[DirectX] RootSignature's `v2::DescriptorRange` is misordered","path":"/llvm/llvm-project/issues/145438","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7CjV2w","title":"[DirectX] Clean up to_underlying in case labels","path":"/llvm/llvm-project/issues/150676","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7FW3Wa","title":"[DirectX] Shader has root bindings but root signature uses a DENY flag to disallow root binding access to the shader stage.","path":"/llvm/llvm-project/issues/153062","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7FWtFO","title":"[DirectX] validate Samples are not being mixed with other resources types in descriptor table","path":"/llvm/llvm-project/issues/153057","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7LJX-m","title":"[DirectX] Move isValidXYZ functions from BinaryFormat/DXContainer.h to BinaryFormat/DXContainer.cpp","path":"/llvm/llvm-project/issues/158162","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7MS4r6","title":"[DirectX] Simplify errors from `RootSignatureMetadata.h`","path":"/llvm/llvm-project/issues/159429","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7PIHKr","title":"[DirectX] Error when setting flags in the wrong version of Root Signature","path":"/llvm/llvm-project/issues/161579","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6k4W8G","title":"[HLSL] Construct Root Signature data structures from LLVM IR metadata","path":"/llvm/llvm-project/issues/121487","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":"Root Signatures","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6phF7z","title":"[DirectX] Setup root signature DXIL Lowering.","path":"/llvm/llvm-project/issues/126632","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":"Root Signatures","assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6phIh5","title":"[DirectX] Add support to Root Signature Constant element to obj2yaml","path":"/llvm/llvm-project/issues/126633","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":"Root Signatures","assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs7M0IKu","title":"Long Vector Execution Tests: Add test cases using min precision values","path":"/microsoft/DirectXShaderCompiler/issues/7780","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs7biNZ0","title":"LongVectors tests - change warning to error","path":"/microsoft/DirectXShaderCompiler/issues/7958","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs6pf-yG","title":"Align on design for long vector execution tests","path":"/microsoft/DirectXShaderCompiler/issues/7135","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vector Tests","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs60yvZZ","title":"Long Vector Execution Tests: Trigonometric ops","path":"/microsoft/DirectXShaderCompiler/issues/7411","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vector Tests","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs63dYc8","title":"Long Vector Execution Tests: Logic Operators","path":"/microsoft/DirectXShaderCompiler/issues/7469","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vector Tests","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs63dh0I","title":"Long Vector Execution Tests: Bring tests framework to main.","path":"/microsoft/DirectXShaderCompiler/issues/7474","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs7CZ8K_","title":"Long Vector Execution Tests: Make/SplitDouble","path":"/microsoft/DirectXShaderCompiler/issues/7667","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs63dZtM","title":"Long Vector Execution Tests: AsType Ops","path":"/microsoft/DirectXShaderCompiler/issues/7473","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs6-Y6Lt","title":"Long Vector Execution Tests: Unary Math Ops","path":"/microsoft/DirectXShaderCompiler/issues/7614","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs6-Y6p2","title":"Long Vector Execution Tests: Binary Math Ops","path":"/microsoft/DirectXShaderCompiler/issues/7615","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs63dXK8","title":"Long Vector Execution Tests: Special Math Ops","path":"/microsoft/DirectXShaderCompiler/issues/7465","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBIRuvs6-ZPFj","title":"Long Vector Execution Tests: Ternary Math Ops","path":"/microsoft/DirectXShaderCompiler/issues/7616","repo":"microsoft/DirectXShaderCompiler","epic":"Long Vectors","workstream":"Long Vectors","assignees":["alsepkow"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM60vLAN","title":"[HLSL] Clean up CodeGenHLSL/*-overload.hlsl tests","path":"/llvm/llvm-project/issues/138016","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM61pEt6","title":"[DirectX] DXILCBufferAccess gets tripped up by arrays that are exactly 64 bits long","path":"/llvm/llvm-project/issues/138996","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM65sRFV","title":"[HLSL][SPIRV] Clang should run spirv-val if available","path":"/llvm/llvm-project/issues/142669","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6849Bp","title":"[DirectX] crash during computeRegisterProperties with DXILClassRegClass","path":"/llvm/llvm-project/issues/145377","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["hekota"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6_8hFy","title":"Support spirv glsl ext op with scalar args for distance, length, & reflect","path":"/llvm/llvm-project/issues/148026","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOK1nZ5c7EjFMm","title":"Enable AMD, NVIDIA, and Qualcomm machines for pre-merge checks","path":"/llvm/offload-test-suite/issues/317","repo":"llvm/offload-test-suite","epic":"SM 6.10 (retail)","workstream":null,"assignees":["Icohedron"],"children":[],"isRoot":false},{"id":"I_kwDOK1nZ5c7ExBnm","title":"[Vulkan] Test `Feature/Textures/SRVToUAV-array.test` fails under `windows-amd` due to bug in VK/Device.cpp","path":"/llvm/offload-test-suite/issues/328","repo":"llvm/offload-test-suite","epic":"SM 6.10 (retail)","workstream":null,"assignees":["Icohedron"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM63suA-","title":"[DirectX] MakeDouble doesn't match validator expectations","path":"/llvm/llvm-project/issues/140998","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["spall"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6yTu65","title":"[SPIRV] Floating point select operands cause the machine verifier to trip","path":"/llvm/llvm-project/issues/135572","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["farzonl"],"children":[],"isRoot":false},{"id":"I_kwDOMbLzis7Axsvi","title":"Fix DirectML build failure due to discarding return value of function with [[nodiscard]] attribute","path":"/llvm/wg-hlsl/issues/319","repo":"llvm/wg-hlsl","epic":"SM 6.10 (retail)","workstream":null,"assignees":["Icohedron"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7FZTxi","title":"[HLSL][SPIRV] Hitting assert when compiling program with splitdouble version of asuint","path":"/llvm/llvm-project/issues/153091","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["s-perron"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7Fpn-J","title":"[HLSL] Crash when wrong parameter type is used for entry point parameter with SV_GroupThreadID","path":"/llvm/llvm-project/issues/153303","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM61lYnn","title":"[HLSL] Buffer SRV type","path":"/llvm/llvm-project/issues/138902","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["V-FEXrt"],"children":[],"isRoot":false},{"id":"I_kwDOK1nZ5c6-fWx4","title":"[DirectX] Add test Support typedBufferLoad and Store for RWBuffer<int64_t2>, RWBuffer<uint64_t2>","path":"/llvm/offload-test-suite/issues/275","repo":"llvm/offload-test-suite","epic":"SM 6.10 (retail)","workstream":null,"assignees":["farzonl"],"children":[],"isRoot":false},{"id":"I_kwDOMbLzis7IUyd3","title":"Analysis based resource properties","path":"/llvm/wg-hlsl/issues/333","repo":"llvm/wg-hlsl","epic":"SM 6.10 (retail)","workstream":null,"assignees":[],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM64rfNH","title":"[DirectX] DXILCBufferAccess pass is removing globals without replacing all uses","path":"/llvm/llvm-project/issues/141840","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["Icohedron"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM64rhst","title":"[HLSL] Read Only Resources incorrectly allow writing","path":"/llvm/llvm-project/issues/141842","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["V-FEXrt"],"children":[],"isRoot":false},{"id":"I_kwDOMbLzis68BPl5","title":"[Deliverable] Support reserved resources","path":"/llvm/wg-hlsl/issues/294","repo":"llvm/wg-hlsl","epic":"SM 6.10 (retail)","workstream":null,"assignees":["bob80905"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM63fa4J","title":"[DirectX] Error occurs when using global resource handles in function parameters or when compiling with `-O0`","path":"/llvm/llvm-project/issues/140819","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["farzonl"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM6-hQkd","title":"[DirectX] Incorrect format metadata when using `Buffer<double>` or `Buffer<int64_t>`","path":"/llvm/llvm-project/issues/146735","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["joaosaffran"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7IvBkE","title":"[DirectX] Incorrect indexing into array of vectors from a Constant Buffer","path":"/llvm/llvm-project/issues/156084","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["bogner"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7FBXwH","title":"[HLSL][DirectX] Invalid DXIL when partially assigning to RWStructuredBuffer vector","path":"/llvm/llvm-project/issues/152815","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["hekota"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7JU3z3","title":"[HLSL][DirectX] Resource lowering bug when using structs with `select`","path":"/llvm/llvm-project/issues/156550","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["kmpeng"],"children":[],"isRoot":false},{"id":"I_kwDOBITxeM7Mk-34","title":"[DirectX] DXIL container mismatch for unbounded resource arrays","path":"/llvm/llvm-project/issues/159679","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["hekota"],"children":[],"isRoot":false},{"id":"I_kwDOH8uULc7NKCXf","title":"[HLSL 202x] Disallow array return types","path":"/microsoft/hlsl-specs/issues/652","repo":"microsoft/hlsl-specs","epic":"SM 6.10 (preview2)","workstream":null,"assignees":["farzonl","llvm-beanz"],"children":[],"isRoot":true},{"id":"I_kwDOBITxeM7PgSlV","title":"[HLSL][SPIRV] NonUniformResourceIndex lowering","path":"/llvm/llvm-project/issues/161852","repo":"llvm/llvm-project","epic":null,"workstream":null,"assignees":["s-perron","luciechoi"],"children":[],"isRoot":true},{"id":"I_kwDOBITxeM7Xn3XZ","title":"[HLSL] Data race when writing to independent elements of the same vector in TGSM from multiple threads","path":"/llvm/llvm-project/issues/167729","repo":"llvm/llvm-project","epic":"SM 6.10 (retail)","workstream":null,"assignees":["bogner","hekota"],"children":[],"isRoot":true}];
+
+const NONE = "(none)";
+const FIELDS = ["epic", "workstream", "assignee"];
+const FIELD_LABELS = { epic: "Epic", workstream: "Workstream", assignee: "Assignee" };
+
+const byId = Object.fromEntries(DATA.map(it => [it.id, it]));
+
+// Default axes: just Epic.
+let axes = ["epic"];
+let mode = "hierarchy-first";
+let multi = "combined";
+let showCounts = true;
+let collapseSingleton = true;
+
+// ---- helpers ---------------------------------------------------------------
+
+function valuesFor(item, field) {
+  if (field === "assignee") {
+    const a = item.assignees || [];
+    if (a.length === 0) return [["(unassigned)"]];
+    if (multi === "explode") return a.map(x => [x]);
+    // combined: one bucket per sorted set
+    return [a.slice().sort()];
+  }
+  const v = item[field];
+  return [[v == null ? NONE : v]];
+}
+
+// Get a single canonical key for an item along an axis (used in
+// hierarchy-first / no-ghost modes where an item can only land in one
+// bucket). For multi-value combined we use the joined key; for explode we
+// take the first sorted value.
+function keyFor(item, field) {
+  const vals = valuesFor(item, field);
+  return vals[0].join(" + ");
+}
+
+function descendantIds(id, into = new Set()) {
+  if (into.has(id)) return into;
+  into.add(id);
+  const it = byId[id];
+  if (!it) return into;
+  (it.children || []).forEach(c => descendantIds(c, into));
+  return into;
+}
+
+function descendantsOnly(id) {
+  const s = descendantIds(id);
+  s.delete(id);
+  return [...s].map(i => byId[i]).filter(Boolean);
+}
+
+// All items (root + every descendant of any root) — flattened
+function allReachable() {
+  const seen = new Set();
+  DATA.filter(it => it.isRoot).forEach(r => descendantIds(r.id, seen));
+  return [...seen].map(i => byId[i]).filter(Boolean);
+}
+
+// ---- renderers -------------------------------------------------------------
+
+const tree = document.getElementById("tree");
+const summary = document.getElementById("summary");
+
+function row({ kind = "item", level = 0, title, meta = "", path = "", ghost = false, badge = "" }) {
+  const div = document.createElement("div");
+  div.className = "row" + (kind === "group" ? " group lvl" + Math.min(level, 3) : "")
+                + (ghost ? " ghost" : "");
+  div.style.paddingLeft = (8 + level * 18) + "px";
+  let inner = "";
+  if (path) inner += '<span class="item-path">' + path + "</span>";
+  inner += '<span class="title">' + escapeHtml(title) + "</span>";
+  if (badge) inner += '<span class="badge">' + escapeHtml(badge) + "</span>";
+  if (meta) inner += '<span class="meta">' + escapeHtml(meta) + "</span>";
+  div.innerHTML = inner;
+  tree.appendChild(div);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+function clear() { tree.innerHTML = ""; }
+
+// ---- mode: hierarchy-first (Option B) -------------------------------------
+
+function renderHierarchyFirst() {
+  const roots = DATA.filter(it => it.isRoot);
+  // Top-level: also group roots by axes
+  renderGroupedItems(roots, axes, 0);
+}
+
+function renderGroupedItems(items, remainingAxes, level) {
+  if (items.length === 0) return;
+  if (remainingAxes.length === 0) {
+    items.forEach(it => renderItemRow(it, level, /*ghost*/false, /*forBucketKeys*/null));
+    return;
+  }
+  const field = remainingAxes[0];
+  // bucket items by their value(s) along this axis
+  const buckets = new Map();
+  for (const it of items) {
+    for (const valSet of valuesFor(it, field)) {
+      const key = valSet.join(" + ");
+      if (!buckets.has(key)) buckets.set(key, { key, items: [] });
+      buckets.get(key).items.push(it);
+    }
+  }
+  const keys = [...buckets.keys()].sort(sortBucketKeys);
+  if (collapseSingleton && keys.length === 1) {
+    return renderGroupedItems(buckets.get(keys[0]).items, remainingAxes.slice(1), level);
+  }
+  for (const k of keys) {
+    const b = buckets.get(k);
+    row({ kind: "group", level, title: FIELD_LABELS[field] + ": " + k,
+          meta: showCounts ? (b.items.length + " item" + (b.items.length===1?"":"s")) : "" });
+    renderGroupedItems(b.items, remainingAxes.slice(1), level + 1);
+  }
+}
+
+function sortBucketKeys(a, b) {
+  // Push (none)/(unassigned) buckets to the bottom
+  const aNone = a === NONE || a === "(unassigned)";
+  const bNone = b === NONE || b === "(unassigned)";
+  if (aNone !== bNone) return aNone ? 1 : -1;
+  return a.localeCompare(b);
+}
+
+function renderItemRow(it, level, ghost, badge) {
+  // For the hierarchy-first / no-ghost modes, render the item and recursively
+  // render its children re-grouped.
+  row({
+    level, title: it.title,
+    path: it.path,
+    meta: metaFor(it),
+    ghost,
+    badge,
+  });
+  if ((it.children || []).length === 0) return;
+  const children = it.children.map(id => byId[id]).filter(Boolean);
+  if (mode === "hierarchy-first") {
+    renderGroupedItems(children, axes, level + 1);
+  } else if (mode === "pivot-no-ghost") {
+    // Children whose pivot disagrees with parent's primary key still nest
+    children.forEach(c => renderItemRow(c, level + 1, false, ""));
+  } else if (mode === "pivot-ghost") {
+    // Handled separately
+  }
+}
+
+function metaFor(it) {
+  return [it.epic && "epic=" + it.epic, it.workstream && "ws=" + it.workstream,
+          (it.assignees||[]).length && "@" + it.assignees.join(",")].filter(Boolean).join(" ");
+}
+
+// ---- mode: pivot-ghost (Option E) -----------------------------------------
+
+function renderPivotGhost() {
+  // For each top-level bucket combination, render hierarchy of items whose
+  // own pivot key matches; render parents as ghosts when needed to attach a
+  // matching descendant.
+  const items = allReachable();
+
+  // Step 1: group items by combined-axis key (Cartesian product across axes)
+  const groups = new Map();
+  for (const it of items) {
+    const valuePaths = combinedValues(it, axes);
+    for (const vp of valuePaths) {
+      const key = vp.join(" \u25B8 ");
+      if (!groups.has(key)) groups.set(key, { keyPath: vp, items: new Set() });
+      groups.get(key).items.add(it.id);
+    }
+  }
+  const keys = [...groups.keys()].sort();
+  let total = 0, ghosts = 0;
+  for (const k of keys) {
+    const g = groups.get(k);
+    // Header row(s) — one per axis level
+    g.keyPath.forEach((label, i) => {
+      const primaryCount = [...g.items].filter(id => keyMatches(byId[id], axes, g.keyPath)).length;
+      // Only emit the deepest header with a count; intermediate headers per
+      // unique prefix are emitted lazily — but for prototype, emit them all
+      // at once since the full path is shown.
+      if (i === g.keyPath.length - 1) {
+        row({ kind: "group", level: i,
+              title: FIELD_LABELS[axes[i]] + ": " + label,
+              meta: showCounts ? (primaryCount + " primary, " + (g.items.size - primaryCount) + " ghost-anchored") : "" });
+      } else {
+        row({ kind: "group", level: i, title: FIELD_LABELS[axes[i]] + ": " + label });
+      }
+    });
+    // Render items as a tree, ghosting parents whose own pivot disagrees
+    const idsInBucket = g.items;
+    // Find roots within this bucket: items whose parent (in DATA) is NOT in
+    // idsInBucket AND not a member of any item in this bucket's chain. We
+    // approximate by: an item is a "bucket root" if none of its ancestors
+    // (in our dataset) appears in idsInBucket.
+    const parentOf = parentMap();
+    const bucketRoots = [...idsInBucket].filter(id => {
+      let p = parentOf[id];
+      while (p) { if (idsInBucket.has(p)) return false; p = parentOf[p]; }
+      return true;
+    });
+    for (const rid of bucketRoots.sort((a,b) => byId[a].title.localeCompare(byId[b].title))) {
+      renderInBucket(rid, idsInBucket, g.keyPath, g.keyPath.length, parentOf);
+    }
+    total += g.items.size;
+  }
+  return { groups: keys.length, total };
+}
+
+function renderInBucket(id, idsInBucket, keyPath, level, parentOf) {
+  const it = byId[id];
+  if (!it) return;
+  const isPrimary = keyMatches(it, axes, keyPath);
+  const ghost = !isPrimary;
+  row({ level, title: it.title, path: it.path, ghost, meta: metaFor(it) });
+  // Children that belong in this bucket
+  const childrenIn = (it.children || []).filter(c => idsInBucket.has(c));
+  for (const c of childrenIn.sort((a,b) => byId[a].title.localeCompare(byId[b].title))) {
+    renderInBucket(c, idsInBucket, keyPath, level + 1, parentOf);
+  }
+}
+
+function combinedValues(it, fields) {
+  // Cartesian product of values along each axis.
+  if (fields.length === 0) return [[]];
+  const head = fields[0], rest = fields.slice(1);
+  const restCombos = combinedValues(it, rest);
+  const headVals = valuesFor(it, head).map(vs => vs.join(" + "));
+  const out = [];
+  for (const h of headVals) for (const r of restCombos) out.push([h, ...r]);
+  return out;
+}
+
+function keyMatches(it, fields, keyPath) {
+  for (let i = 0; i < fields.length; i++) {
+    const has = valuesFor(it, fields[i]).map(vs => vs.join(" + "));
+    if (!has.includes(keyPath[i])) return false;
+  }
+  return true;
+}
+
+let _parentMapCache = null;
+function parentMap() {
+  if (_parentMapCache) return _parentMapCache;
+  const m = {};
+  for (const it of DATA) for (const c of it.children || []) m[c] = it.id;
+  _parentMapCache = m;
+  return m;
+}
+
+// ---- mode: pivot-no-ghost (Option A) --------------------------------------
+
+function renderPivotNoGhost() {
+  // Same as hierarchy-first at the root level (group by axes), but children
+  // STAY UNDER PARENT regardless of their own pivot value.
+  const roots = DATA.filter(it => it.isRoot);
+  // Bucket roots by axes Cartesian
+  const groups = new Map();
+  for (const it of roots) {
+    for (const vp of combinedValues(it, axes)) {
+      const k = vp.join(" \u25B8 ");
+      if (!groups.has(k)) groups.set(k, { keyPath: vp, items: [] });
+      groups.get(k).items.push(it);
+    }
+  }
+  for (const k of [...groups.keys()].sort()) {
+    const g = groups.get(k);
+    g.keyPath.forEach((label, i) => {
+      row({ kind: "group", level: i, title: FIELD_LABELS[axes[i]] + ": " + label,
+            meta: (i === g.keyPath.length - 1 && showCounts) ? (g.items.length + " items") : "" });
+    });
+    for (const it of g.items) {
+      const desc = descendantsOnly(it.id);
+      const otherBuckets = new Set();
+      for (const d of desc) for (const vp of combinedValues(d, axes)) otherBuckets.add(vp.join(" \u25B8 "));
+      otherBuckets.delete(k);
+      const badge = otherBuckets.size > 0
+        ? "+children in " + otherBuckets.size + " other bucket" + (otherBuckets.size===1?"":"s")
+        : "";
+      renderItemRowNoGhost(it, g.keyPath.length, badge);
+    }
+  }
+}
+
+function renderItemRowNoGhost(it, level, badge) {
+  row({ level, title: it.title, path: it.path, meta: metaFor(it), badge });
+  for (const cid of it.children || []) {
+    const c = byId[cid];
+    if (c) renderItemRowNoGhost(c, level + 1, "");
+  }
+}
+
+// ---- mode: flat (Option C) ------------------------------------------------
+
+function renderFlat() {
+  const items = allReachable();
+  const groups = new Map();
+  for (const it of items) {
+    for (const vp of combinedValues(it, axes)) {
+      const k = vp.join(" \u25B8 ");
+      if (!groups.has(k)) groups.set(k, { keyPath: vp, items: [] });
+      groups.get(k).items.push(it);
+    }
+  }
+  for (const k of [...groups.keys()].sort()) {
+    const g = groups.get(k);
+    g.keyPath.forEach((label, i) => {
+      row({ kind: "group", level: i, title: FIELD_LABELS[axes[i]] + ": " + label,
+            meta: (i === g.keyPath.length - 1 && showCounts) ? (g.items.length + " items") : "" });
+    });
+    for (const it of g.items.sort((a,b)=>a.title.localeCompare(b.title))) {
+      // Show parent breadcrumb
+      const parents = parentChain(it.id);
+      const crumb = parents.length ? "↑ " + parents.map(p => byId[p].title).join(" / ") : "";
+      row({ level: g.keyPath.length, title: it.title, path: it.path,
+            meta: (crumb ? crumb + "   " : "") + metaFor(it) });
+    }
+  }
+}
+
+function parentChain(id) {
+  const m = parentMap();
+  const out = [];
+  let p = m[id];
+  while (p) { out.unshift(p); p = m[p]; }
+  return out;
+}
+
+// ---- driver ---------------------------------------------------------------
+
+function render() {
+  clear();
+  let info;
+  if (mode === "hierarchy-first") renderHierarchyFirst();
+  else if (mode === "pivot-ghost") info = renderPivotGhost();
+  else if (mode === "pivot-no-ghost") renderPivotNoGhost();
+  else if (mode === "flat") renderFlat();
+
+  const itemCount = DATA.length;
+  const rootCount = DATA.filter(it => it.isRoot).length;
+  let s = itemCount + " items in dataset (" + rootCount + " top-level), axes: ["
+    + (axes.map(a => FIELD_LABELS[a]).join(", ") || "none")
+    + "], mode: " + mode;
+  if (info) s += ", " + info.groups + " buckets, " + info.total
+    + " item placements (incl. ghost duplications)";
+  summary.textContent = s;
+}
+
+function renderAxes() {
+  const c = document.getElementById("axes");
+  c.innerHTML = "";
+  axes.forEach((a, i) => {
+    const b = document.createElement("button");
+    b.className = "chip active";
+    b.textContent = FIELD_LABELS[a] + " ✕";
+    b.title = "Click to remove";
+    b.onclick = () => { axes.splice(i, 1); renderAxes(); render(); };
+    c.appendChild(b);
+    if (i < axes.length - 1) {
+      const arrow = document.createElement("span");
+      arrow.className = "arrow"; arrow.textContent = "→"; c.appendChild(arrow);
+    }
+  });
+  if (axes.length > 0) {
+    const arrow = document.createElement("span");
+    arrow.className = "arrow"; arrow.textContent = "→"; c.appendChild(arrow);
+  }
+  for (const f of FIELDS) {
+    if (axes.includes(f)) continue;
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = "+ " + FIELD_LABELS[f];
+    b.onclick = () => { axes.push(f); renderAxes(); render(); };
+    c.appendChild(b);
+  }
+}
+
+document.querySelectorAll("input[name=mode]").forEach(el => {
+  el.addEventListener("change", e => { mode = e.target.value; render(); });
+});
+document.querySelectorAll("input[name=multi]").forEach(el => {
+  el.addEventListener("change", e => { multi = e.target.value; render(); });
+});
+document.getElementById("showCounts").addEventListener("change", e => {
+  showCounts = e.target.checked; render();
+});
+document.getElementById("collapseSingleton").addEventListener("change", e => {
+  collapseSingleton = e.target.checked; render();
+});
+
+renderAxes();
+render();
+</script>
+</body>
+</html>
