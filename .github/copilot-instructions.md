@@ -179,7 +179,6 @@ Rules:
 - **After bumping any workspace crate version**, run `cargo update --workspace` (or simply `cargo build` / `cargo check`) and commit the resulting `Cargo.lock` change in the same commit/PR as the version bump.
 - **Never blindly revert an "unrelated" `Cargo.lock` diff** that appears after running cargo commands. First investigate whether the workspace `Cargo.toml` package versions match the lockfile's `[[package]]` entries for those crates. If they don't, the lockfile diff is real and required — keep it.
 - Before reverting any `Cargo.lock` diff, run `git diff Cargo.toml */Cargo.toml` and inspect the lockfile entries for the workspace crates (`ghui`, `ghui-app`, `ghui-util`, `github-graphql`) to confirm versions actually match. Only revert if they already match in the lockfile.
-- **When fixing the release workflow's `Cargo.lock` handling, also regenerate `Cargo.lock` for the current state in the same PR.** Patching `release.yml` only fixes _future_ releases — any version bump that already happened with the broken workflow will have left a stale lockfile that keeps showing up as a spurious diff in unrelated PRs until someone refreshes it. Both PR #44 (after v0.4.0) and the lockfile bump after v0.6.0 were caused by skipping this step. After editing `release.yml`, run `cargo update --workspace` (or `cargo check --workspace`), inspect the resulting `Cargo.lock` diff, and commit it alongside the workflow change.
 
 ### TypeScript Bindings (ts-rs)
 
