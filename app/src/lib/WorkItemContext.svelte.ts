@@ -231,7 +231,7 @@ export class WorkItemContext {
   public getFilterableFieldValue(
     fieldName: keyof Filters,
     workItem: WorkItem
-  ): FieldOptionId | null {
+  ): FieldOptionId | null | undefined {
     return filterableFields.getFilterableFieldValue(workItem, fieldName);
   }
 

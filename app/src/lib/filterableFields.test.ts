@@ -111,6 +111,11 @@ describe("filterable field metadata", () => {
     expect(isFilterableField(data, "title")).toBe(false);
     expect(isFilterableField(data, "assignees")).toBe(false);
     expect(isFilterableField(data, "")).toBe(false);
+    // Inherited Object.prototype property names must not be classified as
+    // filterable — guards against the `in` operator pitfall.
+    expect(isFilterableField(data, "__proto__")).toBe(false);
+    expect(isFilterableField(data, "toString")).toBe(false);
+    expect(isFilterableField(data, "hasOwnProperty")).toBe(false);
   });
 });
 
@@ -156,17 +161,17 @@ describe("getFilterableFieldValue", () => {
     expect(getFilterableFieldValue(item, "iteration")).toBe(null);
   });
 
-  it("returns null for not-yet-loaded DelayLoad fields", () => {
+  it("returns undefined for not-yet-loaded DelayLoad fields so callers can distinguish unset from unknown", () => {
     const item = makeWorkItem({
       iteration: { loadState: "notLoaded" },
       blocked: { loadState: "notLoaded" },
       kind: { loadState: "notLoaded" },
       workstream: { loadState: "notLoaded" },
     });
-    expect(getFilterableFieldValue(item, "iteration")).toBe(null);
-    expect(getFilterableFieldValue(item, "blocked")).toBe(null);
-    expect(getFilterableFieldValue(item, "kind")).toBe(null);
-    expect(getFilterableFieldValue(item, "workstream")).toBe(null);
+    expect(getFilterableFieldValue(item, "iteration")).toBe(undefined);
+    expect(getFilterableFieldValue(item, "blocked")).toBe(undefined);
+    expect(getFilterableFieldValue(item, "kind")).toBe(undefined);
+    expect(getFilterableFieldValue(item, "workstream")).toBe(undefined);
   });
 });
 

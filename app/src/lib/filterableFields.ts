@@ -17,20 +17,23 @@ export function isFilterableField(
   data: Data,
   name: string
 ): name is keyof Filters {
-  return name in data.filters;
+  return Object.hasOwn(data.filters, name);
 }
 
 /** Returns the FieldOptionId currently set on `workItem` for any filterable
  * field. The corresponding `projectItem[fieldName]` is either a raw
  * `FieldOptionId | null` or a `DelayLoad`-wrapped one; both are unwrapped here
- * so callers don't have to care. */
+ * so callers don't have to care. Returns `null` when the field is explicitly
+ * unset, and `undefined` when a `DelayLoad`-wrapped value has not loaded yet
+ * so callers can distinguish "unset" from "unknown" (e.g. to suppress a
+ * quick-filter action that would otherwise treat unloaded as `(none)`). */
 export function getFilterableFieldValue(
   workItem: WorkItem,
   fieldName: keyof Filters
-): FieldOptionId | null {
+): FieldOptionId | null | undefined {
   const v = workItem.projectItem[fieldName];
   if (v === null || typeof v === "string") return v;
-  return v.loadState === "loaded" ? v.value : null;
+  return v.loadState === "loaded" ? v.value : undefined;
 }
 
 /** Returns all option ids (including `null` for "unset") for a filterable

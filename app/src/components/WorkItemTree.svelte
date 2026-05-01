@@ -82,6 +82,10 @@
       item: WorkItem
     ): MenuItem[] {
       const value = context.getFilterableFieldValue(field, item);
+      // Skip quick-filter actions while the underlying value is still loading;
+      // otherwise we'd treat an unloaded value as `(none)` and apply the wrong
+      // filter.
+      if (value === undefined) return [];
       const label = value
         ? (context.getFieldOption(field, value) ?? "(unknown)")
         : "(none)";
