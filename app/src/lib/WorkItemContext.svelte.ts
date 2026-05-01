@@ -17,6 +17,7 @@ import type { LogEntry } from "./bindings/LogEntry";
 import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
+import * as filterableFields from "./filterableFields";
 
 const key = Symbol("WorkItemContext");
 
@@ -219,37 +220,25 @@ export class WorkItemContext {
     }
   }
 
-  /** Names of all fields that support filtering, derived from the `Filters`
-   * struct. This is the single source of truth used wherever code needs to
-   * enumerate or test for filterable fields. */
   public get filterableFields(): Array<keyof Filters> {
-    return Object.keys(this.data.filters) as Array<keyof Filters>;
+    return filterableFields.getFilterableFields(this.data);
   }
 
   public isFilterableField(name: string): name is keyof Filters {
-    return name in this.data.filters;
+    return filterableFields.isFilterableField(this.data, name);
   }
 
-  /** Returns the FieldOptionId currently set on `workItem` for any filterable
-   * field. The corresponding `projectItem[fieldName]` is either a raw
-   * `FieldOptionId | null` or a `DelayLoad`-wrapped one; both are unwrapped
-   * here so callers don't have to care. */
   public getFilterableFieldValue(
     fieldName: keyof Filters,
     workItem: WorkItem
   ): FieldOptionId | null {
-    const v = workItem.projectItem[fieldName];
-    if (v === null || typeof v === "string") return v;
-    return v.loadState === "loaded" ? v.value : null;
+    return filterableFields.getFilterableFieldValue(workItem, fieldName);
   }
 
-  /** Returns all option ids (including `null` for "unset") for a filterable
-   * field. `Field<SingleSelect>` and `Field<Iteration>` share the `options`
-   * shape so they can be handled uniformly. */
   public getFilterableFieldOptionIds(
     fieldName: keyof Filters
   ): Array<FieldOptionId | null> {
-    return [null, ...this.data.fields[fieldName].options.map((o) => o.id)];
+    return filterableFields.getFilterableFieldOptionIds(this.data, fieldName);
   }
 
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {
