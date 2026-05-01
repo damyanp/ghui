@@ -46,11 +46,14 @@
 > 3. **"We can unify the items view and the statistics view on a shared
 >    `PivotField` enum."** That is now an explicit non-goal (§3 N3). The
 >    items view stands on its own.
-> 4. **Recommendation has shifted** from "Option B (hierarchy first) +
->    badge" to **Option E (pivot at top, ghost rows for parents,
->    duplicate when needed)**, because the latter keeps the *pivot* axis
->    as the dominant visual organisation regardless of where in the tree
->    a value lives. See §6.5 (new option E), §11, and the prototype.
+> 4. **Recommendation has shifted** from "pick one rendering mode" to
+>    **ship all four modes as a user-selectable view setting**, with
+>    **Option E (pivot at top, ghost rows)** as the default. Different
+>    workflows favour different shapes (planning view vs. parent-centric
+>    triage vs. flat reporting), the underlying data layer supports all
+>    four cheaply, and the prototype shows them side-by-side already.
+>    See §6 for the per-option spec, §9 for the shared implementation,
+>    and §11 for the rollout plan.
 
 ## 1. Background
 
@@ -126,13 +129,20 @@ Out of scope for this doc:
 
 - G1. Single concept of "pivot list" applied consistently to:
   - the main tree (`WorkItemTree`)
-  - the stats panel (`WorkItemStatistics`)
   - any future kanban / swimlane view
+
+  The stats panel is explicitly **out** of this unification (N3).
 - G2. Sensible defaults so the tree continues to look familiar (default
   pivot list remains `[Epic]`, matching today).
 - G3. Expose enough information for the user to **see and resolve** items
   whose value disagrees with where they ended up grouped.
 - G4. No regressions for filtering, drag-and-drop, change tracking, or undo.
+- G5. **All four rendering modes** in §6 (Hierarchy first / Pivot at top
+  with ghosts / Pivot at top no ghosts / Flat) ship together as a
+  user-selectable view setting, sharing one pivot-axis list and one
+  data layer. Different workflows favour different shapes; the cost
+  delta vs. shipping just one mode is small once the shared layer
+  exists.
 
 **Non-goals**
 
@@ -541,7 +551,7 @@ We'd ship a curated set of presets first and expose the "custom recipe"
 UI later. The recipe representation should still be the underlying data
 model from day one so presets are just named recipes.
 
-### 6.4a Option E — "Pivot at top with ghost rows" *(new recommended default)*
+### 6.4a Option E — "Pivot at top with ghost rows" *(default mode)*
 
 Suggested in review (comment on §6 of the previous draft). Always group
 at the top by the pivot list. Within each pivot bucket, render the
@@ -550,6 +560,40 @@ a matching child has a parent *not* in this bucket, render the parent
 too as a **ghost row** so the child stays visually attached to it.
 Ghost rows are visually muted and labelled; the same parent may appear
 ghosted in several buckets.
+
+**Rendering rules** (refined while building the prototype):
+
+1. **Bucket membership** is built in two passes. First pass: an item
+   is a *primary* member of bucket `B` iff its own pivot value(s)
+   match `B`. Second pass: for every primary member, walk its ancestor
+   chain in the source tree and add each ancestor to `B` as a *ghost*
+   member if it is not already a primary there. The pivot value of a
+   ghost is irrelevant — its only job is to attach a primary
+   descendant to its real parent.
+2. **Bucket roots** are members of `B` whose parent in the source tree
+   is *not* in `B`. Each bucket is rendered as a forest of those
+   roots, recursing only into children that are also members of `B`
+   (primary or ghost).
+3. **Ghost styling** is muted (italic, a `(ghost)` prefix, a `(ghost)`
+   badge or similar). Counts are reported as
+   "*N primary* + *M ghost*" so it is unambiguous which figure to
+   trust for "how much work is in this bucket".
+4. **Multi-axis pivots collapse repeated leading headers.** When the
+   pivot list has more than one axis (e.g. `[Epic, Workstream]`), the
+   header rows for two consecutive buckets that share the same Epic
+   value emit the Epic header *only once*, followed by the differing
+   Workstream sub-headers underneath. This avoids the "Epic: (none) /
+   Workstream: (none) / Epic: (none) / Workstream: DXIL …" repetition
+   that an earlier prototype build produced.
+5. **Multi-valued items** (e.g. assignees) follow the chosen
+   multi-value strategy from §6.6 — under *Combined*, an item lands
+   primary in exactly one synthetic bucket; under *Explode*, it lands
+   primary in each constituent value's bucket. Either way, ghost
+   ancestors are added per (1).
+6. **Interaction routing.** A click / drag / edit on a ghost routes to
+   the primary occurrence of that item; the ghost itself is
+   non-interactive. Change-tracking markers (e.g. "modified") still
+   render on ghosts because they reflect the underlying item's state.
 
 Abstract example (verbatim from review):
 
@@ -589,14 +633,31 @@ Mask based on Resource properties in the Shader", Epic = *SM 6.10
 6.10 (preview2)* and two of which have no Epic set:
 
 ```
-▾ Epic: SM 6.10 (preview2)
+▾ Epic: SM 6.10 (preview2)              2 primary
   ▾ [DirectX] Collect Shader Flags Mask based on Resource properties …
       [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnTypedResource`
       [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnHeapResource`
-▾ Epic: (none)
+▾ Epic: (none)                          2 primary + 1 ghost
   ▾ ([DirectX] Collect Shader Flags Mask based on Resource properties …)   ← ghost
       [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnGroupShared`
       [DirectX] Implement shader flag analysis for EnableRawAndStructuredBuffers
+```
+
+Multi-axis example, pivot `[Epic, Workstream]` over the same family —
+note the leading `Epic:` header is emitted once per Epic, with
+Workstream sub-headers nested underneath it (rule 4 above):
+
+```
+▾ Epic: SM 6.10 (preview2)
+  ▾ Workstream: DXIL Shader Flags        2 primary
+    ▾ [DirectX] Collect Shader Flags Mask …
+        [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnTypedResource`
+        [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnHeapResource`
+▾ Epic: (none)
+  ▾ Workstream: (none)                   2 primary + 1 ghost
+    ▾ ([DirectX] Collect Shader Flags Mask …)   ← ghost
+        [DirectX] Implement Shader Flags Analysis for `AtomicInt64OnGroupShared`
+        [DirectX] Implement shader flag analysis for EnableRawAndStructuredBuffers
 ```
 
 The same pattern with the larger Scenario B parent (*[Scenario] DML Demo
@@ -715,14 +776,21 @@ buckets so the user can see *why* their filter eliminated the items.
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ ghui  ▸ HLSL Working Group                                ⟲ undo  ⟳ redo    │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Group by:  [ Workstream ▾ ]  →  [ Epic ▾ ]  →  [ + ]   View: [ Tree ▾ ] ⚙  │
+│ Group by: [ Epic ▾ ] → [ Workstream ▾ ] → [ + ]   View: [ Pivot+ghosts ▾ ] ⚙│
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-`View` lets us host alternative renderers in the future (Tree, Flat,
-Board) sharing the same pivot list.
+`Group by` is the pivot-axis list (`PivotConfig::axes`). `View` is
+`PivotConfig::mode` and offers the four §6 options:
 
-### 7.2 Tree, Option B (recommended default), pivot `[Workstream, Epic]`
+- **Pivot + ghosts** (default, Option E)
+- **Hierarchy first** (Option B)
+- **Pivot, no ghosts** (Option A)
+- **Flat** (Option C)
+
+Switching mode preserves the axis list and any filters.
+
+### 7.2 Tree, Option B (alternative mode), pivot `[Workstream, Epic]`
 
 Drawn from the live sub-issues of `[Scenario] DML Demo finalization`:
 
@@ -845,12 +913,25 @@ within the current architecture.
        /// Today's default = `vec![PivotField::Epic]`.
        pub axes: Vec<PivotField>,
 
-       /// How to render a parent whose descendants disagree with it on
-       /// one of the pivot axes.
-       pub mixed_strategy: MixedStrategy,    // GhostRows | Badge | MixedBucket
+       /// Which of the four rendering modes from §6 to use. Stored
+       /// alongside `axes` in `AppState` (next to `Filters`); not part
+       /// of `Changes`.
+       pub mode: PivotMode,
 
        /// How to render multi-valued items (assignees).
        pub multi_value_strategy: MultiValueStrategy, // Combined | Explode
+   }
+
+   pub enum PivotMode {
+       /// §6.4a — pivot at top, ghost ancestors when needed. Default.
+       PivotGhost,
+       /// §6.2 — hierarchy first, regroup at every level.
+       HierarchyFirst,
+       /// §6.1 — pivot at top, no ghosts; mixed parents get a badge.
+       PivotNoGhost,
+       /// §6.3 — flat list of items, one bucket per pivot key, no
+       /// hierarchy at all.
+       Flat,
    }
    ```
 
@@ -860,24 +941,46 @@ within the current architecture.
    single-valued fields or a sorted `Vec<FieldOptionId>` for
    multi-valued fields with the `Combined` strategy.
 
-3. Make `add_nodes` recurse over the *pivot axis list* before
-   recursing into sub-issues, so that `[Workstream, Epic]` produces two
-   nested `NodeData::Group` levels under each parent before the
-   work-item rows.
+3. Make `add_nodes` dispatch on `PivotConfig::mode`:
+
+   - `HierarchyFirst` — recurse over hierarchy first; at each level
+     where children's pivot values disagree, recurse over the *pivot
+     axis list* before continuing into sub-issues. This is the
+     generalisation of today's `NodeBuilder` to a `Vec<PivotField>`.
+   - `PivotGhost` (default) — bucket items at the top by Cartesian
+     product of axis values, then for each bucket compute primary +
+     ghost members (per §6.4a rule 1) and render each bucket's
+     forest. Coalesce repeated leading axis-header rows across
+     consecutive buckets (§6.4a rule 4).
+   - `PivotNoGhost` — same bucketing as `PivotGhost` but render
+     without ghosts; mixed-children parents get a `⊕ children: …`
+     badge (§6.1 / §7.3).
+   - `MixedBucket` for parents whose own value disagrees with the
+     bucket they were promoted into is still on the table for
+     `PivotNoGhost`; see §6.5 option 3.
+   - `Flat` — emit each primary placement as a top-level row under
+     its bucket header; no hierarchy at all (§6.3 / §7.4).
+
+   All four modes share the same upstream pieces (`PivotConfig`,
+   bucket-key construction, multi-value strategy, filtering), so the
+   incremental cost of supporting all four is small.
 
 4. Plumb `PivotConfig` through `AppState` (it lives next to `Filters` —
    it is *not* part of `Changes`, matching the architectural rule that
    `Changes` is a pure data container).
 
-5. Export `PivotField` / `PivotConfig` to TypeScript via `ts-rs`, like
-   the existing field enums.
+5. Export `PivotField` / `PivotMode` / `PivotConfig` to TypeScript via
+   `ts-rs`, like the existing field enums.
 
-6. Default `PivotConfig` is `{ axes: vec![Epic], mixed: GhostRows,
+6. Default `PivotConfig` is `{ axes: vec![Epic], mode: PivotGhost,
    multi_value: Combined }`. With `axes = [Epic]` and ghost-rows mode,
    the default view is *very close* to today's behaviour for items
    whose Epic agrees with their parent's, and it makes the existing
    mixed-Epic cases (e.g. DXC#7838) more visible by hoisting them into
-   the matching top-level Epic bucket.
+   the matching top-level Epic bucket. Users who prefer today's
+   parent-centric shape can switch to `HierarchyFirst` from the
+   toolbar; teams driving roadmap reviews from the doc can switch to
+   `Flat`.
 
 ## 10. Open questions
 
@@ -902,32 +1005,53 @@ within the current architecture.
 
 For an initial implementation:
 
-1. Adopt **Option E** ("pivot at top with ghost rows", §6.4a) as the
-   default tree behaviour, parameterised by a *list* of pivot fields.
-   This keeps the pivot axis dominant, surfaces mixed-child cases
-   prominently (a parent appears in every bucket whose contents
-   include one of its descendants), and works uniformly across all
-   pivot fields without depending on the sanitize pass (which is
-   itself slated to relax — see §3 N4).
-2. Add a top-level "Group by" chip control driven by `PivotConfig`;
-   default the axis list to `[Epic]` so the experience for items where
-   parent and children agree on Epic is visually close to today's.
-3. Use **mixed-strategy = GhostRows** initially (§6.5 option 2 / §6.4a).
-   Offer **Badge** as an alternative for users who prefer Option B's
-   shape; defer **Mixed bucket** and **Promote-children**.
-4. Use **multi-value strategy = Combined** for assignees (§6.6, per
-   review feedback). Defer the "explode" alternative.
-5. Treat the **statistics view as out of scope** (§3 N3). It keeps its
-   current independent implementation.
-6. Defer Option C / board view and Option D / composable recipes to a
-   follow-up, but keep the data layer (axis list, multi-valued group
-   keys, mixed strategy enum) general enough to support them later.
+1. **Ship all four rendering modes from §6 as a single user-selectable
+   "View" setting** (Hierarchy first / Pivot at top with ghosts / Pivot
+   at top no ghosts / Flat), backed by one shared pivot-axis list
+   (`PivotConfig::axes`) and one shared data layer (§9). The cost
+   delta over shipping a single mode is small once the layer exists,
+   and different real workflows on this team genuinely favour
+   different shapes:
 
-A live in-browser prototype demonstrating Options B, E, A, and C side
-by side over a curated subset of real data is checked in at
+   - **Pivot at top + ghosts (Option E)** — default; best for
+     planning views where "what's in this Epic / Workstream" is the
+     dominant question and mixed parents must stay visible.
+   - **Hierarchy first (Option B)** — best for parent-centric triage
+     ("what's the state of this Scenario?"); preserves today's
+     mental model for users who like it.
+   - **Pivot at top, no ghosts (Option A)** — compact; useful when
+     mixed parents are noise and a single `⊕ children` badge is
+     enough.
+   - **Flat (Option C)** — best for reporting / board-style layouts
+     and as the data shape a future kanban view will consume.
+2. **Default to Option E with `axes = [Epic]`.** This keeps the
+   day-one experience close to today's tree for items whose Epic
+   agrees with their parent's, while making the existing
+   mixed-children cases (e.g. DXC#7838) immediately visible by
+   hoisting their children into the matching top-level Epic bucket.
+3. **Persist the `PivotConfig` (axes + mode + multi-value strategy)
+   per project**, in the same place as filters. A toolbar control lets
+   the user flip mode without losing their axis selection.
+4. **Mixed-strategy enum is folded into `PivotMode`** rather than
+   being a separate setting. Ghost rows belong to `PivotGhost`; the
+   `⊕ children` badge belongs to `PivotNoGhost`. Users pick the mode,
+   not a matrix of orthogonal toggles.
+5. **Multi-value strategy = Combined** for assignees by default
+   (§6.6, per review feedback). Defer the "Explode" alternative
+   behind a toggle.
+6. **Statistics view stays out of scope** (§3 N3) — it keeps its
+   current independent implementation; we are deliberately not
+   sharing types with it in this round.
+7. **Defer Option D / composable recipes and the Board view** to a
+   follow-up, but the data layer (axis list, multi-valued group keys,
+   `PivotMode` enum) is general enough to host them later.
+
+A live in-browser prototype demonstrating all four modes side by side
+over a curated subset of real data is checked in at
 [`docs/pivoting-prototype.html`](./pivoting-prototype.html); use it to
 sanity-check the recommendation against the trade-offs before we
-commit.
+commit. The prototype already implements rules (1)–(4) of §6.4a so the
+behaviour reviewers see in `pivot-ghost` mode matches the spec.
 
 ## 12. Acceptance for this design exercise
 

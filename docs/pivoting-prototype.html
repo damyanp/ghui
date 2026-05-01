@@ -76,8 +76,8 @@
 <div class="controls">
   <fieldset>
     <legend>Mode</legend>
-    <label><input type="radio" name="mode" value="hierarchy-first" checked> Option B — Hierarchy first</label>
-    <label><input type="radio" name="mode" value="pivot-ghost"> Option E — Pivot at top (ghost rows)</label>
+    <label><input type="radio" name="mode" value="hierarchy-first"> Option B — Hierarchy first</label>
+    <label><input type="radio" name="mode" value="pivot-ghost" checked> Option E — Pivot at top (ghost rows)</label>
     <label><input type="radio" name="mode" value="pivot-no-ghost"> Option A — Pivot at top (no ghosts)</label>
     <label><input type="radio" name="mode" value="flat"> Option C — Flat / Board</label>
   </fieldset>
@@ -121,7 +121,7 @@ const byId = Object.fromEntries(DATA.map(it => [it.id, it]));
 
 // Default axes: just Epic.
 let axes = ["epic"];
-let mode = "hierarchy-first";
+let mode = "pivot-ghost";
 let multi = "combined";
 let showCounts = true;
 let collapseSingleton = true;
@@ -285,54 +285,77 @@ function renderPivotGhost() {
       groups.get(key).items.add(it.id);
     }
   }
+  // Step 2: for each bucket, walk each primary item's ancestors and add them
+  // as ghost members of the bucket so the matching descendant stays visually
+  // attached to its real parent chain.
+  const parentOf = parentMap();
+  for (const g of groups.values()) {
+    const primaryIds = new Set(g.items);
+    const allIds = new Set(primaryIds);
+    for (const id of primaryIds) {
+      let p = parentOf[id];
+      while (p) {
+        if (allIds.has(p)) break; // stop walking — already covered
+        allIds.add(p);
+        p = parentOf[p];
+      }
+    }
+    g.primaryIds = primaryIds;
+    g.items = allIds;
+  }
+
   const keys = [...groups.keys()].sort();
-  let total = 0, ghosts = 0;
+  let total = 0, totalGhosts = 0;
+  let prevKeyPath = [];
   for (const k of keys) {
     const g = groups.get(k);
-    // Header row(s) — one per axis level
+    const primaryCount = g.primaryIds.size;
+    const ghostCount = g.items.size - primaryCount;
+    // Header row(s) — emit one per axis level, but skip leading levels whose
+    // label is identical to the previous bucket (avoids repeating "Epic: (none)"
+    // before every Workstream subgroup).
+    let diverged = false;
     g.keyPath.forEach((label, i) => {
-      const primaryCount = [...g.items].filter(id => keyMatches(byId[id], axes, g.keyPath)).length;
-      // Only emit the deepest header with a count; intermediate headers per
-      // unique prefix are emitted lazily — but for prototype, emit them all
-      // at once since the full path is shown.
+      if (!diverged && prevKeyPath[i] === label) return;
+      diverged = true;
       if (i === g.keyPath.length - 1) {
         row({ kind: "group", level: i,
               title: FIELD_LABELS[axes[i]] + ": " + label,
-              meta: showCounts ? (primaryCount + " primary, " + (g.items.size - primaryCount) + " ghost-anchored") : "" });
+              meta: showCounts
+                ? (primaryCount + " primary"
+                   + (ghostCount > 0 ? " + " + ghostCount + " ghost" + (ghostCount===1?"":"s") : ""))
+                : "" });
       } else {
         row({ kind: "group", level: i, title: FIELD_LABELS[axes[i]] + ": " + label });
       }
     });
-    // Render items as a tree, ghosting parents whose own pivot disagrees
+    prevKeyPath = g.keyPath;
+    // Render items as a tree. Bucket roots = members of this bucket whose
+    // parent (in DATA) is NOT in this bucket.
     const idsInBucket = g.items;
-    // Find roots within this bucket: items whose parent (in DATA) is NOT in
-    // idsInBucket AND not a member of any item in this bucket's chain. We
-    // approximate by: an item is a "bucket root" if none of its ancestors
-    // (in our dataset) appears in idsInBucket.
-    const parentOf = parentMap();
     const bucketRoots = [...idsInBucket].filter(id => {
       let p = parentOf[id];
       while (p) { if (idsInBucket.has(p)) return false; p = parentOf[p]; }
       return true;
     });
     for (const rid of bucketRoots.sort((a,b) => byId[a].title.localeCompare(byId[b].title))) {
-      renderInBucket(rid, idsInBucket, g.keyPath, g.keyPath.length, parentOf);
+      renderInBucket(rid, idsInBucket, g.primaryIds, g.keyPath.length);
     }
     total += g.items.size;
+    totalGhosts += ghostCount;
   }
-  return { groups: keys.length, total };
+  return { groups: keys.length, total, ghosts: totalGhosts };
 }
 
-function renderInBucket(id, idsInBucket, keyPath, level, parentOf) {
+function renderInBucket(id, idsInBucket, primaryIds, level) {
   const it = byId[id];
   if (!it) return;
-  const isPrimary = keyMatches(it, axes, keyPath);
-  const ghost = !isPrimary;
+  const ghost = !primaryIds.has(id);
   row({ level, title: it.title, path: it.path, ghost, meta: metaFor(it) });
-  // Children that belong in this bucket
+  // Children that belong in this bucket (primary or ghost)
   const childrenIn = (it.children || []).filter(c => idsInBucket.has(c));
   for (const c of childrenIn.sort((a,b) => byId[a].title.localeCompare(byId[b].title))) {
-    renderInBucket(c, idsInBucket, keyPath, level + 1, parentOf);
+    renderInBucket(c, idsInBucket, primaryIds, level + 1);
   }
 }
 
@@ -458,7 +481,9 @@ function render() {
     + (axes.map(a => FIELD_LABELS[a]).join(", ") || "none")
     + "], mode: " + mode;
   if (info) s += ", " + info.groups + " buckets, " + info.total
-    + " item placements (incl. ghost duplications)";
+    + " rows (" + (info.total - (info.ghosts||0)) + " primary"
+    + (info.ghosts ? " + " + info.ghosts + " ghost" : "")
+    + ")";
   summary.textContent = s;
 }
 
