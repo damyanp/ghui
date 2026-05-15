@@ -471,7 +471,7 @@
         index === 0 && "pr-1 flex gap-1 flex-nowrap",
         index !== 0 && "px-1 overflow-ellipsis ",
       ]}
-      oncontextmenu={() => (contextMenuColumn = column)}
+      oncontextmenucapture={() => (contextMenuColumn = column)}
     >
       {#if index === 0}
         {@render expander(row)}
@@ -489,6 +489,7 @@
   {#if row.hasChildren}
     <button
       class="shrink-0"
+      oncontextmenucapture={() => (contextMenuColumn = undefined)}
       onclick={() => {
         if (expanded.includes(row.id)) {
           expanded = expanded.filter((i) => i !== row.id);
