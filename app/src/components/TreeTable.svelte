@@ -30,7 +30,7 @@
     getGroup: (row: Row<T>) => GROUP;
     getItem: (row: Row<T>) => ITEM | undefined;
     renderGroup: Snippet<[GROUP]>;
-    getContextMenuItems: (row: Row<T>) => MenuItem[];
+    getContextMenuItems: (row: Row<T>, column?: Column<ITEM>) => MenuItem[];
     onRowDragDrop?: (draggedRowId: string, droppedOntoRowId: string) => void;
     onRowFirstVisible?: (row: Row<T>) => void;
     matchesFilter?: (row: Row<T>, filter: string) => boolean;
@@ -117,6 +117,11 @@
 
   let draggedRowId: string | null = $state(null);
   let currentDropRowId: string | null = $state(null);
+
+  // Tracks which column was right-clicked, so getContextMenuItems can offer
+  // cell-aware actions (eg. quick filters). Reset on each contextmenu event
+  // via the capture phase on the row before per-cell handlers fire.
+  let contextMenuColumn: Column<ITEM> | undefined = $state(undefined);
 
   function dragStartHandler(e: DragEvent) {
     let element = e.target as HTMLElement;
@@ -382,7 +387,9 @@
         {@const modified = row.isModified}
         {@const modifiedDescendent = !modified && row.modifiedDescendent}
         {@const onRowFirstVisible = props.onRowFirstVisible}
-        <TreeTableContextMenu getItems={() => props.getContextMenuItems(row)}>
+        <TreeTableContextMenu
+          getItems={() => props.getContextMenuItems(row, contextMenuColumn)}
+        >
           {#snippet trigger({ props }: { props: any })}
             {@const menuOpen = props["data-state"] === "open"}
             <div
@@ -400,6 +407,7 @@
               ondragleave={dragLeaveHandler}
               ondragover={dragOverHandler}
               ondrop={dropHandler}
+              oncontextmenucapture={() => (contextMenuColumn = undefined)}
               {@attach onFirstVisible(row, onRowFirstVisible)}
               {@attach rowVisibilityChecker}
             >
@@ -456,12 +464,14 @@
 {#snippet itemRow(row: Row<T>)}
   {#each columns as column, index}
     {@const item = props.getItem(row)}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class={[
         "overflow-hidden border-r border-surface-200-800 py-0.5",
         index === 0 && "pr-1 flex gap-1 flex-nowrap",
         index !== 0 && "px-1 overflow-ellipsis ",
       ]}
+      oncontextmenucapture={() => (contextMenuColumn = column)}
     >
       {#if index === 0}
         {@render expander(row)}
@@ -479,6 +489,7 @@
   {#if row.hasChildren}
     <button
       class="shrink-0"
+      oncontextmenucapture={() => (contextMenuColumn = undefined)}
       onclick={() => {
         if (expanded.includes(row.id)) {
           expanded = expanded.filter((i) => i !== row.id);

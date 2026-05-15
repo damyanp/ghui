@@ -5,7 +5,8 @@
   export type MenuItem =
     | { type: "text"; title: string }
     | { type: "action"; title: string; action: () => void }
-    | { type: "link"; title: string; href: string };
+    | { type: "link"; title: string; href: string }
+    | { type: "separator" };
 
   type Props = ContextMenuRootProps & {
     trigger: Snippet<[{ props: any }]>;
@@ -25,6 +26,10 @@
             <ContextMenu.Item class="cursor-default text-lg">
               {item.title}
             </ContextMenu.Item>
+          {:else if item.type === "separator"}
+            <ContextMenu.Separator
+              class="my-1 h-px bg-surface-500"
+            />
           {:else if item.type === "action"}
             <ContextMenu.Item
               class="cursor-default hover:bg-primary-50-950"

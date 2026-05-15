@@ -17,6 +17,7 @@ import type { LogEntry } from "./bindings/LogEntry";
 import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
+import * as filterableFields from "./filterableFields";
 
 const key = Symbol("WorkItemContext");
 
@@ -217,6 +218,27 @@ export class WorkItemContext {
       default:
         throw new Error(`${fieldName} is not an iteration field`);
     }
+  }
+
+  public get filterableFields(): Array<keyof Filters> {
+    return filterableFields.getFilterableFields(this.data);
+  }
+
+  public isFilterableField(name: string): name is keyof Filters {
+    return filterableFields.isFilterableField(this.data, name);
+  }
+
+  public getFilterableFieldValue(
+    fieldName: keyof Filters,
+    workItem: WorkItem
+  ): FieldOptionId | null | undefined {
+    return filterableFields.getFilterableFieldValue(workItem, fieldName);
+  }
+
+  public getFilterableFieldOptionIds(
+    fieldName: keyof Filters
+  ): Array<FieldOptionId | null> {
+    return filterableFields.getFilterableFieldOptionIds(this.data, fieldName);
   }
 
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {

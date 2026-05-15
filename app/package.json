@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test": "svelte-kit sync && vitest run",
+    "test:watch": "svelte-kit sync && vitest",
     "tauri": "tauri"
   },
   "license": "MIT",
@@ -42,7 +44,8 @@
     "tailwindcss": "^4.0.0",
     "typescript": "5.x",
     "vite": "6.x",
-    "vite-plugin-devtools-json": "^0.2.0"
+    "vite-plugin-devtools-json": "^0.2.0",
+    "vitest": "^4.1.5"
   },
   "overrides": {
     "cookie": "^0.7.0"
