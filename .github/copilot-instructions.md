@@ -54,9 +54,22 @@ npm ci
 # Type checking
 npm run check
 
+# Run frontend unit tests (vitest)
+npm test
+
 # Dev server
 npm run dev
 ```
+
+Frontend tests live next to the code they cover as `*.test.ts` files (e.g.
+`app/src/lib/filterableFields.test.ts`). Tests use **vitest** and should be
+plain TypeScript — keep them dependency-free of Svelte/Tauri runtime so they
+run fast in Node. When you add or refactor logic in `app/src/lib/**`,
+**always add or update a `*.test.ts` next to it**. Pure helper modules (no
+Svelte/Tauri imports) are the easiest to test; if you find yourself wanting to
+test logic that lives inside a `.svelte.ts` class, extract it into a pure
+helper module and have the class delegate to it (this is how
+`WorkItemContext` consumes `filterableFields.ts`).
 
 ### Full Tauri app
 
@@ -69,10 +82,10 @@ npx tauri build   # Release build (produces MSI + NSIS installers)
 
 ### CI
 
-- **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, and `npm run check` on `windows-latest` for push/PR to main.
+- **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, `npm run check`, and `npm test` (vitest) on `windows-latest` for push/PR to main.
 - **build-installer.yml**: Builds Windows installer on push to main.
 
-The CI runs on Windows. If you can't run a full `cargo build` locally (missing system deps on Linux), validate with `cargo fmt --all -- --check`, `cargo clippy --all -- -D warnings`, `cargo test -p github-graphql` and `cd app && npm run check`.
+The CI runs on Windows. If you can't run a full `cargo build` locally (missing system deps on Linux), validate with `cargo fmt --all -- --check`, `cargo clippy --all -- -D warnings`, `cargo test -p github-graphql`, `cd app && npm run check`, and `cd app && npm test`.
 
 ## Rust Conventions
 
@@ -143,6 +156,22 @@ pub async fn my_command(
 - Snapshot testing with `insta` is available in `github-graphql`.
 - Tests live in `github-graphql/src/data/tests.rs` with helpers in `test_helpers.rs`.
 - NodeBuilder tests live in `ghui-app/src/nodes.rs` (run with `cargo test -p ghui-app`, requires `libdbus-1-dev` on Linux).
+
+#### Frontend tests (vitest)
+
+- Frontend tests live next to the code as `*.test.ts` files (e.g.
+  `app/src/lib/filterableFields.test.ts`) and run with `cd app && npm test`.
+- They run in plain Node — keep them free of Svelte/Tauri runtime imports.
+  `invoke` from `@tauri-apps/api/core` is not available in tests.
+- To make `.svelte.ts` class logic testable, extract the pure logic into a
+  sibling module (no runes, no `invoke`) and have the class delegate to it.
+  This is how `WorkItemContext` consumes `filterableFields.ts`, and is the
+  pattern to follow for any new testable logic.
+- Pinning tests for refactors: when refactoring shared logic, add a
+  `*.test.ts` that locks in the pre-refactor behavior across all relevant
+  cases (e.g., `filterableFields.test.ts` covers all 8 filterable fields and
+  both raw / `DelayLoad`-wrapped value shapes) before changing the
+  implementation.
 
 ### WorkItems::update() and UpdateType
 
@@ -230,14 +259,15 @@ let { columns = $bindable() } = $props();   // Two-way bindable props
 - **Reuse existing patterns** — look at how similar things are done elsewhere in the codebase before introducing new approaches.
 - **Keep `Changes` and `UndoHistory` separate** — this was a deliberate architectural decision.
 - **Add comments for non-obvious behavior** (e.g., why the window starts invisible).
-- **Run the full validation suite before every commit that changes Rust or frontend code.** All four checks must be run together as a set — never pick and choose. Running clippy without fmt (or vice versa) is the most common cause of CI failures on this repo (see PR #44):
+- **Run the full validation suite before every commit that changes Rust or frontend code.** All five checks must be run together as a set — never pick and choose. Running clippy without fmt (or vice versa) is the most common cause of CI failures on this repo (see PR #44):
   1. `cargo fmt --all -- --check`
   2. `cargo clippy --all -- -D warnings`
   3. `cargo test -p github-graphql` (or `cargo test --all` if ts-rs bindings may need regeneration)
   4. `cd app && npm run check`
+  5. `cd app && npm test`
 
-  After making code changes, run all four. If any fail, fix and re-run the full set — don't assume the others still pass.
-- **Explicitly report validation results in PR comments.** Whenever you reply to the user or call `report_progress` after code changes, list each of the four commands above with a pass/fail indicator (e.g. ✅/❌). The reviewer should never have to ask "is this clippy clean?" or "will this pass CI?" — that information should already be in your last comment.
+  After making code changes, run all five. If any fail, fix and re-run the full set — don't assume the others still pass.
+- **Explicitly report validation results in PR comments.** Whenever you reply to the user or call `report_progress` after code changes, list each of the five commands above with a pass/fail indicator (e.g. ✅/❌). The reviewer should never have to ask "is this clippy clean?" or "will this pass CI?" — that information should already be in your last comment.
 - **Think independently** about suggestions — evaluate whether a proposed change actually makes sense before implementing it.
 - **Remove unnecessary code/config** — don't add things "just in case" (e.g., don't add `center: true` if the window starts hidden).
 - **Apply cross-cutting concerns consistently** — when adding a pattern like a busy guard, loading state, or error-handling wrapper, apply it to ALL relevant handlers/callsites, not just one. Audit the full set of similar code paths.
@@ -259,7 +289,7 @@ Screenshots posted to PRs must actually render for the reviewer. Past PRs (e.g. 
 - Don't introduce custom CSS color definitions when theme tokens exist.
 - Don't put undo/redo state inside the `Changes` struct.
 - Don't conditionally show/hide toolbar buttons — keep them visible and disable them instead.
-- Don't skip clippy, fmt, or test validation.
+- Don't skip clippy, fmt, or test validation (Rust **or** frontend `npm test`).
 - Don't add UI elements (buttons, menu items, panels) until they have working functionality. Placeholder/stub UI creates a confusing user experience.
 - Don't use `.expect()` or `.unwrap()` in non-test code — see [Error Handling](#error-handling).
 
