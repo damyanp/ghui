@@ -190,7 +190,9 @@
         <code>Iteration</code>, <code>Kind</code>, <code>Assignee</code>,
         <code>IssueType</code>, <code>State</code>, <code>Repository</code>,
         <code>Priority</code>, <code>Blocked</code>, <code>Estimate</code>,
-        <code>Type</code>.
+        <code>Type</code>. <code>IssueType</code> also accepts spaced or
+        underscored forms such as <code>Issue Type</code> and
+        <code>Issue_Type</code>.
       </p>
     </div>
   </details>
