@@ -64,11 +64,7 @@ pub fn parse_recipe(text: &str) -> Result<Vec<Axis>> {
         return Ok(Vec::new());
     }
 
-    let normalised = text
-        .replace('→', "|")
-        .replace("->", "|")
-        .replace('>', "|")
-        .replace(',', "|");
+    let normalised = normalize_recipe_separators(text);
 
     let tokens = normalised
         .split('|')
@@ -167,10 +163,9 @@ fn parse_axis_token(token: &str) -> Result<(&str, Option<&str>)> {
 
 fn resolve_field(name: &str) -> Option<PivotField> {
     let key = name
-        .trim()
-        .to_ascii_lowercase()
         .chars()
         .filter(|c| !c.is_whitespace())
+        .map(|c| c.to_ascii_lowercase())
         .collect::<String>();
 
     match key.as_str() {
@@ -189,6 +184,24 @@ fn resolve_field(name: &str) -> Option<PivotField> {
         "repository" | "repo" => Some(PivotField::Repository),
         _ => None,
     }
+}
+
+fn normalize_recipe_separators(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '-' if chars.peek() == Some(&'>') => {
+                let _ = chars.next();
+                out.push('|');
+            }
+            '→' | '>' | ',' => out.push('|'),
+            _ => out.push(ch),
+        }
+    }
+
+    out
 }
 
 fn field_label(field: &PivotField) -> &'static str {
