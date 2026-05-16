@@ -219,7 +219,7 @@ impl AppState {
                 state.pivot_config = cache.pivot_config;
             }
             Err(error) => {
-                debug!("failed to load cached view config: {error}");
+                debug!("failed to load view config cache during initialization: {error}");
             }
         }
 
@@ -376,10 +376,7 @@ impl AppState {
 
     pub async fn set_filters(&mut self, filters: Filters) -> Result<()> {
         self.filters = filters;
-        let save_result = save_view_config_to_appdata(&ViewConfigCache {
-            filters: self.filters.clone(),
-            pivot_config: self.pivot_config.clone(),
-        });
+        let save_result = save_view_config_to_appdata(&self.view_config_cache());
         if let Err(error) = save_result {
             warn!("failed to save cached view config: {error}");
         }
@@ -392,14 +389,18 @@ impl AppState {
 
     pub async fn set_pivot_config(&mut self, pivot_config: PivotConfig) -> Result<()> {
         self.pivot_config = pivot_config;
-        let save_result = save_view_config_to_appdata(&ViewConfigCache {
-            filters: self.filters.clone(),
-            pivot_config: self.pivot_config.clone(),
-        });
+        let save_result = save_view_config_to_appdata(&self.view_config_cache());
         if let Err(error) = save_result {
             warn!("failed to save cached view config: {error}");
         }
         self.refresh(false).await
+    }
+
+    fn view_config_cache(&self) -> ViewConfigCache {
+        ViewConfigCache {
+            filters: self.filters.clone(),
+            pivot_config: self.pivot_config.clone(),
+        }
     }
 
     pub async fn add_changes(&mut self, changes: Changes) -> Result<()> {
