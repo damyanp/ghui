@@ -24,37 +24,30 @@ const FIELD_ALIASES: Record<string, PivotField> = {
   repo: "repository",
 };
 
-function isAsciiAlphabetic(char: string): boolean {
-  return /^[A-Za-z]$/.test(char);
-}
-
 function normalizeRecipeSeparators(text: string): string {
   let out = "";
-
-  for (let i = 0; i < text.length; i++) {
+  let i = 0;
+  while (i < text.length) {
     const char = text[i];
-    if (char === "-" && text[i + 1] === ">") {
+    if (char === "-" && i + 1 < text.length && text[i + 1] === ">") {
       out += "|";
-      i++;
+      i += 2;
       continue;
     }
     if (char === "→" || char === ">" || char === ",") {
       out += "|";
+      i++;
       continue;
     }
     out += char;
+    i++;
   }
 
   return out;
 }
 
 function parseAxisToken(token: string): { kind: string; arg: string | null } {
-  if (
-    ![...token].every(
-      (char) =>
-        isAsciiAlphabetic(char) || char === "_" || char === " " || char === "(" || char === ")"
-    )
-  ) {
+  if (!/^[A-Za-z_ ()]+$/.test(token)) {
     throw new Error(`Could not parse axis: ${JSON.stringify(token)}`);
   }
 
@@ -64,19 +57,18 @@ function parseAxisToken(token: string): { kind: string; arg: string | null } {
       throw new Error(`Could not parse axis: ${JSON.stringify(token)}`);
     }
 
-    const closeParen = token.length - 1;
-    if (openParen >= closeParen) {
+    if (openParen >= token.length - 1) {
       throw new Error(`Could not parse axis: ${JSON.stringify(token)}`);
     }
 
     const kind = token.slice(0, openParen).trim();
-    const arg = token.slice(openParen + 1, closeParen).trim();
+    const arg = token.slice(openParen + 1, token.length - 1).trim();
     if (
       !kind ||
       !arg ||
       arg.includes("(") ||
       arg.includes(")") ||
-      ![...kind].every((char) => isAsciiAlphabetic(char))
+      !/^[A-Za-z]+$/.test(kind)
     ) {
       throw new Error(`Could not parse axis: ${JSON.stringify(token)}`);
     }
@@ -84,7 +76,7 @@ function parseAxisToken(token: string): { kind: string; arg: string | null } {
     return { kind, arg };
   }
 
-  if (![...token].every((char) => isAsciiAlphabetic(char) || /\s/.test(char))) {
+  if (!/^[A-Za-z\s]+$/.test(token)) {
     throw new Error(`Could not parse axis: ${JSON.stringify(token)}`);
   }
 
@@ -97,10 +89,7 @@ function parseAxisToken(token: string): { kind: string; arg: string | null } {
 }
 
 function resolveField(name: string): PivotField | null {
-  const key = [...name]
-    .filter((char) => !/\s/.test(char))
-    .join("")
-    .toLowerCase();
+  const key = name.replace(/\s/g, "").toLowerCase();
 
   return FIELD_ALIASES[key] ?? null;
 }
@@ -176,7 +165,13 @@ export function parseRecipe(
         throw new Error(`Unknown field: ${arg}`);
       }
 
-      axes.push({ kind: lowerKind, field } as Axis);
+      if (lowerKind === "pivot") {
+        axes.push({ kind: "pivot", field });
+      } else if (lowerKind === "group") {
+        axes.push({ kind: "group", field });
+      } else {
+        axes.push({ kind: "sort", field });
+      }
     }
 
     return { ok: true, recipe: axes };
@@ -191,11 +186,16 @@ export function parseRecipe(
 export function recipeToString(recipe: Axis[]): string {
   return recipe
     .map((axis) => {
-      if (axis.kind === "hierarchy") {
-        return "Hierarchy";
+      switch (axis.kind) {
+        case "hierarchy":
+          return "Hierarchy";
+        case "pivot":
+          return `Pivot(${fieldLabel(axis.field)})`;
+        case "group":
+          return `Group(${fieldLabel(axis.field)})`;
+        case "sort":
+          return `Sort(${fieldLabel(axis.field)})`;
       }
-      const kind = axis.kind[0].toUpperCase() + axis.kind.slice(1);
-      return `${kind}(${fieldLabel(axis.field)})`;
     })
     .join(" → ");
 }
