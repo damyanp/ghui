@@ -198,32 +198,37 @@ impl Default for AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        let mut state = Self {
+        let view_config = match load_view_config_from_appdata() {
+            Ok(cache) => Some(cache),
+            Err(error) => {
+                debug!("failed to load view config cache during initialization: {error}");
+                None
+            }
+        };
+
+        let filters = view_config
+            .as_ref()
+            .map(|cache| cache.filters.clone())
+            .unwrap_or_default();
+        let pivot_config = view_config
+            .as_ref()
+            .map(|cache| cache.pivot_config.clone())
+            .unwrap_or_default();
+
+        Self {
             pat: PATState::default(),
             watcher: Arc::new(Box::new(|_| {
                 warn!("No watcher set!");
             })),
             fields: None,
             work_items: None,
-            filters: Filters::default(),
-            pivot_config: PivotConfig::default(),
+            filters,
+            pivot_config,
             changes: Changes::default(),
             undo_history: UndoHistory::default(),
             preview_changes: true,
             epic_conflicts: Vec::new(),
-        };
-
-        match load_view_config_from_appdata() {
-            Ok(cache) => {
-                state.filters = cache.filters;
-                state.pivot_config = cache.pivot_config;
-            }
-            Err(error) => {
-                debug!("failed to load view config cache during initialization: {error}");
-            }
         }
-
-        state
     }
 
     pub async fn set_watcher(&mut self, watcher: SendDataUpdate) -> Result<()> {
