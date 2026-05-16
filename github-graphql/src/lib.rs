@@ -1,5 +1,6 @@
 pub mod client;
 pub mod data;
+pub mod pivot;
 
 pub type Result<T = ()> = core::result::Result<T, Error>;
 

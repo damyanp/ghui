@@ -1,0 +1,56 @@
+{
+  "Pivot(Epic) → Hierarchy": [
+    { "kind": "pivot", "field": "epic" },
+    { "kind": "hierarchy" }
+  ],
+  "Hierarchy → Group(Workstream)": [
+    { "kind": "hierarchy" },
+    { "kind": "group", "field": "workstream" }
+  ],
+  "Hierarchy → Group(Status)": [
+    { "kind": "hierarchy" },
+    { "kind": "group", "field": "status" }
+  ],
+  "Pivot(Status)": [
+    { "kind": "pivot", "field": "status" }
+  ],
+  "Pivot(Status) → Group(Workstream)": [
+    { "kind": "pivot", "field": "status" },
+    { "kind": "group", "field": "workstream" }
+  ],
+  "Pivot(Assignee) → Group(Epic)": [
+    { "kind": "pivot", "field": "assignee" },
+    { "kind": "group", "field": "epic" }
+  ],
+  "Pivot(Iteration) → Hierarchy": [
+    { "kind": "pivot", "field": "iteration" },
+    { "kind": "hierarchy" }
+  ],
+  "Pivot(Repository) → Group(Epic) → Hierarchy": [
+    { "kind": "pivot", "field": "repository" },
+    { "kind": "group", "field": "epic" },
+    { "kind": "hierarchy" }
+  ],
+  "Pivot(IssueType) → Group(Status)": [
+    { "kind": "pivot", "field": "issueType" },
+    { "kind": "group", "field": "status" }
+  ],
+  "Pivot(State) → Group(Epic)": [
+    { "kind": "pivot", "field": "state" },
+    { "kind": "group", "field": "epic" }
+  ],
+  "Hierarchy": [
+    { "kind": "hierarchy" }
+  ],
+  "Sort(Priority) → Hierarchy": [
+    { "kind": "sort", "field": "priority" },
+    { "kind": "hierarchy" }
+  ],
+  "Sort(Epic)": [
+    { "kind": "sort", "field": "epic" }
+  ],
+  "Pivot(Type) → Group(Status)": [
+    { "kind": "pivot", "field": "type" },
+    { "kind": "group", "field": "status" }
+  ]
+}
