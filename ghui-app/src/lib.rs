@@ -8,6 +8,7 @@ use github_graphql::{
         Change, ChangeData, Changes, FieldOptionId, Fields, ProjectItemId, SanitizeConflict,
         SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
     },
+    pivot::PivotConfig,
 };
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -16,7 +17,7 @@ use std::{
     fs,
     io::{BufReader, BufWriter, Read, Write},
     ops::Deref,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 use tokio::{
@@ -106,6 +107,7 @@ pub struct Data {
     original_work_items: HashMap<WorkItemId, WorkItem>,
 
     filters: Filters,
+    pivot_config: PivotConfig,
     changes: Changes,
     can_undo: bool,
     can_redo: bool,
@@ -180,6 +182,7 @@ pub struct AppState {
     fields: Option<Fields>,
     work_items: Option<WorkItems>,
     filters: Filters,
+    pivot_config: PivotConfig,
     changes: Changes,
     undo_history: UndoHistory,
     preview_changes: bool,
@@ -195,7 +198,7 @@ impl Default for AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        Self {
+        let mut state = Self {
             pat: PATState::default(),
             watcher: Arc::new(Box::new(|_| {
                 warn!("No watcher set!");
@@ -203,11 +206,24 @@ impl AppState {
             fields: None,
             work_items: None,
             filters: Filters::default(),
+            pivot_config: PivotConfig::default(),
             changes: Changes::default(),
             undo_history: UndoHistory::default(),
             preview_changes: true,
             epic_conflicts: Vec::new(),
+        };
+
+        match load_view_config_from_appdata() {
+            Ok(cache) => {
+                state.filters = cache.filters;
+                state.pivot_config = cache.pivot_config;
+            }
+            Err(error) => {
+                debug!("failed to load cached view config: {error}");
+            }
         }
+
+        state
     }
 
     pub async fn set_watcher(&mut self, watcher: SendDataUpdate) -> Result<()> {
@@ -238,6 +254,7 @@ impl AppState {
             fields,
             original_work_items,
             filters: self.filters.clone(),
+            pivot_config: self.pivot_config.clone(),
             changes: self.changes.clone(),
             can_undo: self.undo_history.can_undo(),
             can_redo: self.undo_history.can_redo(),
@@ -359,6 +376,29 @@ impl AppState {
 
     pub async fn set_filters(&mut self, filters: Filters) -> Result<()> {
         self.filters = filters;
+        let save_result = save_view_config_to_appdata(&ViewConfigCache {
+            filters: self.filters.clone(),
+            pivot_config: self.pivot_config.clone(),
+        });
+        if let Err(error) = save_result {
+            warn!("failed to save cached view config: {error}");
+        }
+        self.refresh(false).await
+    }
+
+    pub fn get_pivot_config(&self) -> PivotConfig {
+        self.pivot_config.clone()
+    }
+
+    pub async fn set_pivot_config(&mut self, pivot_config: PivotConfig) -> Result<()> {
+        self.pivot_config = pivot_config;
+        let save_result = save_view_config_to_appdata(&ViewConfigCache {
+            filters: self.filters.clone(),
+            pivot_config: self.pivot_config.clone(),
+        });
+        if let Err(error) = save_result {
+            warn!("failed to save cached view config: {error}");
+        }
         self.refresh(false).await
     }
 
@@ -654,6 +694,39 @@ fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
 
 const WORK_ITEMS_EXTRA_DATA: &str = "work_items_extra_data";
 
+const VIEW_CONFIG_FILENAME: &str = "view_config";
+
+#[derive(Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ViewConfigCache {
+    #[serde(default)]
+    filters: Filters,
+    #[serde(default)]
+    pivot_config: PivotConfig,
+}
+
+fn load_view_config_from_file(path: &Path) -> anyhow::Result<ViewConfigCache> {
+    let reader = fs::File::open(path)?;
+    Ok(serde_json::from_reader(BufReader::new(reader))?)
+}
+
+fn save_view_config_to_file(path: &Path, cache: &ViewConfigCache) -> anyhow::Result<()> {
+    let writer = fs::File::create(path)?;
+    Ok(serde_json::to_writer_pretty(BufWriter::new(writer), cache)?)
+}
+
+fn load_view_config_from_appdata() -> anyhow::Result<ViewConfigCache> {
+    let path = get_appdata_path(VIEW_CONFIG_FILENAME);
+    info!("Attempting to load view config cache from {path:?}");
+    load_view_config_from_file(&path)
+}
+
+fn save_view_config_to_appdata(cache: &ViewConfigCache) -> anyhow::Result<()> {
+    let path = get_appdata_path(VIEW_CONFIG_FILENAME);
+    info!("Attempting to save view config cache to {path:?}");
+    save_view_config_to_file(&path, cache)
+}
+
 pub fn save_work_items_extra_data(data: &str) -> anyhow::Result<()> {
     let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
     info!("Saving work items extra data to {path:?}");
@@ -709,6 +782,9 @@ fn summarize_refresh_changes(
 mod tests {
     use super::*;
     use github_graphql::data::test_helpers::TestData;
+    use github_graphql::pivot::{Axis, MultiValueStrategy, PivotField};
+    use std::sync::{Arc, Mutex};
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_get_project_ids_to_update_returns_ids_when_force_is_true() {
@@ -836,5 +912,86 @@ mod tests {
                 updated_items: 0,
             }
         );
+    }
+
+    #[test]
+    fn test_view_config_cache_round_trip_pivot_config() {
+        let file = NamedTempFile::new().unwrap();
+        let expected = ViewConfigCache {
+            filters: Filters {
+                status: vec![Some(FieldOptionId("status-a".to_string()))],
+                ..Default::default()
+            },
+            pivot_config: PivotConfig {
+                recipe: vec![
+                    Axis::Pivot(PivotField::Status),
+                    Axis::Group(PivotField::Epic),
+                    Axis::Hierarchy,
+                ],
+                multi_value_strategy: MultiValueStrategy::Explode,
+                show_ghost_ancestors: false,
+            },
+        };
+
+        save_view_config_to_file(file.path(), &expected).unwrap();
+        let loaded = load_view_config_from_file(file.path()).unwrap();
+
+        assert_eq!(loaded.pivot_config, expected.pivot_config);
+        assert_eq!(loaded.filters.status, expected.filters.status);
+    }
+
+    #[test]
+    fn test_view_config_cache_deserializes_legacy_filters_only() {
+        let file = NamedTempFile::new().unwrap();
+        let legacy = serde_json::json!({
+            "filters": {
+                "status": [null],
+                "blocked": [],
+                "epic": [],
+                "iteration": [],
+                "kind": [],
+                "workstream": [],
+                "estimate": [],
+                "priority": []
+            }
+        });
+        fs::write(file.path(), serde_json::to_vec_pretty(&legacy).unwrap()).unwrap();
+
+        let loaded = load_view_config_from_file(file.path()).unwrap();
+        assert_eq!(loaded.pivot_config, PivotConfig::default());
+
+        save_view_config_to_file(file.path(), &loaded).unwrap();
+        let persisted = fs::read_to_string(file.path()).unwrap();
+        assert!(persisted.contains("\"pivotConfig\""));
+    }
+
+    #[tokio::test]
+    async fn test_set_pivot_config_triggers_data_update() {
+        let data = TestData::default();
+        let mut state = AppState::new();
+        state.fields = Some(data.fields);
+        state.work_items = Some(data.work_items);
+
+        let observed_configs = Arc::new(Mutex::new(Vec::<PivotConfig>::new()));
+        let observed_configs_clone = Arc::clone(&observed_configs);
+        state.watcher = Arc::new(Box::new(move |update| {
+            if let DataUpdate::Data(data) = update {
+                observed_configs_clone
+                    .lock()
+                    .unwrap()
+                    .push(data.pivot_config.clone());
+            }
+        }));
+
+        let next = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Status)],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        state.set_pivot_config(next.clone()).await.unwrap();
+
+        let observed = observed_configs.lock().unwrap();
+        assert_eq!(observed.last().unwrap(), &next);
     }
 }

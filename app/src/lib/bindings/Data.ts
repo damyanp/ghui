@@ -3,6 +3,7 @@ import type { Changes } from "./Changes";
 import type { Fields } from "./Fields";
 import type { Filters } from "./Filters";
 import type { Node } from "./Node";
+import type { PivotConfig } from "./PivotConfig";
 import type { SanitizeConflict } from "./SanitizeConflict";
 import type { WorkItem } from "./WorkItem";
 import type { WorkItemId } from "./WorkItemId";
@@ -13,6 +14,7 @@ export type Data = {
   nodes: Array<Node>;
   originalWorkItems: { [key in WorkItemId]?: WorkItem };
   filters: Filters;
+  pivotConfig: PivotConfig;
   changes: Changes;
   canUndo: boolean;
   canRedo: boolean;

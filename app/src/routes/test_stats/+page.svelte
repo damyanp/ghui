@@ -240,6 +240,11 @@
       estimate: [],
       priority: [],
     },
+    pivotConfig: {
+      recipe: [{ kind: "pivot", field: "epic" }, { kind: "hierarchy" }],
+      multiValueStrategy: "combined",
+      showGhostAncestors: true,
+    },
     changes: { data: {} },
     canUndo: false,
     canRedo: false,
