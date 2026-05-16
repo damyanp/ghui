@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{cmp::Ordering, collections::HashMap};
 
 use github_graphql::{
@@ -14,12 +12,14 @@ use crate::Filters;
 
 use super::{Node, NodeData};
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum SortValue {
     Index(usize),
     Text(String),
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct FieldValue {
     key: String,
@@ -28,6 +28,7 @@ struct FieldValue {
     field_option_id: Option<FieldOptionId>,
 }
 
+#[allow(dead_code)]
 struct Bucket {
     key: String,
     label: String,
@@ -36,6 +37,7 @@ struct Bucket {
     items: Vec<WorkItemId>,
 }
 
+#[allow(dead_code)]
 pub(crate) struct RecipeNodeBuilder<'a> {
     fields: &'a Fields,
     work_items: &'a WorkItems,
@@ -45,6 +47,7 @@ pub(crate) struct RecipeNodeBuilder<'a> {
     nodes: Vec<Node>,
 }
 
+#[allow(dead_code)]
 impl<'a> RecipeNodeBuilder<'a> {
     pub fn new(
         fields: &'a Fields,
@@ -81,7 +84,7 @@ impl<'a> RecipeNodeBuilder<'a> {
 
         if recipe.is_empty() {
             let mut items = items;
-            items.sort_by(|a, b| self.item(a).title.cmp(&self.item(b).title));
+            items.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
             for id in items {
                 self.push_item(&id, level, false, false);
             }
@@ -176,7 +179,7 @@ impl<'a> RecipeNodeBuilder<'a> {
         level: u32,
         path: &str,
     ) {
-        roots.sort_by(|a, b| self.item(a).title.cmp(&self.item(b).title));
+        roots.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
         for root in roots {
             self.render_tree_node(&root, scope_ids, ghost_ids, child_recipe, level, path);
         }
@@ -201,7 +204,7 @@ impl<'a> RecipeNodeBuilder<'a> {
         let child_path = self.child_path(path, id);
         if child_recipe.is_empty() {
             let mut children = children;
-            children.sort_by(|a, b| self.item(a).title.cmp(&self.item(b).title));
+            children.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
             for child in children {
                 self.render_tree_node(
                     &child,
@@ -240,7 +243,7 @@ impl<'a> RecipeNodeBuilder<'a> {
 
         if recipe.is_empty() {
             let mut items = items;
-            items.sort_by(|a, b| self.item(a).title.cmp(&self.item(b).title));
+            items.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
             for id in items {
                 self.render_tree_node(&id, scope_ids, ghost_ids, recipe, level, path);
             }
@@ -385,7 +388,7 @@ impl<'a> RecipeNodeBuilder<'a> {
         scope_ids: &std::collections::HashSet<WorkItemId>,
     ) -> Vec<WorkItemId> {
         self.item(id)
-            .get_sub_issues()
+            .and_then(WorkItem::get_sub_issues)
             .map(|children| {
                 children
                     .iter()
@@ -397,7 +400,9 @@ impl<'a> RecipeNodeBuilder<'a> {
     }
 
     fn field_values(&self, id: &WorkItemId, field: &PivotField) -> Vec<FieldValue> {
-        let item = self.item(id);
+        let Some(item) = self.item(id) else {
+            return Vec::new();
+        };
 
         match field {
             PivotField::Status => {
@@ -565,6 +570,9 @@ impl<'a> RecipeNodeBuilder<'a> {
     }
 
     fn push_item(&mut self, id: &WorkItemId, level: u32, is_ghost: bool, has_children: bool) {
+        if self.item(id).is_none() {
+            return;
+        }
         self.nodes.push(Node {
             level,
             id: id.0.clone(),
@@ -575,20 +583,22 @@ impl<'a> RecipeNodeBuilder<'a> {
         });
     }
 
-    fn item(&self, id: &WorkItemId) -> &WorkItem {
-        self.work_items
-            .get(id)
-            .unwrap_or_else(|| panic!("Unknown work item id {}", id.0))
+    fn item(&self, id: &WorkItemId) -> Option<&WorkItem> {
+        self.work_items.get(id)
+    }
+
+    fn item_title<'b>(&'b self, id: &'b WorkItemId) -> &'b str {
+        self.item(id).map(|item| item.title.as_str()).unwrap_or("")
     }
 
     fn parent_id(&self, id: &WorkItemId) -> Option<WorkItemId> {
-        if let Some(parent_id) = self.item(id).get_parent() {
+        if let Some(parent_id) = self.item(id).and_then(WorkItem::get_parent) {
             return Some(parent_id.clone());
         }
 
         self.work_items.iter().find_map(|candidate_id| {
             self.item(candidate_id)
-                .get_sub_issues()
+                .and_then(WorkItem::get_sub_issues)
                 .filter(|children| children.contains(id))
                 .map(|_| candidate_id.clone())
         })
@@ -629,7 +639,7 @@ impl<'a> RecipeNodeBuilder<'a> {
     }
 
     fn should_include(&self, work_item_id: &WorkItemId) -> bool {
-        let work_item = self.work_items.get(work_item_id);
+        let work_item = self.item(work_item_id);
         if let Some(work_item) = work_item {
             if let WorkItem {
                 data: WorkItemData::Issue(issue),

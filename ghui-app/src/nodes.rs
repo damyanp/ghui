@@ -5,9 +5,7 @@ use ts_rs::TS;
 
 use crate::Filters;
 
-mod recipe_builder;
-#[allow(unused_imports)]
-pub(crate) use recipe_builder::RecipeNodeBuilder;
+pub(crate) mod recipe_builder;
 
 #[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase")]
