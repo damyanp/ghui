@@ -21,11 +21,15 @@
 > the sandbox that produced this PR can't reach `api.github.com` to
 > refresh the file itself.
 >
-> A live, in-browser **prototype** of the four grouping modes (Hierarchy
-> first, Pivot at top + ghost rows, Pivot at top no ghosts, Flat) using a
-> curated subset of the real data lives at
-> [`docs/pivoting-prototype.html`](./pivoting-prototype.html). Open it in
-> any browser to play with the trade-offs side-by-side.
+> A live, in-browser **prototype** lives at
+> [`docs/pivoting-prototype.html`](./pivoting-prototype.html). It uses the
+> **full project dataset (1,839 items, all field-option mappings)**
+> embedded inline and implements **Option D — composable view recipes**
+> (§6.4) on top of the rendering rules from §6.4a (ghost ancestors). The
+> recipe is a free-form text expression (e.g. `Pivot(Epic) → Hierarchy`)
+> with a preset dropdown and grammar help; users can type their own
+> recipes and see the tree update immediately. Open the file in any
+> browser to play with the trade-offs.
 >
 > ### Areas that need special attention
 >
@@ -46,14 +50,18 @@
 > 3. **"We can unify the items view and the statistics view on a shared
 >    `PivotField` enum."** That is now an explicit non-goal (§3 N3). The
 >    items view stands on its own.
-> 4. **Recommendation has shifted** from "pick one rendering mode" to
->    **ship all four modes as a user-selectable view setting**, with
->    **Option E (pivot at top, ghost rows)** as the default. Different
->    workflows favour different shapes (planning view vs. parent-centric
->    triage vs. flat reporting), the underlying data layer supports all
->    four cheaply, and the prototype shows them side-by-side already.
->    See §6 for the per-option spec, §9 for the shared implementation,
->    and §11 for the rollout plan.
+> 4. **Recommendation has shifted again.** Earlier drafts proposed
+>    shipping four mutually-exclusive rendering modes (A / B / C / E) as
+>    a single "View" picker. After building a working prototype against
+>    the full dataset, the four modes turned out to be **special cases
+>    of one composable model**: a small ordered list of axis rules
+>    (`Pivot`, `Group`, `Hierarchy`, `Sort`) that can be expressed as a
+>    short textual *recipe*. The current recommendation is therefore
+>    **Option D (§6.4)** as the underlying data model and **a textual
+>    recipe input + curated presets** as the first-iteration UI. The
+>    older mode-picker framing is preserved in §6.1–§6.4a as the
+>    catalogue of recipes worth shipping presets for. See §11 for the
+>    rollout plan.
 
 ## 1. Background
 
@@ -137,12 +145,11 @@ Out of scope for this doc:
 - G3. Expose enough information for the user to **see and resolve** items
   whose value disagrees with where they ended up grouped.
 - G4. No regressions for filtering, drag-and-drop, change tracking, or undo.
-- G5. **All four rendering modes** in §6 (Hierarchy first / Pivot at top
-  with ghosts / Pivot at top no ghosts / Flat) ship together as a
-  user-selectable view setting, sharing one pivot-axis list and one
-  data layer. Different workflows favour different shapes; the cost
-  delta vs. shipping just one mode is small once the shared layer
-  exists.
+- G5. **The four shapes from §6 (A / B / C / E) are expressible as
+  recipes in one composable model** (Option D, §6.4). Different
+  workflows favour different shapes; one rendering pipeline that
+  handles all of them is cheaper to ship and maintain than four
+  parallel modes. Concrete recipe equivalents are listed in §6.4.
 
 **Non-goals**
 
@@ -520,7 +527,7 @@ Cons: loses the sense of how work rolls up. We mitigate by showing the
 parent chain as a breadcrumb column. Probably wrong as the *only*
 default — users do want to see hierarchy.
 
-### 6.4 Option D — Composable: a "view recipe"
+### 6.4 Option D — Composable: a "view recipe" *(recommended)*
 
 Treat the entire view as a small ordered list of *axis rules*. Each axis
 is one of:
@@ -547,9 +554,63 @@ This is the most flexible model but also the most surface area. The
 in §2 / §6.2; `Pivot(...)` is the special case where the chain replaces
 hierarchy at the root rather than nesting inside it.
 
-We'd ship a curated set of presets first and expose the "custom recipe"
-UI later. The recipe representation should still be the underlying data
-model from day one so presets are just named recipes.
+**Options A, B, C, and E are all special cases of this model:**
+
+| Earlier option                       | Equivalent recipe                                 |
+| ------------------------------------ | ------------------------------------------------- |
+| Option A — Pivot first, no ghosts    | `Pivot(F)` *(no `Hierarchy` axis)*                |
+| Option B — Hierarchy first, sub-pivot| `Hierarchy → Group(F)`                            |
+| Option C — Flat                      | `Pivot(F)` with no further axes                   |
+| Option E — Pivot at top + ghosts     | `Pivot(F) → Hierarchy` *(ghost ancestors on)*     |
+
+The ghost-row rendering rules from §6.4a apply uniformly whenever a
+`Hierarchy` axis sits *inside* a `Pivot(...)` or `Group(...)` axis: any
+ancestor on the path from a primary descendant up to the bucket root
+that is not itself a primary member is rendered as a (muted, italic,
+non-interactive) ghost. This is a single rendering rule, not four.
+
+#### 6.4.1 Textual recipe grammar (first-iteration UI)
+
+The first UI iteration is a single text input that accepts a recipe in
+this grammar:
+
+```
+recipe := axis (SEP axis)*
+SEP    := "→" | "->" | ">" | ","
+axis   := "Pivot" "(" field ")"
+        | "Group" "(" field ")"
+        | "Sort"  "(" field ")"
+        | "Hierarchy"
+field  := Status | Blocked | Epic | Iteration | Kind
+        | Workstream | Estimate | Priority
+        | Assignee | Repository | Type | State
+```
+
+Parsing is case-insensitive on keywords and field names; whitespace is
+ignored; common aliases (`Repo`, `Assignees`, `Owner`) are accepted.
+When the `Hierarchy` axis is hit, the remaining axes in the recipe are
+recursively re-applied to the children of each level of the source
+tree, so `Pivot(Epic) → Hierarchy → Group(Status)` means "top-level
+buckets by Epic, then the parent/child tree, with each level's
+children sub-grouped by Status".
+
+The UI ships:
+
+1. A free-form recipe text input with grammar help in a collapsible.
+2. A dropdown of curated presets that just write into the text input
+   (so users can edit them as a starting point).
+3. A handful of orthogonal toggles that don't belong in the recipe:
+   *show counts*, *collapse single-valued groups*, *hide closed*,
+   *explode multi-valued (assignees)*, *show ghost ancestors*.
+
+The textual recipe is a stepping stone, not the final UI: once the
+shape settles, presets get first-class names and a future iteration can
+add a chip-style visual builder on top of the same parser. The
+*underlying data model is the recipe from day one*, so any future UI is
+just a different editor over the same `Vec<Axis>`.
+
+A working prototype of this model against the full 1,839-item dataset
+is at [`docs/pivoting-prototype.html`](./pivoting-prototype.html).
 
 ### 6.4a Option E — "Pivot at top with ghost rows" *(default mode)*
 
@@ -909,29 +970,31 @@ within the current architecture.
    }
 
    pub struct PivotConfig {
-       /// Ordered list of axes. Empty = no pivoting (pure hierarchy).
-       /// Today's default = `vec![PivotField::Epic]`.
-       pub axes: Vec<PivotField>,
-
-       /// Which of the four rendering modes from §6 to use. Stored
-       /// alongside `axes` in `AppState` (next to `Filters`); not part
-       /// of `Changes`.
-       pub mode: PivotMode,
+       /// Ordered list of axes (Option D, §6.4). Empty = flat list of
+       /// all matching items, no grouping or hierarchy.
+       /// Today's default = `Pivot(Epic) → Hierarchy`.
+       pub recipe: Vec<Axis>,
 
        /// How to render multi-valued items (assignees).
        pub multi_value_strategy: MultiValueStrategy, // Combined | Explode
+
+       /// Render ancestors of primary items as muted ghost rows
+       /// whenever a `Hierarchy` axis sits inside a `Pivot` or
+       /// `Group` axis (§6.4a rules 1–6). On by default.
+       pub show_ghost_ancestors: bool,
    }
 
-   pub enum PivotMode {
-       /// §6.4a — pivot at top, ghost ancestors when needed. Default.
-       PivotGhost,
-       /// §6.2 — hierarchy first, regroup at every level.
-       HierarchyFirst,
-       /// §6.1 — pivot at top, no ghosts; mixed parents get a badge.
-       PivotNoGhost,
-       /// §6.3 — flat list of items, one bucket per pivot key, no
-       /// hierarchy at all.
-       Flat,
+   pub enum Axis {
+       /// Top-level bucket by this field. The remaining axes apply
+       /// inside each bucket.
+       Pivot(PivotField),
+       /// Recursive sub-bucket inside the current scope.
+       Group(PivotField),
+       /// Use the GitHub parent/sub-issue tree. Remaining axes (if
+       /// any) are re-applied to the children of each level.
+       Hierarchy,
+       /// Sort the current scope by this field; no grouping.
+       Sort(PivotField),
    }
    ```
 
@@ -941,46 +1004,43 @@ within the current architecture.
    single-valued fields or a sorted `Vec<FieldOptionId>` for
    multi-valued fields with the `Combined` strategy.
 
-3. Make `add_nodes` dispatch on `PivotConfig::mode`:
+3. Make `add_nodes` interpret the recipe directly. The pipeline walks
+   the axis list once: each `Pivot` / `Group` axis buckets the current
+   scope by its field, each `Hierarchy` axis renders the parent /
+   sub-issue tree of the items in scope (with ghost ancestors when
+   `show_ghost_ancestors` is true) and re-applies any remaining axes
+   to each level's children, and `Sort` axes order the current scope
+   without bucketing. The four "modes" from §6.1–§6.4a fall out as
+   special cases:
 
-   - `HierarchyFirst` — recurse over hierarchy first; at each level
-     where children's pivot values disagree, recurse over the *pivot
-     axis list* before continuing into sub-issues. This is the
-     generalisation of today's `NodeBuilder` to a `Vec<PivotField>`.
-   - `PivotGhost` (default) — bucket items at the top by Cartesian
-     product of axis values, then for each bucket compute primary +
-     ghost members (per §6.4a rule 1) and render each bucket's
-     forest. Coalesce repeated leading axis-header rows across
-     consecutive buckets (§6.4a rule 4).
-   - `PivotNoGhost` — same bucketing as `PivotGhost` but render
-     without ghosts; mixed-children parents get a `⊕ children: …`
-     badge (§6.1 / §7.3).
-   - `MixedBucket` for parents whose own value disagrees with the
-     bucket they were promoted into is still on the table for
-     `PivotNoGhost`; see §6.5 option 3.
-   - `Flat` — emit each primary placement as a top-level row under
-     its bucket header; no hierarchy at all (§6.3 / §7.4).
+   - Option B (Hierarchy first, sub-pivot) → `Hierarchy → Group(F)`.
+   - Option E (Pivot at top + ghosts) → `Pivot(F) → Hierarchy` with
+     `show_ghost_ancestors = true`.
+   - Option A (Pivot at top, no ghosts) → `Pivot(F) → Hierarchy` with
+     `show_ghost_ancestors = false` (mixed-parent badge per §6.5).
+   - Option C (Flat) → `Pivot(F)` with no `Hierarchy` axis.
 
-   All four modes share the same upstream pieces (`PivotConfig`,
-   bucket-key construction, multi-value strategy, filtering), so the
-   incremental cost of supporting all four is small.
+   The ghost rules from §6.4a (rule 1: primary + ghost two-pass
+   membership; rule 2: bucket roots; rule 4: coalesce repeated leading
+   axis headers across consecutive buckets) apply uniformly wherever a
+   `Hierarchy` axis is nested inside a `Pivot` or `Group`.
 
 4. Plumb `PivotConfig` through `AppState` (it lives next to `Filters` —
    it is *not* part of `Changes`, matching the architectural rule that
    `Changes` is a pure data container).
 
-5. Export `PivotField` / `PivotMode` / `PivotConfig` to TypeScript via
+5. Export `PivotField` / `Axis` / `PivotConfig` to TypeScript via
    `ts-rs`, like the existing field enums.
 
-6. Default `PivotConfig` is `{ axes: vec![Epic], mode: PivotGhost,
-   multi_value: Combined }`. With `axes = [Epic]` and ghost-rows mode,
-   the default view is *very close* to today's behaviour for items
-   whose Epic agrees with their parent's, and it makes the existing
-   mixed-Epic cases (e.g. DXC#7838) more visible by hoisting them into
-   the matching top-level Epic bucket. Users who prefer today's
-   parent-centric shape can switch to `HierarchyFirst` from the
-   toolbar; teams driving roadmap reviews from the doc can switch to
-   `Flat`.
+6. Default `PivotConfig` is `{ recipe: [Pivot(Epic), Hierarchy],
+   show_ghost_ancestors: true, multi_value: Combined }`. This is
+   *very close* to today's behaviour for items whose Epic agrees with
+   their parent's, and it makes the existing mixed-Epic cases (e.g.
+   DXC#7838) more visible by hoisting them into the matching
+   top-level Epic bucket. Users who prefer today's parent-centric
+   shape can write `Hierarchy → Group(Epic)` (or pick that preset);
+   teams driving roadmap reviews from the doc can write
+   `Pivot(Status)` for a flat board.
 
 ## 10. Open questions
 
@@ -1005,53 +1065,45 @@ within the current architecture.
 
 For an initial implementation:
 
-1. **Ship all four rendering modes from §6 as a single user-selectable
-   "View" setting** (Hierarchy first / Pivot at top with ghosts / Pivot
-   at top no ghosts / Flat), backed by one shared pivot-axis list
-   (`PivotConfig::axes`) and one shared data layer (§9). The cost
-   delta over shipping a single mode is small once the layer exists,
-   and different real workflows on this team genuinely favour
-   different shapes:
-
-   - **Pivot at top + ghosts (Option E)** — default; best for
-     planning views where "what's in this Epic / Workstream" is the
-     dominant question and mixed parents must stay visible.
-   - **Hierarchy first (Option B)** — best for parent-centric triage
-     ("what's the state of this Scenario?"); preserves today's
-     mental model for users who like it.
-   - **Pivot at top, no ghosts (Option A)** — compact; useful when
-     mixed parents are noise and a single `⊕ children` badge is
-     enough.
-   - **Flat (Option C)** — best for reporting / board-style layouts
-     and as the data shape a future kanban view will consume.
-2. **Default to Option E with `axes = [Epic]`.** This keeps the
-   day-one experience close to today's tree for items whose Epic
-   agrees with their parent's, while making the existing
-   mixed-children cases (e.g. DXC#7838) immediately visible by
-   hoisting their children into the matching top-level Epic bucket.
-3. **Persist the `PivotConfig` (axes + mode + multi-value strategy)
-   per project**, in the same place as filters. A toolbar control lets
-   the user flip mode without losing their axis selection.
-4. **Mixed-strategy enum is folded into `PivotMode`** rather than
-   being a separate setting. Ghost rows belong to `PivotGhost`; the
-   `⊕ children` badge belongs to `PivotNoGhost`. Users pick the mode,
-   not a matrix of orthogonal toggles.
-5. **Multi-value strategy = Combined** for assignees by default
-   (§6.6, per review feedback). Defer the "Explode" alternative
-   behind a toggle.
+1. **Adopt Option D (§6.4) as the underlying data model.** A
+   `PivotConfig` is a `Vec<Axis>` where each axis is `Pivot(field)`,
+   `Group(field)`, `Hierarchy`, or `Sort(field)`. The four
+   mutually-exclusive "modes" from §6.1–§6.4a (A / B / C / E) become
+   *recipes*, not modes. This keeps the implementation tractable
+   (one rendering pipeline, not four) while letting users compose
+   shapes the original mode picker would not have produced (e.g.
+   `Pivot(Status) → Group(Workstream) → Hierarchy`).
+2. **Ship a textual recipe input as the first UI** (§6.4.1), backed by
+   a curated set of presets that simply write into the text input.
+   The default recipe is `Pivot(Epic) → Hierarchy`, which is
+   identical in behaviour to today's tree (Option E with Epic). The
+   recipe parser, grammar, and 14 working presets are demonstrated in
+   [`docs/pivoting-prototype.html`](./pivoting-prototype.html).
+3. **Ghost ancestors are always-on whenever `Hierarchy` sits inside a
+   `Pivot(...)` or `Group(...)`** (§6.4a rules 1–6), with a single
+   toggle to hide them for users who prefer the cleaner Option A
+   look. There is no separate "mode" enum.
+4. **Multi-value strategy = Combined** for assignees by default
+   (§6.6, per review feedback). The *Explode* alternative is a single
+   toggle that lives next to the recipe input, not part of the recipe
+   itself.
+5. **Persist the `PivotConfig` (recipe text + toggles) per project**,
+   in the same place as filters. Saved recipes get first-class names
+   in a follow-up iteration.
 6. **Statistics view stays out of scope** (§3 N3) — it keeps its
-   current independent implementation; we are deliberately not
-   sharing types with it in this round.
-7. **Defer Option D / composable recipes and the Board view** to a
-   follow-up, but the data layer (axis list, multi-valued group keys,
-   `PivotMode` enum) is general enough to host them later.
+   current independent implementation.
+7. **Defer a chip-style visual recipe builder** to a follow-up. The
+   textual input + presets is the smallest thing that exposes the
+   full power of the data model; once the shape stabilises, a richer
+   editor can be layered on top of the same parser.
 
-A live in-browser prototype demonstrating all four modes side by side
-over a curated subset of real data is checked in at
-[`docs/pivoting-prototype.html`](./pivoting-prototype.html); use it to
-sanity-check the recommendation against the trade-offs before we
-commit. The prototype already implements rules (1)–(4) of §6.4a so the
-behaviour reviewers see in `pivot-ghost` mode matches the spec.
+A live in-browser prototype demonstrating this model against the full
+1,839-item dataset is at
+[`docs/pivoting-prototype.html`](./pivoting-prototype.html). It
+implements the textual recipe parser, the curated presets, the
+orthogonal toggles, and the ghost-ancestor rendering rules from
+§6.4a — use it to sanity-check the recommendation against real data
+before we commit.
 
 ## 12. Acceptance for this design exercise
 

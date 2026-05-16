@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ghui — Pivoting prototype (recipes)</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e1e4e8;
+    --muted: #6a737d;
+    --ghost: #b0b6bd;
+    --accent: #0366d6;
+    --accent-bg: #eaf2fb;
+    --warn: #b54708;
+    --warn-bg: #fff8e6;
+    --group0: #f1f4f8;
+    --group1: #e6ecf2;
+    --group2: #dde3ea;
+    --group3: #d3dae3;
+    --group4: #c9d1da;
+    --group5: #bfc8d2;
+    --error: #b91c1c;
+    --error-bg: #fdecea;
+    --closed: #8b949e;
+    --pr: #6f42c1;
+    --pr-bg: #f3eefb;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: #24292e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+  }
+  header {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+  }
+  h1 { margin: 0 0 4px 0; font-size: 16px; font-weight: 600; }
+  header .blurb { color: var(--muted); font-size: 12px; }
+  header .blurb a { color: var(--accent); }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .toolbar .row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  }
+  .toolbar label.lbl {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .toolbar input[type=text] {
+    flex: 1; min-width: 320px;
+    font-family: ui-monospace, SFMono-Regular, "Cascadia Code", monospace;
+    font-size: 13px;
+    padding: 6px 8px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: #fff;
+  }
+  .toolbar input[type=text].error {
+    border-color: var(--error); background: var(--error-bg);
+  }
+  .toolbar select {
+    padding: 5px 8px;
+    font-size: 12px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .toolbar button {
+    padding: 5px 10px;
+    font-size: 12px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel);
+    cursor: pointer;
+  }
+  .toolbar button.primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .toolbar .checkboxes {
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .toolbar .checkboxes label {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .toolbar .help {
+    font-size: 11px; color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+  .toolbar .help code {
+    background: #eef0f3; padding: 1px 4px; border-radius: 3px;
+  }
+  .toolbar .error-msg {
+    color: var(--error); font-size: 12px;
+    background: var(--error-bg); padding: 4px 8px; border-radius: 4px;
+    border: 1px solid #f5c6cb;
+  }
+
+  main { padding: 14px 20px; }
+  .summary {
+    color: var(--muted); margin-bottom: 8px; font-size: 12px;
+    display: flex; gap: 20px; flex-wrap: wrap;
+  }
+  .summary strong { color: #24292e; }
+
+  .tree {
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex; align-items: baseline;
+    padding: 3px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    line-height: 1.35;
+    min-height: 24px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .indicator {
+    display: inline-block; width: 14px; flex-shrink: 0;
+    color: var(--muted); font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+  }
+  .row .title { flex: 1; min-width: 0; }
+  .row .title a { color: inherit; text-decoration: none; }
+  .row .title a:hover { text-decoration: underline; }
+  .row .meta {
+    color: var(--muted); font-size: 11px; margin-left: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 50%;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+  .row .meta .chip {
+    display: inline-block; padding: 0 5px; margin-right: 4px;
+    border-radius: 3px; background: #eef0f3; color: #444;
+    font-size: 10px;
+  }
+  .row.group { font-weight: 600; }
+  .row.group.lvl0 { background: var(--group0); }
+  .row.group.lvl1 { background: var(--group1); }
+  .row.group.lvl2 { background: var(--group2); }
+  .row.group.lvl3 { background: var(--group3); }
+  .row.group.lvl4 { background: var(--group4); }
+  .row.group.lvl5,
+  .row.group.lvl6,
+  .row.group.lvl7 { background: var(--group5); }
+  .row.group .axis-tag {
+    display: inline-block;
+    background: var(--accent-bg); color: var(--accent);
+    font-size: 10px; padding: 0 5px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: .04em;
+    margin-right: 6px;
+    font-weight: 500;
+  }
+  .row.group .axis-tag.group-tag { background: #e8f5e9; color: #1b5e20; }
+  .row.group .axis-tag.sort-tag { background: #fff3cd; color: #6a4f00; }
+  .row.group .axis-tag.hierarchy-tag { background: #ede7f6; color: #4527a0; }
+  .row.group .count {
+    color: var(--muted); font-weight: normal;
+    margin-left: 6px; font-size: 11px;
+  }
+
+  .row.item .id-link {
+    color: var(--muted); font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px; margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .row.item.closed .title { color: var(--closed); text-decoration: line-through; }
+  .row.item.closed .id-link { color: var(--closed); }
+  .row.item .pill {
+    display: inline-block;
+    padding: 0 6px;
+    margin-right: 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 14px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    background: #eaeef3;
+    color: #444;
+    vertical-align: 1px;
+  }
+  .row.item .pill.pr { background: var(--pr-bg); color: var(--pr); }
+  .row.item .pill.draft { background: #fff5d6; color: #8a6d00; }
+  .row.item .pill.bug { background: #fde2e1; color: #b91c1c; }
+  .row.item .pill.task { background: #e0eaf5; color: #1d4ed8; }
+  .row.item .pill.feature { background: #dcf2e3; color: #15803d; }
+  .row.item .pill.open { background: #e6f4ea; color: #137333; }
+  .row.item .pill.closed { background: #eaeef3; color: var(--closed); }
+
+  .row.item.ghost .title { color: var(--ghost); font-style: italic; }
+  .row.item.ghost .title::before { content: "(ghost) "; color: var(--ghost); }
+  .row.item.ghost .meta { color: var(--ghost); }
+  .row.item.secondary .title::after {
+    content: " *"; color: var(--accent); font-weight: 600;
+  }
+  .badge {
+    display: inline-block; background: var(--warn-bg); color: var(--warn);
+    border: 1px solid #f0d878; border-radius: 4px;
+    padding: 0 6px; font-size: 10px; margin-left: 8px;
+    cursor: help;
+  }
+
+  .empty {
+    color: var(--muted); padding: 20px; text-align: center; font-style: italic;
+  }
+  details.help-block {
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 12px; margin-bottom: 10px;
+    font-size: 12px;
+  }
+  details.help-block summary {
+    cursor: pointer; color: var(--accent); font-weight: 500;
+  }
+  details.help-block table { border-collapse: collapse; margin-top: 6px; }
+  details.help-block th, details.help-block td {
+    text-align: left; padding: 3px 10px 3px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  details.help-block code {
+    background: #eef0f3; padding: 1px 4px; border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>ghui — Pivoting prototype (composable recipes)</h1>
+  <div class="blurb">
+    Companion to <a href="./pivoting-design.md">pivoting-design.md</a>. This prototype focuses on
+    <strong>Option D — composable view recipes</strong>. The full project dataset
+    (1,839 items, all field option mappings) is embedded inline; nothing is fetched at runtime.
+    Pick a preset or type your own recipe in the box below — both update the tree immediately.
+    <br><span style="color:var(--muted); font-size:11px;">
+      Generated from <code>all_items.json</code> + <code>~/fields.ghui.json</code> by
+      <code>docs/.gen-prototype.ps1</code>; see <code>pivoting-design.md §6.4</code> for the model.
+    </span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="row">
+    <span class="lbl">Recipe</span>
+    <input type="text" id="recipeInput" autocomplete="off" spellcheck="false"
+           placeholder="e.g. Pivot(Epic) → Hierarchy">
+    <button id="applyBtn" class="primary">Apply</button>
+  </div>
+  <div class="row">
+    <span class="lbl">Preset</span>
+    <select id="presetSelect">
+      <option value="">— Pick a preset —</option>
+    </select>
+    <span class="checkboxes">
+      <label><input type="checkbox" id="showCounts" checked> Show counts</label>
+      <label><input type="checkbox" id="collapseSingleton" checked> Collapse single-valued groups</label>
+      <label><input type="checkbox" id="hideClosed"> Hide closed items</label>
+      <label><input type="checkbox" id="explodeMulti"> Explode multi-valued (assignees)</label>
+      <label><input type="checkbox" id="ghostAncestors" checked> Show ghost ancestors in hierarchy</label>
+    </span>
+  </div>
+  <div class="row" id="errorRow" style="display:none">
+    <span class="error-msg" id="errorMsg"></span>
+  </div>
+  <details class="help-block">
+    <summary>Recipe grammar &amp; available fields</summary>
+    <p>A recipe is an ordered list of <em>axes</em> separated by <code>→</code>, <code>-&gt;</code>,
+       <code>&gt;</code>, or <code>,</code>. Each axis is one of:</p>
+    <table>
+      <tr><th>Axis</th><th>Meaning</th></tr>
+      <tr>
+        <td><code>Pivot(field)</code></td>
+        <td>Bucket items by their own value of <em>field</em>. Items appear once per value
+            (multi-valued items appear in multiple buckets).</td>
+      </tr>
+      <tr>
+        <td><code>Group(field)</code></td>
+        <td>In this prototype, behaves like <code>Pivot</code> at the current scope.
+            Logically distinct from <code>Pivot</code> in the design doc:
+            <code>Group</code> is meant for sub-grouping inside an existing scope.</td>
+      </tr>
+      <tr>
+        <td><code>Hierarchy</code></td>
+        <td>Render the parent ↔ sub-issue tree. Recursive — children of each node are organised
+            using the rest of the recipe (the recipe wraps around at each tree level).</td>
+      </tr>
+      <tr>
+        <td><code>Sort(field)</code></td>
+        <td>Sort items in the current scope by the field's natural order. No grouping.</td>
+      </tr>
+    </table>
+    <p>Fields you can use:
+      <code>Epic</code>, <code>Workstream</code>, <code>Status</code>, <code>Iteration</code>,
+      <code>Kind</code>, <code>Assignee</code>, <code>IssueType</code>, <code>State</code>,
+      <code>Repository</code>, <code>Priority</code>, <code>Blocked</code>, <code>Estimate</code>,
+      <code>Type</code> (= issue / pullRequest / draftIssue).
+    </p>
+    <p>Examples:</p>
+    <ul>
+      <li><code>Pivot(Epic) → Hierarchy</code> — today's behaviour.</li>
+      <li><code>Hierarchy → Group(Workstream)</code> — root tree, sub-grouped by workstream.</li>
+      <li><code>Pivot(Status) → Pivot(Assignee)</code> — kanban-ish board, two axes deep.</li>
+      <li><code>Sort(Priority) → Hierarchy</code> — tree, but ordered by priority within each level.</li>
+    </ul>
+  </details>
+</div>
+
+<main>
+  <div class="summary" id="summary"></div>
+  <div class="tree" id="tree"></div>
+</main>
+
+<script id="ghui-data" type="application/json">__GHUI_DATA_PLACEHOLDER__</script>
+
+<script>
+"use strict";
+
+// =====================================================================
+// Data load
+// =====================================================================
+const RAW = JSON.parse(document.getElementById("ghui-data").textContent);
+const FIELDS = RAW.fields;
+const ITEMS  = RAW.items;
+
+// Build option-id -> name lookup tables for each project field.
+const OPTION_NAME = {};
+for (const [key, f] of Object.entries(FIELDS)) {
+  OPTION_NAME[key] = Object.fromEntries(f.options.map(o => [o.id, o.value]));
+}
+// Stable display order per field comes from the field options array order.
+// Iteration we sort chronologically by startDate.
+const OPTION_ORDER = {};
+for (const [key, f] of Object.entries(FIELDS)) {
+  let opts = f.options.slice();
+  if (key === "iteration") {
+    opts.sort((a,b) => (a.startDate || "").localeCompare(b.startDate || ""));
+  }
+  OPTION_ORDER[key] = Object.fromEntries(opts.map((o,i) => [o.id, i]));
+}
+
+// Lookup item by id
+const BY_ID = Object.fromEntries(ITEMS.map(it => [it.id, it]));
+
+// =====================================================================
+// Field accessors
+// =====================================================================
+// Each accessor returns a list of {id,label} per item — multi-valued fields
+// (Assignee) emit one entry per value. An empty list means "no value" and
+// is bucketed as "(none)".
+const NONE_LABEL = "(none)";
+
+function projectFieldAccessor(key, label) {
+  return {
+    label,
+    values(item) {
+      const v = item[key];
+      if (v == null) return [];
+      const name = (OPTION_NAME[key] && OPTION_NAME[key][v]) || v;
+      return [{ id: v, label: name }];
+    },
+    sortIndex(value) {
+      if (value.id === null) return Number.MAX_SAFE_INTEGER;
+      return (OPTION_ORDER[key] && OPTION_ORDER[key][value.id]) ?? Number.MAX_SAFE_INTEGER - 1;
+    },
+  };
+}
+
+const FIELD_ACCESSORS = {
+  epic:       projectFieldAccessor("epic",       "Epic"),
+  workstream: projectFieldAccessor("workstream", "Workstream"),
+  status:     projectFieldAccessor("status",     "Status"),
+  iteration:  projectFieldAccessor("iteration",  "Iteration"),
+  kind:       projectFieldAccessor("kind",       "Kind"),
+  priority:   projectFieldAccessor("priority",   "Priority"),
+  blocked:    projectFieldAccessor("blocked",    "Blocked"),
+  estimate:   projectFieldAccessor("estimate",   "Estimate"),
+
+  assignee: {
+    label: "Assignee",
+    values(item) {
+      const a = item.assignees || [];
+      if (a.length === 0) return [];
+      if (config.explodeMulti) {
+        return a.map(login => ({ id: login, label: "@" + login }));
+      }
+      const sorted = a.slice().sort();
+      return [{ id: sorted.join("+"), label: sorted.map(s => "@" + s).join(", ") }];
+    },
+    sortIndex(value) { return value.label; },
+  },
+
+  issuetype: {
+    label: "Issue type",
+    values(item) {
+      if (!item.issueType) return [];
+      return [{ id: item.issueType, label: item.issueType }];
+    },
+    sortIndex(value) { return value.label; },
+  },
+
+  state: {
+    label: "State",
+    values(item) {
+      if (!item.state) return [];
+      return [{ id: item.state, label: item.state }];
+    },
+    sortIndex(value) {
+      const order = { OPEN: 0, CLOSED: 1 };
+      return order[value.id] ?? 99;
+    },
+  },
+
+  type: {
+    label: "Type",
+    values(item) {
+      if (!item.type) return [];
+      return [{ id: item.type, label: item.type }];
+    },
+    sortIndex(value) {
+      const order = { issue: 0, pullRequest: 1, draftIssue: 2 };
+      return order[value.id] ?? 99;
+    },
+  },
+
+  repository: {
+    label: "Repository",
+    values(item) {
+      if (!item.repo) return [];
+      return [{ id: item.repo, label: item.repo }];
+    },
+    sortIndex(value) { return value.label; },
+  },
+};
+
+// Field-name aliases (case-insensitive) → accessor key
+const FIELD_ALIASES = {
+  epic: "epic",
+  workstream: "workstream", ws: "workstream",
+  status: "status",
+  iteration: "iteration", sprint: "iteration",
+  kind: "kind",
+  priority: "priority",
+  blocked: "blocked",
+  estimate: "estimate",
+  assignee: "assignee", assignees: "assignee", assigned: "assignee",
+  issuetype: "issuetype", "issue_type": "issuetype",
+  state: "state",
+  type: "type",
+  repository: "repository", repo: "repository",
+};
+
+function resolveField(name) {
+  const k = name.trim().toLowerCase().replace(/\s+/g, "");
+  return FIELD_ALIASES[k] || null;
+}
+
+// =====================================================================
+// Recipe parsing
+// =====================================================================
+// Grammar (informal):
+//   recipe := axis ( SEP axis )*
+//   SEP    := "→" | "->" | ">" | ","
+//   axis   := "Hierarchy"
+//          |  ("Pivot"|"Group"|"Sort") "(" identifier ")"
+
+function parseRecipe(text) {
+  if (!text || !text.trim()) return [];
+  // Normalise separators
+  const normalised = text.replace(/→|->|>|,/g, "|");
+  const tokens = normalised.split("|").map(s => s.trim()).filter(Boolean);
+
+  const axes = [];
+  for (const tok of tokens) {
+    const m = /^([A-Za-z]+)\s*(?:\(\s*([A-Za-z_ ]+)\s*\))?$/.exec(tok);
+    if (!m) throw new Error("Could not parse axis: " + JSON.stringify(tok));
+    const kind = m[1].toLowerCase();
+    const arg  = m[2] ? m[2].trim() : null;
+    if (kind === "hierarchy") {
+      if (arg) throw new Error("Hierarchy takes no argument");
+      axes.push({ kind: "hierarchy" });
+      continue;
+    }
+    if (!["pivot", "group", "sort"].includes(kind)) {
+      throw new Error("Unknown axis: " + tok + " (use Pivot, Group, Sort, or Hierarchy)");
+    }
+    if (!arg) throw new Error(kind + " requires a field argument, e.g. " + kind + "(Epic)");
+    const field = resolveField(arg);
+    if (!field) throw new Error("Unknown field: " + arg);
+    axes.push({ kind, field });
+  }
+  return axes;
+}
+
+function recipeToString(axes) {
+  return axes.map(a => {
+    if (a.kind === "hierarchy") return "Hierarchy";
+    const k = a.kind[0].toUpperCase() + a.kind.slice(1);
+    return k + "(" + FIELD_ACCESSORS[a.field].label + ")";
+  }).join(" → ");
+}
+
+// =====================================================================
+// Bucketing
+// =====================================================================
+// Returns an ordered array of { label, items } given a list of items and a
+// field accessor. Items with no value go into "(none)" at the end.
+function bucketByField(items, fieldKey) {
+  const acc = FIELD_ACCESSORS[fieldKey];
+  const buckets = new Map();
+  for (const it of items) {
+    const vs = acc.values(it);
+    if (vs.length === 0) {
+      if (!buckets.has(NONE_LABEL))
+        buckets.set(NONE_LABEL, { label: NONE_LABEL, sortIndex: Number.MAX_SAFE_INTEGER, items: [] });
+      buckets.get(NONE_LABEL).items.push(it);
+      continue;
+    }
+    for (const v of vs) {
+      const key = v.label;
+      if (!buckets.has(key))
+        buckets.set(key, { label: key, sortIndex: acc.sortIndex(v), items: [] });
+      buckets.get(key).items.push(it);
+    }
+  }
+  const out = [...buckets.values()];
+  out.sort((a, b) => {
+    if (typeof a.sortIndex === "number" && typeof b.sortIndex === "number")
+      return a.sortIndex - b.sortIndex;
+    return String(a.sortIndex).localeCompare(String(b.sortIndex));
+  });
+  return out;
+}
+
+// =====================================================================
+// Rendering
+// =====================================================================
+const config = {
+  showCounts: true,
+  collapseSingleton: true,
+  hideClosed: false,
+  explodeMulti: false,
+  ghostAncestors: true,
+};
+
+let renderStats; // updated per render
+
+function clearStats() {
+  renderStats = { groups: 0, items: 0, ghosts: 0, secondary: 0, maxDepth: 0 };
+}
+
+function applyFilters(items) {
+  let r = items;
+  if (config.hideClosed) r = r.filter(it => it.state !== "CLOSED");
+  return r;
+}
+
+const tree = document.getElementById("tree");
+const summaryEl = document.getElementById("summary");
+
+function renderRecipe(items) {
+  tree.innerHTML = "";
+  clearStats();
+  const filtered = applyFilters(items);
+  if (filtered.length === 0) {
+    const d = document.createElement("div");
+    d.className = "empty";
+    d.textContent = "No items match the current filter.";
+    tree.appendChild(d);
+    return;
+  }
+  // The recipe is processed top-to-bottom. When a Hierarchy axis is
+  // encountered, it consumes the rest of the recipe and applies it to the
+  // children of each tree node, recursively. For non-hierarchy axes, the
+  // axis just splits/sorts the current scope.
+  renderScope(filtered, parsedRecipe, 0, /*seenSet*/ null);
+}
+
+// renderScope renders the given items at the given indentation level using
+// the supplied recipe. seenSet (a Set of item ids already rendered) is used
+// to mark "secondary" appearances of items that ended up in multiple
+// buckets due to multi-valued pivots.
+function renderScope(items, recipe, level, seenSet) {
+  if (level > renderStats.maxDepth) renderStats.maxDepth = level;
+  if (items.length === 0) return;
+
+  if (recipe.length === 0) {
+    // Leaf — render as flat list (sorted by title) without descending into
+    // hierarchy unless an explicit Hierarchy axis was in the recipe.
+    items.slice().sort((a,b) => a.title.localeCompare(b.title))
+         .forEach(it => renderItemRow(it, level, false, "", seenSet));
+    return;
+  }
+  const [head, ...rest] = recipe;
+
+  switch (head.kind) {
+    case "pivot":
+    case "group": {
+      const buckets = bucketByField(items, head.field);
+      if (config.collapseSingleton && buckets.length === 1) {
+        // Collapse pure single-valued grouping levels
+        return renderScope(buckets[0].items, rest, level, seenSet);
+      }
+      for (const b of buckets) {
+        renderGroupHeader(head, b.label, b.items.length, level);
+        // Each bucket gets its own seen-set so multi-valued items still get
+        // primary-styled rows once per bucket.
+        renderScope(b.items, rest, level + 1, new Set());
+      }
+      return;
+    }
+    case "sort": {
+      const acc = FIELD_ACCESSORS[head.field];
+      const sorted = items.slice().sort((a, b) => {
+        const av = acc.values(a)[0];
+        const bv = acc.values(b)[0];
+        const ai = av ? acc.sortIndex(av) : Number.MAX_SAFE_INTEGER;
+        const bi = bv ? acc.sortIndex(bv) : Number.MAX_SAFE_INTEGER;
+        if (typeof ai === "number" && typeof bi === "number") return ai - bi;
+        return String(ai).localeCompare(String(bi));
+      });
+      return renderScope(sorted, rest, level, seenSet);
+    }
+    case "hierarchy":
+      return renderHierarchy(items, rest, level);
+  }
+}
+
+// renderHierarchy renders the items as a parent-child tree. Within the
+// scope, "roots" are items whose parent is not in scope. The childRecipe is
+// applied to each item's children, and recursion continues hierarchically.
+function renderHierarchy(items, childRecipe, level) {
+  const inScope = new Set(items.map(it => it.id));
+  // Roots: items whose parent isn't in scope.
+  const roots = items.filter(it => !it.parentId || !inScope.has(it.parentId));
+
+  // If config.ghostAncestors is on, walk each root's ancestors *outside the
+  // scope* to surface the chain that leads to the visible item. This lets
+  // us see "this item belongs under <epic> in the real tree" even when the
+  // epic itself is not in the bucket.
+  if (config.ghostAncestors) {
+    const ghostIds = new Set();
+    for (const r of roots) {
+      let p = r.parentId;
+      while (p && BY_ID[p] && !ghostIds.has(p) && !inScope.has(p)) {
+        ghostIds.add(p);
+        p = BY_ID[p].parentId;
+      }
+    }
+    if (ghostIds.size > 0) {
+      const extendedSet = new Set(items.map(it => it.id));
+      ghostIds.forEach(id => extendedSet.add(id));
+      const displayRoots = [...extendedSet]
+        .map(id => BY_ID[id])
+        .filter(it => it && (!it.parentId || !extendedSet.has(it.parentId)));
+      return renderTree(displayRoots, extendedSet, ghostIds, childRecipe, level);
+    }
+  }
+
+  return renderTree(roots, inScope, new Set(), childRecipe, level);
+}
+
+function renderTree(roots, scopeSet, ghostSet, childRecipe, level) {
+  const sortedRoots = roots.slice().sort((a, b) => a.title.localeCompare(b.title));
+  for (const r of sortedRoots) {
+    renderTreeNode(r, scopeSet, ghostSet, childRecipe, level);
+  }
+}
+
+function renderTreeNode(item, scopeSet, ghostSet, childRecipe, level) {
+  if (level > renderStats.maxDepth) renderStats.maxDepth = level;
+  const isGhost = ghostSet.has(item.id);
+  renderItemRow(item, level, isGhost, "", null);
+
+  const children = (item.children || [])
+    .map(id => BY_ID[id])
+    .filter(c => c && scopeSet.has(c.id));
+  if (children.length === 0) return;
+
+  if (childRecipe.length === 0) {
+    // Pure hierarchy — recurse without re-grouping
+    for (const c of children.slice().sort((a,b) => a.title.localeCompare(b.title))) {
+      renderTreeNode(c, scopeSet, ghostSet, childRecipe, level + 1);
+    }
+    return;
+  }
+
+  // Apply childRecipe to children. Once we hit Hierarchy again it'll
+  // recurse via renderHierarchy. Sub-buckets/sub-sorts work on the
+  // *children of this node*.
+  renderScopeInTree(children, childRecipe, level + 1, scopeSet, ghostSet);
+}
+
+function renderScopeInTree(items, recipe, level, scopeSet, ghostSet) {
+  if (items.length === 0) return;
+  if (recipe.length === 0) {
+    // Continue hierarchical recursion without further grouping
+    for (const c of items.slice().sort((a,b) => a.title.localeCompare(b.title))) {
+      renderTreeNode(c, scopeSet, ghostSet, recipe, level);
+    }
+    return;
+  }
+  const [head, ...rest] = recipe;
+  switch (head.kind) {
+    case "pivot":
+    case "group": {
+      const buckets = bucketByField(items, head.field);
+      if (config.collapseSingleton && buckets.length === 1) {
+        return renderScopeInTree(buckets[0].items, rest, level, scopeSet, ghostSet);
+      }
+      for (const b of buckets) {
+        renderGroupHeader(head, b.label, b.items.length, level);
+        renderScopeInTree(b.items, rest, level + 1, scopeSet, ghostSet);
+      }
+      return;
+    }
+    case "sort": {
+      const acc = FIELD_ACCESSORS[head.field];
+      const sorted = items.slice().sort((a, b) => {
+        const av = acc.values(a)[0];
+        const bv = acc.values(b)[0];
+        const ai = av ? acc.sortIndex(av) : Number.MAX_SAFE_INTEGER;
+        const bi = bv ? acc.sortIndex(bv) : Number.MAX_SAFE_INTEGER;
+        if (typeof ai === "number" && typeof bi === "number") return ai - bi;
+        return String(ai).localeCompare(String(bi));
+      });
+      return renderScopeInTree(sorted, rest, level, scopeSet, ghostSet);
+    }
+    case "hierarchy":
+      // Hierarchy nested inside hierarchy: ignore (already in tree mode),
+      // continue with the rest of the recipe.
+      return renderScopeInTree(items, rest, level, scopeSet, ghostSet);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Row rendering
+// ---------------------------------------------------------------------
+function renderGroupHeader(axis, label, count, level) {
+  renderStats.groups += 1;
+  const div = document.createElement("div");
+  div.className = "row group lvl" + Math.min(level, 7);
+  div.style.paddingLeft = (8 + level * 18) + "px";
+  const tag = (axis.kind === "hierarchy") ? "Hierarchy"
+            : (axis.kind[0].toUpperCase() + axis.kind.slice(1)) + " · " + FIELD_ACCESSORS[axis.field].label;
+  const tagClass = axis.kind === "group"     ? "group-tag"
+                 : axis.kind === "sort"      ? "sort-tag"
+                 : axis.kind === "hierarchy" ? "hierarchy-tag" : "";
+  let html = '<span class="axis-tag ' + tagClass + '">' + escapeHtml(tag) + '</span>';
+  html += '<span class="title">' + escapeHtml(label) + '</span>';
+  if (config.showCounts) {
+    html += '<span class="count">(' + count + ')</span>';
+  }
+  div.innerHTML = html;
+  tree.appendChild(div);
+}
+
+function renderItemRow(item, level, ghost, badge, seenSet) {
+  renderStats.items += 1;
+  if (ghost) renderStats.ghosts += 1;
+  const secondary = !!(seenSet && seenSet.has(item.id));
+  if (secondary) renderStats.secondary += 1;
+  if (seenSet) seenSet.add(item.id);
+
+  const div = document.createElement("div");
+  let cls = "row item";
+  if (ghost) cls += " ghost";
+  if (secondary) cls += " secondary";
+  if (item.state === "CLOSED") cls += " closed";
+  div.className = cls;
+  div.style.paddingLeft = (8 + level * 18) + "px";
+
+  const url = "https://github.com" + (item.path || "");
+  const idShort = item.path ? item.path.split("/").pop() : item.id.substring(0, 8);
+  const repoTrunk = item.repo && item.repo.includes("/") ? item.repo.split("/")[1] : (item.repo || "");
+  let html = '';
+  html += '<a class="id-link" href="' + url + '" target="_blank" rel="noopener" title="'
+        + escapeHtml(item.repo || "") + '#' + idShort + '">'
+        + escapeHtml(repoTrunk) + '#' + escapeHtml(idShort) + '</a>';
+
+  // Pills
+  if (item.type === "pullRequest") html += '<span class="pill pr">PR</span>';
+  else if (item.type === "draftIssue") html += '<span class="pill draft">Draft</span>';
+  if (item.issueType === "Bug") html += '<span class="pill bug">Bug</span>';
+  else if (item.issueType === "Task") html += '<span class="pill task">Task</span>';
+  else if (item.issueType === "Feature") html += '<span class="pill feature">Feat</span>';
+  if (item.state === "CLOSED") html += '<span class="pill closed">Closed</span>';
+
+  html += '<span class="title">' + escapeHtml(item.title) + '</span>';
+  if (badge) html += '<span class="badge" title="' + escapeHtml(badge) + '">' + escapeHtml(badge) + '</span>';
+  html += '<span class="meta">' + metaFor(item) + '</span>';
+  div.innerHTML = html;
+  tree.appendChild(div);
+}
+
+function metaFor(it) {
+  const parts = [];
+  if (it.epic       != null) parts.push(chip("E", optName("epic",       it.epic)));
+  if (it.workstream != null) parts.push(chip("W", optName("workstream", it.workstream)));
+  if (it.status     != null) parts.push(chip("S", optName("status",     it.status)));
+  if (it.iteration  != null) parts.push(chip("I", optName("iteration",  it.iteration)));
+  if (it.kind       != null) parts.push(chip("K", optName("kind",       it.kind)));
+  if (it.priority   != null) parts.push(chip("P", optName("priority",   it.priority)));
+  if (it.blocked    != null) parts.push(chip("B", optName("blocked",    it.blocked)));
+  if ((it.assignees || []).length) parts.push(chip("@", it.assignees.join(",")));
+  return parts.join(" ");
+}
+function chip(prefix, value) {
+  return '<span class="chip">' + escapeHtml(prefix) + ":" + escapeHtml(value) + '</span>';
+}
+function optName(key, id) {
+  return (OPTION_NAME[key] && OPTION_NAME[key][id]) || id;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g,
+    c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+}
+
+// =====================================================================
+// Presets
+// =====================================================================
+const PRESETS = [
+  { name: "Today's tree (Epic, then hierarchy)",        recipe: "Pivot(Epic) → Hierarchy" },
+  { name: "Hierarchy first, sub-grouped by workstream", recipe: "Hierarchy → Group(Workstream)" },
+  { name: "Hierarchy first, sub-grouped by status",     recipe: "Hierarchy → Group(Status)" },
+  { name: "Flat status board",                          recipe: "Pivot(Status)" },
+  { name: "Flat status × workstream",                   recipe: "Pivot(Status) → Group(Workstream)" },
+  { name: "Per-assignee, per-epic",                     recipe: "Pivot(Assignee) → Group(Epic)" },
+  { name: "Iteration plan",                             recipe: "Pivot(Iteration) → Hierarchy" },
+  { name: "Repository, then epic, then hierarchy",      recipe: "Pivot(Repository) → Group(Epic) → Hierarchy" },
+  { name: "Issue-type breakdown",                       recipe: "Pivot(IssueType) → Group(Status)" },
+  { name: "Open vs closed",                             recipe: "Pivot(State) → Group(Epic)" },
+  { name: "Hierarchy only (parent ↔ sub-issues)",       recipe: "Hierarchy" },
+  { name: "Sort by priority, then tree",                recipe: "Sort(Priority) → Hierarchy" },
+  { name: "Just sort by epic (no grouping)",            recipe: "Sort(Epic)" },
+  { name: "PRs vs Issues",                              recipe: "Pivot(Type) → Group(Status)" },
+];
+
+// =====================================================================
+// Driver
+// =====================================================================
+const recipeInput  = document.getElementById("recipeInput");
+const presetSelect = document.getElementById("presetSelect");
+const applyBtn     = document.getElementById("applyBtn");
+const errorRow     = document.getElementById("errorRow");
+const errorMsg     = document.getElementById("errorMsg");
+
+let parsedRecipe = [];
+
+for (const p of PRESETS) {
+  const opt = document.createElement("option");
+  opt.value = p.recipe;
+  opt.textContent = p.name + "  —  " + p.recipe;
+  presetSelect.appendChild(opt);
+}
+
+function applyRecipeText(text) {
+  try {
+    parsedRecipe = parseRecipe(text);
+    errorRow.style.display = "none";
+    errorMsg.textContent = "";
+    recipeInput.classList.remove("error");
+  } catch (e) {
+    parsedRecipe = [];
+    errorRow.style.display = "";
+    errorMsg.textContent = e.message;
+    recipeInput.classList.add("error");
+    return;
+  }
+  doRender();
+}
+
+function doRender() {
+  renderRecipe(ITEMS);
+  const recipeStr = parsedRecipe.length ? recipeToString(parsedRecipe) : "(empty — flat list)";
+  const total = ITEMS.length;
+  const filtered = applyFilters(ITEMS).length;
+  const itemRows  = renderStats.items - renderStats.ghosts - renderStats.secondary;
+  summaryEl.innerHTML =
+      '<span><strong>' + total + '</strong> items in dataset, '
+        + '<strong>' + filtered + '</strong> after filters.</span>'
+    + '<span>Recipe: <strong>' + escapeHtml(recipeStr) + '</strong></span>'
+    + '<span>Rendered: <strong>' + itemRows + '</strong> primary'
+        + (renderStats.secondary ? ' + ' + renderStats.secondary + ' secondary' : '')
+        + (renderStats.ghosts    ? ' + ' + renderStats.ghosts    + ' ghost'     : '')
+        + ', <strong>' + renderStats.groups + '</strong> group rows, '
+        + 'depth ' + renderStats.maxDepth + '.</span>';
+}
+
+applyBtn.addEventListener("click", () => applyRecipeText(recipeInput.value));
+recipeInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") applyRecipeText(recipeInput.value);
+});
+presetSelect.addEventListener("change", e => {
+  const v = e.target.value;
+  if (!v) return;
+  recipeInput.value = v;
+  applyRecipeText(v);
+});
+
+for (const id of ["showCounts", "collapseSingleton", "hideClosed", "explodeMulti", "ghostAncestors"]) {
+  document.getElementById(id).addEventListener("change", e => {
+    config[id] = e.target.checked;
+    doRender();
+  });
+}
+
+// Initial state
+recipeInput.value = "Pivot(Epic) → Hierarchy";
+applyRecipeText(recipeInput.value);
+</script>
+</body>
+</html>
