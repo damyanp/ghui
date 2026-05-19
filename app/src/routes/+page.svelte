@@ -14,6 +14,7 @@
     Bubbles,
     ChartColumnBig,
     ChartGantt,
+    ChartNetwork,
     CircleCheck,
     CircleSlash,
     Ellipsis,
@@ -33,6 +34,7 @@
   import AppBarButton from "../components/AppBarButton.svelte";
   import DropdownMenu from "../components/DropdownMenu.svelte";
   import LogPanel from "../components/LogPanel.svelte";
+  import RecipeBar from "../components/RecipeBar.svelte";
   import ReviewChangesPanel from "../components/ReviewChangesPanel.svelte";
   import AddItemDialog from "../components/AddItemDialog.svelte";
   import WorkItemExecutionTracker, {
@@ -101,6 +103,7 @@
   let reviewChangesOpen = $state(false);
   let addItemDialogOpen = $state(false);
   let logPanelOpen = $state(false);
+  let recipeBarOpen = $state(false);
   let busy = $state(false);
   const disabled = $derived(busy || context.loadProgress > 0);
 
@@ -301,6 +304,16 @@
 
       <div class="w-3"></div>
 
+      <AppBarButton
+        icon={ChartNetwork}
+        text="Recipe"
+        active={recipeBarOpen}
+        disabled={disabled}
+        onclick={() => { recipeBarOpen = !recipeBarOpen; }}
+      />
+
+      <div class="w-3"></div>
+
       <DropdownMenu
         open={openDropdown === "mode"}
         onopen={() => (openDropdown = "mode")}
@@ -411,6 +424,15 @@
       <Pat />
     {/snippet}
   </AppBar>
+
+  {#if recipeBarOpen}
+    <div class="border-b border-surface-300-700 px-4 py-2">
+      <RecipeBar
+        bind:value={context.data.pivotConfig}
+        onApply={(cfg) => context.setPivotConfig(cfg)}
+      />
+    </div>
+  {/if}
 
   <ReviewChangesPanel bind:open={reviewChangesOpen} />
   <AddItemDialog bind:open={addItemDialogOpen} />
