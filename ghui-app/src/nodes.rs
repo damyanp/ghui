@@ -5,6 +5,8 @@ use ts_rs::TS;
 
 use crate::Filters;
 
+pub(crate) mod recipe_builder;
+
 #[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Node {
@@ -13,6 +15,7 @@ pub struct Node {
     pub data: NodeData,
     pub has_children: bool,
     pub is_modified: bool,
+    pub is_ghost: bool,
 }
 
 #[derive(Serialize, TS, Debug)]
@@ -114,6 +117,7 @@ impl<'a> NodeBuilder<'a> {
                         },
                         has_children: true,
                         is_modified: false,
+                        is_ghost: false,
                     });
                 }
             }
@@ -174,6 +178,7 @@ impl<'a> NodeBuilder<'a> {
                 data: NodeData::WorkItem,
                 has_children: !children.is_empty(),
                 is_modified: self.original_work_items.contains_key(id),
+                is_ghost: false,
             });
 
             self.add_nodes(

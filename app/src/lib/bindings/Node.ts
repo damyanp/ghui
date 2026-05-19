@@ -7,4 +7,5 @@ export type Node = {
   data: NodeData;
   hasChildren: boolean;
   isModified: boolean;
+  isGhost: boolean;
 };
