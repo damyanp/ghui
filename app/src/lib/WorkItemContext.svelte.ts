@@ -50,6 +50,11 @@ export class WorkItemContext {
       estimate: [],
       priority: [],
     },
+    pivotConfig: {
+      recipe: [{ kind: "pivot", field: "epic" }, { kind: "hierarchy" }],
+      multiValueStrategy: "combined",
+      showGhostAncestors: true,
+    },
     originalWorkItems: {},
     changes: { data: {} },
     canUndo: false,

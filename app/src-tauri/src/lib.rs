@@ -56,6 +56,8 @@ pub fn run() {
             data::set_preview_changes,
             data::save_changes,
             data::set_filters,
+            data::get_pivot_config,
+            data::set_pivot_config,
             data::set_work_items_extra_data,
             data::get_work_items_extra_data,
             data::get_log_file_path,
