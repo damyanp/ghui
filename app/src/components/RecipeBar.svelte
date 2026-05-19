@@ -3,7 +3,12 @@
   import type { PivotConfig } from "$lib/bindings/PivotConfig";
   import { parseRecipe, recipeToString } from "$lib/recipeParser";
   import { PRESETS } from "$lib/recipePresets";
-  import { applyText, setToggle, type RecipeBarToggle } from "./recipeBarState";
+  import {
+    applyText,
+    getToggleChecked,
+    setToggle,
+    type RecipeBarToggle,
+  } from "./recipeBarState";
 
   let { value = $bindable<PivotConfig>(), onApply }: {
     value: PivotConfig;
@@ -13,17 +18,14 @@
   const liveToggles: ReadonlyArray<{
     id: RecipeBarToggle;
     label: string;
-    checked: (config: PivotConfig) => boolean;
   }> = [
     {
       id: "explodeMulti",
       label: "Explode multi-valued (assignees)",
-      checked: (config) => config.multiValueStrategy === "explode",
     },
     {
       id: "showGhostAncestors",
       label: "Show ghost ancestors",
-      checked: (config) => config.showGhostAncestors,
     },
   ];
 
@@ -136,7 +138,7 @@
         <label class="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={toggle.checked(value)}
+            checked={getToggleChecked(value, toggle.id)}
             onchange={(event) => {
               updateToggle(toggle.id, (event.currentTarget as HTMLInputElement).checked);
             }}

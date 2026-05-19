@@ -51,3 +51,20 @@ export function setToggle(
       return { ...config, showGhostAncestors: checked };
   }
 }
+
+/**
+ * Return the current `checked` state of a RecipeBar toggle for a given
+ * PivotConfig. This is the inverse of `setToggle` and is the source of
+ * truth for what each checkbox in the bar should show.
+ */
+export function getToggleChecked(
+  config: PivotConfig,
+  toggle: RecipeBarToggle
+): boolean {
+  switch (toggle) {
+    case "explodeMulti":
+      return config.multiValueStrategy === "explode";
+    case "showGhostAncestors":
+      return config.showGhostAncestors;
+  }
+}
