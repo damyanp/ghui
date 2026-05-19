@@ -972,6 +972,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_set_filters_preserves_pivot_config_in_cache() {
+        let data = TestData::default();
+        let mut state = AppState::new();
+        state.fields = Some(data.fields);
+        state.work_items = Some(data.work_items);
+
+        let non_default_pivot = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Status)],
+            multi_value_strategy: MultiValueStrategy::Explode,
+            show_ghost_ancestors: false,
+        };
+        let new_filters = Filters {
+            status: vec![Some(FieldOptionId("status-a".to_string()))],
+            ..Default::default()
+        };
+
+        state
+            .set_pivot_config(non_default_pivot.clone())
+            .await
+            .unwrap();
+        state.set_filters(new_filters.clone()).await.unwrap();
+
+        // view_config_cache() is what gets written to file — verify it holds both
+        let cache = state.view_config_cache();
+        assert_eq!(cache.pivot_config, non_default_pivot);
+        assert_eq!(cache.filters.status, new_filters.status);
+    }
+
+    #[tokio::test]
     async fn test_set_pivot_config_triggers_data_update() {
         let data = TestData::default();
         let mut state = AppState::new();
