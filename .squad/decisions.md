@@ -254,6 +254,51 @@ If Damyan rejects the deviation, the correct path is: (a) reject PR #73; (b) Tas
 
 ---
 
+## 2026-05-19 — Phase 3 (Task 6) close-out
+
+**PR #74 merged as [`15a4b82`](https://github.com/damyanp/ghui/commit/15a4b82) — `pivoting(task6): wire RecipeNodeBuilder + RecipeBar end-to-end`.** Phase 3 of the pivoting plan is complete: the live tree is now driven by `RecipeNodeBuilder` reading `AppState::pivot_config`, and `<RecipeBar>` is mounted in `+page.svelte` behind a toggle button. All 5 validation commands green locally + CI fully green.
+
+### Joint authorship model — worked, kept as the default
+
+- **Basher (Rust)** on sub-branch `pivoting/task6-rust` → 2 commits.
+- **Linus (Frontend)** on sub-branch `pivoting/task6-frontend` → 2 commits.
+- Both merged into parent branch `pivoting/task6-wire-up` via two `--no-ff` merges (`8fd91c4`, `f7a86e2`).
+- **Zero convergence conflicts** — direct consequence of the clean Rust/TS file-disjoint split mandated by Rusty's contract (Basher touched `ghui-app/src/`, Linus touched `app/src/`).
+- **Pattern adopted as default:** parent + per-language sub-branches via worktrees is now the default workflow for any task with a clean Rust/TS seam.
+
+### Rusty's contract decisions — implemented
+
+The full contract (~16k bytes of interface specification, test gates, risks, and convergence plan) is preserved as the historical reference at `.squad/decisions/contracts/task6.md`. Cite it for any future questions about why Task 6 was sliced the way it was.
+
+| Contract decision | Status |
+|---|---|
+| Mount UX: toggled panel below AppBar (LogPanel pattern) | ✅ IMPLEMENTED — `recipeBarOpen = $state(false)` + `{#if recipeBarOpen}` block immediately after `</AppBar>`, before `<ReviewChangesPanel>`. Toolbar icon: `ChartNetwork` from `@lucide/svelte` (no new dep). |
+| `setPivotConfig(cfg)` mirrors `setFilter` (fire-and-forget invoke) | ✅ IMPLEMENTED — one-line `invoke("set_pivot_config", { cfg })` in `WorkItemContext`. Canonical config arrives back via `DataUpdate::Data` watcher. |
+| Joint PR over separate PRs | ✅ DELIVERED — single PR #74 with both authors' commits and `Co-authored-by` trailers. |
+
+### Plan deviations — open backlog against `docs/pivoting-implementation-plan.md`
+
+Rusty flagged three places where the Task 6 spec drifts from reality. These need amending in the plan doc as backlog (not blocking; document accuracy only):
+
+1. **"Register Tauri commands" — already done by PR #72 (Task 4).** `get_pivot_config`, `set_pivot_config`, `parse_recipe`, `recipe_to_string` were registered in `tauri::generate_handler![…]` by Phase 2. Strike this bullet from Task 6 scope in the plan.
+2. **"`AppState::refresh()` end-to-end test" is a misnomer.** `AppState::refresh()` requires PAT + network + file I/O; it isn't unit-testable. The correct test surface is `RecipeNodeBuilder::build()` directly with a non-default recipe. Update the plan spec wording.
+3. **`recipe_builder_tests.rs` as a standalone file does not exist.** Tests live in `#[cfg(test)] mod tests` inside `recipe_builder.rs` (per Task 2's PR #70 verdict). Update plan to reference the embedded test module, not a separate file.
+
+### Rusty's final verdict on PR #74 — APPROVE_WITH_NITS
+
+Three non-blocking nits, deferrable to Task 7:
+
+1. `test_recipe_node_builder_filters_closed` uses `[Hierarchy]` rather than the default `[Pivot(Epic), Hierarchy]`. The default path is already covered by Task 2's snapshot suite, so this is a minor stylistic gap, not a coverage gap.
+2. No explicit empty-recipe test (`vec![]`). The shared-invariants section of the contract calls this out as an enforced behavior; worth a one-line test in Task 7.
+3. No explicit pre/post node-list diff in the PR description. The author relied on Task 2's snapshot tests + CI greenness for default-recipe equivalence, which is sufficient but less self-evident in PR review.
+
+### Archive
+
+- Full contract: [`.squad/decisions/contracts/task6.md`](decisions/contracts/task6.md) (kept as permanent reference, do not delete).
+- Agent completion reports: [`.squad/decisions/archive/2026-05-19-task6/`](decisions/archive/2026-05-19-task6/) — Basher's Rust report + Linus's frontend report.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
