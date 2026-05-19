@@ -208,6 +208,52 @@ If Damyan rejects the deviation, the correct path is: (a) reject PR #73; (b) Tas
 
 ---
 
+## Wave B — Phase 2 PR #71 revision + close-out — 2026-05-19
+
+### 2026-05-19T09:55:00-07:00: PR #73 — fixed type-check failure in fixture test
+**By:** Livingston
+**What:** Replaced node:fs/path imports with Vite JSON import (`import fixtureData from "../../../github-graphql/tests/fixtures/recipes.json"`). Vite's cross-directory JSON import worked without any fs allowlist changes. svelte-check now passes. All 5 vitest tests still pass.
+**Why:** I missed `npm run check` in my first validation — only ran `npm test`. Will not happen again — added a learning entry to history.md. The preferred Vite JSON import approach worked cleanly; no fixture copy was needed.
+
+### 2026-05-19T10:25:00-07:00: PR #71 — revision per Wave A verdicts
+**By:** Linus
+**What:** Deleted recipeText.ts; switched RecipeBar to async parseRecipe; removed 3 dead toggles; added error + alias tests; un-drafted.
+**Why:** Aligns with Damyan's call to keep #73's Tauri delegation as the single source of truth. PR #71 ready for review.
+
+### 2026-05-19T10:55:00-07:00: PR #71 — re-review after Linus revision
+**By:** Rusty
+**Verdict:** APPROVE_WITH_NITS
+**What:** Re-review of the RecipeBar UI shell (Task 3) after Linus addressed every blocking item from the original NEEDS_MORE_WORK verdict: deletion of `recipeText.ts`, removal of 3 dead toggles, migration to the async `recipeParser` shim, error surfacing, `$effect` cancellation guard, pure-helper extraction, Skeleton tokens, tests, and CI.
+
+**Why:**
+
+*Original blocking items — verified resolved:*
+
+- **A. recipeText.ts deleted** ✅ — `gh api .../pulls/71/files` returns zero results for any filename containing `recipeText`. Net diff vs main contains no trace of the file. Commit history confirms "pivoting(task3): rebase on main, delete obsolete recipeText.ts". Its test is also gone.
+- **B. Async shim used** ✅ — `RecipeBar.svelte` imports `parseRecipe, recipeToString` from `$lib/recipeParser` (the Tauri-delegation shim). `applyCurrentText` and `pickPreset` both `await applyText(…, parseRecipe, recipeToString)`. No import of `recipeText.ts` anywhere in the diff.
+- **C. Dead toggles removed** ✅ — `liveToggles` contains exactly two entries (`explodeMulti`, `showGhostAncestors`). No trace of `showCounts`, `collapse`, or `hideClosed` in the diff.
+- **D. $effect cancellation guard** ✅ — Pattern is correct: `let cancelled = false` captured synchronously before the `recipeToString` call; `if (!cancelled)` guards the write inside `.then()`; cleanup function `() => { cancelled = true; }` is returned from the effect so Svelte cancels in-flight async work on re-run. The `lastEmittedRecipe === recipe` reference guard correctly suppresses redundant re-formatting for self-emitted config updates (same array reference set by `emit()` before `value = next`).
+- **E. Pure helper extraction** ✅ — `recipeBarState.ts` contains only `import type` from bindings. No Svelte runes, no `invoke`, no Tauri imports. `ParseFn` and `FormatFn` are injected, making the module testable in plain Node. Clean.
+- **F. Test quality** ✅ — 7 tests total. Error-path tests assert on actual error message text, not just `ok === false`. The alias normalisation test wires `"Pivot(Issue_Type)"` as input → mock `parse` returns `[{ kind: "pivot", field: "issueType" }]` → asserts `result.config.recipe[0].field === "issueType"` and `result.formattedText === "Pivot(IssueType)"`. Meaningful and realistic.
+- **G. Alias normalisation mock realism** ✅ — Mock faithfully represents what the Rust parser returns: raw alias in → canonical camelCase field out. The format mock returns the canonical display string. The test correctly verifies the shim's normalization contract.
+- **H. tsconfig scope** ✅ (accepted) — `"types": ["vitest/globals"]` is a standard SvelteKit workaround for `svelte-check` not finding vitest module declarations. Risk: vitest globals (`describe`, `it`, `vi`, etc.) become available in production `.ts` source files. In practice no production file will accidentally import them, and the fix resolves a real pre-existing CI failure. Acceptable.
+- **I. Phase boundary** ✅ — Diff touches only `app/src/components/`, `app/src/lib/recipePresets.ts`, `app/src/routes/dev/recipe-bar/`, and `app/tsconfig.json`. Zero Rust files. `NodeBuilder::add_nodes()` and `WorkItemTree.svelte` untouched.
+- **J. Skeleton tokens** ✅ — Error badge uses `bg-error-50-950 text-error-700-300`. Dual-value tokens, no custom hex.
+- **K. Co-authored-by trailers** ✅ — All four revision commits carry `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
+- **CI** ✅ — All 7 checks green: `format`, `build`, `frontend`, CodeQL ×3, CodeQL gate. This is the full `rust.yml` suite, not just CodeQL. Un-drafted.
+- **Title** ✅ — `pivoting(task3): RecipeBar UI shell with presets`.
+
+**Nits (non-blocking):**
+
+- **Floating promises in event handlers.** `onkeydown` calls `applyCurrentText()` and `onchange` calls `pickPreset()` without `await` or `.catch()`. Both functions handle errors internally via `errorText`, so the UX is fine, but an unhandled rejection is technically possible if something throws before the result check. A `.catch((e) => { errorText = String(e); })` on each callsite would make the intent explicit.
+- **Demo route `$effect` lacks cancellation guard.** `routes/dev/recipe-bar/+page.svelte`'s `$effect` calls `recipeToString(recipe).then(...)` with no `cancelled` flag. Stale writes possible if `applied.recipe` changes quickly. Dev-only route, low impact, but inconsistent with the pattern established in `RecipeBar.svelte`.
+- **`lastEmittedRecipe` reference guard is opaque without a comment.** The comparison `recipe === lastEmittedRecipe` relies on reference identity (set by `emit()` before `value = next`). This is a clever but non-obvious trick. A one-line comment — "same reference means we emitted this update; skip redundant re-format" — would spare the next reader a double-take.
+- **`tsconfig.json` global vitest types.** As noted above, accepted but worth tracking. If a `vitest.config.ts` with `globals: true` is ever added and a separate `tsconfig.test.json` created, this entry should migrate there.
+
+**Merge decision:** Safe to merge once CI green — CI is already green. No re-revision required.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
