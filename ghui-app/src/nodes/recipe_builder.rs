@@ -671,7 +671,7 @@ impl<'a> RecipeNodeBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     use github_graphql::{
         data::{
@@ -709,9 +709,20 @@ mod tests {
                     multi_value_strategy: MultiValueStrategy::Combined,
                     show_ghost_ancestors: true,
                 };
+                let nodes = build_recipe_nodes(&fixture.fields, &fixture.work_items, &config);
+
+                // HARD STOP: a duplicate Node.id panics Svelte's keyed each
+                // block at runtime. Fail loudly here, before the opaque
+                // string compare below ever runs, so the failure message
+                // names the preset and the colliding ids.
+                let label = format!("preset {preset:?}");
+                assert_node_ids_unique(&label, &nodes);
+
+                let total = nodes.len();
+                let unique = nodes.iter().map(|n| &n.id).collect::<HashSet<_>>().len();
                 format!(
-                    "== {preset} ==\n{}",
-                    render_recipe_nodes(&fixture.fields, &fixture.work_items, &config)
+                    "== {preset} ==\ntotal={total} unique_ids={unique}\n{}",
+                    format_nodes_string(&nodes),
                 )
             })
             .collect::<Vec<_>>()
@@ -720,6 +731,7 @@ mod tests {
         assert_eq!(
             actual,
             r#"== Hierarchy ==
+total=6 unique_ids=6
 0 item 2 ghost=false children=true
 1 item 1 ghost=false children=false
 0 item 4 ghost=false children=true
@@ -728,6 +740,7 @@ mod tests {
 0 item 6 ghost=false children=false
 
 == Hierarchy → Group(Status) ==
+total=8 unique_ids=8
 0 item 2 ghost=false children=true
 1 group path/2/status=id(Active) Active
 2 item 1 ghost=false children=false
@@ -738,6 +751,7 @@ mod tests {
 0 item 6 ghost=false children=false
 
 == Hierarchy → Group(Workstream) ==
+total=8 unique_ids=8
 0 item 2 ghost=false children=true
 1 group path/2/workstream=id(WS1) WS1
 2 item 1 ghost=false children=false
@@ -748,6 +762,7 @@ mod tests {
 0 item 6 ghost=false children=false
 
 == Pivot(Assignee) → Group(Epic) ==
+total=15 unique_ids=15
 0 group path/assignee=(none) (none)
 1 group path/assignee=(none)/epic=(none) (none)
 2 item 6 ghost=false children=false
@@ -765,6 +780,7 @@ mod tests {
 2 item 5 ghost=false children=false
 
 == Pivot(Epic) → Hierarchy ==
+total=10 unique_ids=10
 0 group path/epic=id(EpicA) EpicA
 1 item 2 ghost=false children=true
 2 item 1 ghost=false children=false
@@ -777,6 +793,7 @@ mod tests {
 1 item 6 ghost=false children=false
 
 == Pivot(IssueType) → Group(Status) ==
+total=16 unique_ids=16
 0 group path/issue_type=(none) (none)
 1 group path/issue_type=(none)/status=id(Active) Active
 2 item 5 ghost=false children=false
@@ -795,6 +812,7 @@ mod tests {
 2 item 2 ghost=false children=false
 
 == Pivot(Iteration) → Hierarchy ==
+total=10 unique_ids=10
 0 group path/iteration=id(S1) S1
 1 item 2 ghost=false children=true
 2 item 1 ghost=false children=false
@@ -807,6 +825,7 @@ mod tests {
 1 item 6 ghost=false children=false
 
 == Pivot(Repository) → Group(Epic) → Hierarchy ==
+total=14 unique_ids=14
 0 group path/repository=org/repo-a org/repo-a
 1 group path/repository=org/repo-a/epic=id(EpicA) EpicA
 2 item 2 ghost=false children=true
@@ -823,6 +842,7 @@ mod tests {
 2 item 6 ghost=false children=false
 
 == Pivot(State) → Group(Epic) ==
+total=14 unique_ids=14
 0 group path/state=OPEN OPEN
 1 group path/state=OPEN/epic=id(EpicA) EpicA
 2 item 1 ghost=false children=false
@@ -839,6 +859,7 @@ mod tests {
 2 item 6 ghost=false children=false
 
 == Pivot(Status) ==
+total=11 unique_ids=11
 0 group path/status=id(Active) Active
 1 item 1 ghost=false children=false
 1 item 5 ghost=false children=false
@@ -852,6 +873,7 @@ mod tests {
 1 item 6 ghost=false children=false
 
 == Pivot(Status) → Group(Workstream) ==
+total=17 unique_ids=17
 0 group path/status=id(Active) Active
 1 group path/status=id(Active)/workstream=id(WS1) WS1
 2 item 1 ghost=false children=false
@@ -871,6 +893,7 @@ mod tests {
 2 item 6 ghost=false children=false
 
 == Pivot(Type) → Group(Status) ==
+total=15 unique_ids=15
 0 group path/type=issue issue
 1 group path/type=issue/status=id(Active) Active
 2 item 1 ghost=false children=false
@@ -888,6 +911,7 @@ mod tests {
 2 item 6 ghost=false children=false
 
 == Sort(Epic) ==
+total=6 unique_ids=6
 0 item 1 ghost=false children=false
 0 item 2 ghost=false children=false
 0 item 3 ghost=false children=false
@@ -896,6 +920,7 @@ mod tests {
 0 item 6 ghost=false children=false
 
 == Sort(Priority) → Hierarchy ==
+total=6 unique_ids=6
 0 item 2 ghost=false children=true
 1 item 1 ghost=false children=false
 0 item 4 ghost=false children=true
@@ -1062,6 +1087,61 @@ mod tests {
         );
     }
 
+    /// Structural invariants for the recipe node builder. Iterates the full
+    /// matrix of (preset × ghost ancestors on/off × Combined/Explode) and
+    /// asserts three invariants per combination:
+    ///
+    /// 1. `Node.id` uniqueness — Svelte's keyed `{#each}` blocks panic at
+    ///    runtime if two siblings (or anywhere in the rendered list) share
+    ///    the same key. This is the test that catches the
+    ///    `each_key_duplicate` bug class the opaque string-snapshot test
+    ///    failed to catch.
+    /// 2. Level monotonicity — a flat depth-first tree may not jump down
+    ///    more than one level between consecutive nodes; the first node
+    ///    must be at level 0.
+    /// 3. WorkItem id presence — every `NodeData::WorkItem` node references
+    ///    a `WorkItemId` present in `work_items` (no stale/orphan refs).
+    ///
+    /// Failure messages always include preset name, ghost flag, and
+    /// strategy so a CI failure points straight at the broken combination.
+    #[test]
+    fn test_recipe_builder_node_id_uniqueness_invariant() {
+        let presets: Value = serde_json::from_str(include_str!(
+            "../../../github-graphql/tests/fixtures/recipes.json"
+        ))
+        .unwrap();
+        let mut preset_names = presets
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        preset_names.sort();
+
+        let fixture = build_snapshot_fixture();
+
+        for preset_name in &preset_names {
+            for show_ghost_ancestors in [false, true] {
+                for strategy in [MultiValueStrategy::Combined, MultiValueStrategy::Explode] {
+                    let config = PivotConfig {
+                        recipe: parse_recipe(preset_name).unwrap(),
+                        multi_value_strategy: strategy.clone(),
+                        show_ghost_ancestors,
+                    };
+                    let nodes = build_recipe_nodes(&fixture.fields, &fixture.work_items, &config);
+
+                    let label = format!(
+                        "preset={preset_name:?} ghost={show_ghost_ancestors} strategy={strategy:?}"
+                    );
+
+                    assert_node_ids_unique(&label, &nodes);
+                    assert_levels_monotonic(&label, &nodes);
+                    assert_work_item_ids_present(&label, &nodes, &fixture.work_items);
+                }
+            }
+        }
+    }
+
     fn build_snapshot_fixture() -> TestData {
         let mut data = TestData::default();
 
@@ -1133,11 +1213,11 @@ mod tests {
         data
     }
 
-    fn render_recipe_nodes(
+    fn build_recipe_nodes(
         fields: &Fields,
         work_items: &WorkItems,
         pivot_config: &PivotConfig,
-    ) -> String {
+    ) -> Vec<Node> {
         let filters = Filters::default();
         let original_work_items = HashMap::new();
         let mut builder = RecipeNodeBuilder::new(
@@ -1147,10 +1227,13 @@ mod tests {
             &original_work_items,
             pivot_config,
         );
-        builder
-            .build()
-            .into_iter()
-            .map(|node| match node.data {
+        builder.build()
+    }
+
+    fn format_nodes_string(nodes: &[Node]) -> String {
+        nodes
+            .iter()
+            .map(|node| match &node.data {
                 NodeData::Group { name, .. } => {
                     format!("{} group {} {}", node.level, node.id, name)
                 }
@@ -1161,6 +1244,93 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    fn render_recipe_nodes(
+        fields: &Fields,
+        work_items: &WorkItems,
+        pivot_config: &PivotConfig,
+    ) -> String {
+        let nodes = build_recipe_nodes(fields, work_items, pivot_config);
+        format_nodes_string(&nodes)
+    }
+
+    /// Find duplicate `Node.id` values along with the count of occurrences.
+    /// Returned in sorted order so failure messages are stable across runs.
+    fn duplicate_node_ids(nodes: &[Node]) -> Vec<(String, usize)> {
+        let mut counts: HashMap<&str, usize> = HashMap::new();
+        for n in nodes {
+            *counts.entry(n.id.as_str()).or_insert(0) += 1;
+        }
+        let mut dups: Vec<(String, usize)> = counts
+            .into_iter()
+            .filter(|(_, c)| *c > 1)
+            .map(|(id, c)| (id.to_owned(), c))
+            .collect();
+        dups.sort();
+        dups
+    }
+
+    /// Invariant: every `Node.id` produced by the builder must be unique within
+    /// the result. Svelte's keyed `{#each}` blocks rely on this; duplicates
+    /// cause runtime `each_key_duplicate` panics in `TreeTable.svelte`.
+    fn assert_node_ids_unique(label: &str, nodes: &[Node]) {
+        let unique = nodes.iter().map(|n| &n.id).collect::<HashSet<_>>().len();
+        if unique != nodes.len() {
+            panic!(
+                "{label}: Node.id collision — total={} unique_ids={}. Duplicate ids: {:?}",
+                nodes.len(),
+                unique,
+                duplicate_node_ids(nodes),
+            );
+        }
+    }
+
+    /// Invariant: the flat node list represents a depth-first traversal of a
+    /// tree, so consecutive nodes may never *jump* down by more than one
+    /// level. The first node must be at level 0.
+    fn assert_levels_monotonic(label: &str, nodes: &[Node]) {
+        if nodes.is_empty() {
+            return;
+        }
+        assert_eq!(
+            nodes[0].level, 0,
+            "{label}: first node level must be 0, got {} (id {:?})",
+            nodes[0].level, nodes[0].id,
+        );
+        for i in 1..nodes.len() {
+            let prev = &nodes[i - 1];
+            let curr = &nodes[i];
+            assert!(
+                curr.level <= prev.level + 1,
+                "{label}: level jump at index {i}: prev (id={:?}, lvl={}) -> curr (id={:?}, lvl={}). Children must descend by exactly one level.",
+                prev.id,
+                prev.level,
+                curr.id,
+                curr.level,
+            );
+        }
+    }
+
+    /// Invariant: every `NodeData::WorkItem` node must reference a `WorkItemId`
+    /// that exists in `work_items`. This catches stale or orphan refs (e.g. a
+    /// ghost ancestor that survived after its underlying work item was
+    /// removed).
+    ///
+    /// Assumption: on current main, `node.id` IS the `WorkItemId`. If a fix
+    /// changes the id format to a path-prefixed string, this helper will need
+    /// to extract the work item id (likely the trailing segment) instead.
+    fn assert_work_item_ids_present(label: &str, nodes: &[Node], work_items: &WorkItems) {
+        for n in nodes {
+            if let NodeData::WorkItem { work_item_id } = &n.data {
+                assert!(
+                    work_items.get(work_item_id).is_some(),
+                    "{label}: WorkItem node has id {:?} (work_item_id={:?}) which is not present in work_items",
+                    n.id,
+                    work_item_id,
+                );
+            }
+        }
     }
 
     fn set_title(data: &mut TestData, id: &WorkItemId, title: &str) {
