@@ -299,6 +299,83 @@ Three non-blocking nits, deferrable to Task 7:
 
 ---
 
+## 2026-05-19 — Phase 4 (Polish) close-out — Pivoting plan complete
+
+**Status:** 🏁 Phase 4 archived. Pivoting plan complete end-to-end (Phases 1 → 4).
+
+### Shipped PRs
+
+| PR | Title | Task | Commit | Author | Reviewer |
+|---|---|---|---|---|---|
+| [#75](https://github.com/damyanp/ghui/pull/75) | `pivoting(task8): test wiring for Explode multi-value toggle` | Task 8 | `a1f1257` | Linus | Rusty — APPROVE_WITH_NITS |
+| [#76](https://github.com/damyanp/ghui/pull/76) | `pivoting(task7): Ghost-row visuals + click routing` | Task 7 | `3a7de13` | Linus | Rusty — APPROVE_WITH_NITS |
+| [#77](https://github.com/damyanp/ghui/pull/77) | `pivoting(task9): Orthogonal toolbar toggles` | Task 9 | `32c87e8` | Linus | Rusty — APPROVE_WITH_NITS |
+
+All three squashed to `main`. PR #77 was the final pivoting PR.
+
+### Execution shape
+
+Each task was front-end-heavy enough that a single Linus agent handled it; joint authorship was unnecessary this phase. Parallelism came from worktrees, not co-authors:
+
+- **Wave A (Tasks 7 + 8) — parallel.** Two worktrees (`E:\prj\ghui-task7`, `E:\prj\ghui-task8`), no file overlap. Task 7 touched `TreeTable.svelte` / `WorkItemTree.svelte` / new `ghostRouting.{ts,test.ts}`; Task 8 touched `RecipeBar.svelte` / `recipeBarState.ts` / `RecipeBar.test.ts`. Both PRs opened and reviewed concurrently.
+- **Wave B (Task 9) — serialized.** Held until Wave A merged because Task 9 also rewrote `RecipeBar.svelte` (added five toggles) and would have collided with Task 8's edits to the same file. Once Tasks 7 + 8 landed on `main`, Task 9 rebased onto the new HEAD and shipped clean.
+
+### Key architectural decisions
+
+**Task 7 — file split correction (plan vs. reality).** The plan said "modify `WorkItemTree.svelte` — apply muted CSS class," but row rendering actually lives in the generic `TreeTable.svelte`. Ghost styling, drag suppression, and click routing went into `TreeTable.svelte` (so the behaviour follows the row regardless of which feature mounts the table). The ghost-aware *context menu* stayed in `WorkItemTree.svelte` because that's where `getContextMenuItems(node, column): MenuItem[]` is defined. Both files end up touched — consistent with the plan's intent, just split differently than its wording suggested. Helper pattern (`ghostRouting.ts` + sibling `.test.ts`) followed the established `filterableFields.ts` / `recipeBarState.ts` convention: extract pure helpers from `.svelte` for vitest coverage with no Svelte/Tauri runtime.
+
+**Task 7 gotcha — ghost / primary id collision.** Ghost and primary nodes share the same `WorkItemId`, so `rows.find(r => r.id === clickedId)` always returned the primary, never the ghost. An early `resolveGhostClick(rows, clickedRowId)` helper looked correct but failed the very first test. Fix: callers already have the row object (with `isGhost` on it) in scope, so the helper API takes row objects directly instead of ids. Lesson: when extracting pure helpers, make sure the inputs actually carry enough information to be unambiguous.
+
+**Task 8 — the work was already done.** The MultiValueStrategy toggle was plumbed end-to-end by earlier tasks: Rust `RecipeNodeBuilder::assignee_field_values` branched on Combined/Explode (`recipe_builder.rs:478–512`) and was pinned by `test_recipe_builder_multi_value_combined_vs_explode`; `ViewConfigCache` already round-tripped `MultiValueStrategy::Explode`; the Svelte checkbox + `setToggle` plumbing landed in PR #71. Task 8 collapsed to a **coverage-only PR** — extracted a pure `getToggleChecked(config, toggle)` helper into `recipeBarState.ts` (mirrors `setToggle`) and added 6 new vitest cases covering the three issue-spec acceptance points. **Lesson: always re-read the prerequisite code before assuming a "do the work" task isn't actually "the work is done, add the tests."**
+
+**Task 9 — per-toggle state-ownership table.** Five toggles, three layers. *Where* state lives matters more than how the checkbox is wired.
+
+| Toggle | State lives | Persists? |
+|---|---|---|
+| `explodeMulti` | `PivotConfig.multiValueStrategy` | ✅ |
+| `showGhostAncestors` | `PivotConfig.showGhostAncestors` | ✅ |
+| `hideClosed` | `Filters.hide_closed` (Rust) | ✅ |
+| `showCounts` | `WorkItemContext.showCounts` (`$state`) | ❌ intentional — render-only |
+| `collapseSingleValue` | `WorkItemContext.collapseSingleValue` (`$state`) | ❌ intentional — render-only |
+
+Render-only toggles are deliberately *not* persisted: their default-off state is sensible, and persistence would require a separate cache or schema migration for two booleans. If users complain they want stickiness, move them to `PivotConfig` later (additive, backcompat-safe).
+
+**Task 9 bonus — top-bar "Hide Closed" button rewired.** The existing top-bar "Hide Closed" button in `+page.svelte` used to hack `filters.status` by toggling the "Closed" status option id. Linus rewired it (without being asked) to drive `Filters.hide_closed` directly via the new `setHideClosed` method. Net semantic improvement: now catches GitHub state `CLOSED`/`MERGED` items even when the project Status field isn't set to "Closed," and removes the "button disabled when no Closed status option exists" weirdness. Both UIs (toolbar button + RecipeBar checkbox) now sync via shared `context.data.filters.hideClosed`.
+
+**Task 9 quirk — `FilterableField` vs `keyof Filters`.** Introducing the first non-field boolean to `Filters` broke the existing `filterableFields` iteration (which assumed `keyof Filters` = filterable single-select fields). Fix: `FilterableField = Exclude<keyof Filters, "hideClosed">` plus a runtime `NON_FIELD_FILTER_KEYS = new Set(["hideClosed"])` in `filterableFields.ts`. The runtime set is required because TS narrowing doesn't survive `Object.keys()`. **Future maintainer must update both the type and the runtime set when adding more boolean toggles** — both are documented inline.
+
+### Reviewer follow-ups deferred to backlog
+
+Non-blocking notes Rusty raised during APPROVE_WITH_NITS. Open as separate issues if Damyan wants them addressed:
+
+**PR #76 (Task 7):**
+- (a) Auto-expand collapsed ancestors when jumping to a primary not in the DOM (currently a debug-log no-op).
+- (b) Brief visual flash (~1.5s) on the jumped-to row after smooth scroll — held off to avoid inventing per-row selection state in `TreeTable`.
+- (c) Drag handler retains the same id-collision pattern (benign because the `draggable={isRowDraggable(row)}` gate prevents the handler from firing on ghosts).
+- (d) `scrollIntoView` logic duplicated between `TreeTable.svelte` and `WorkItemTree.svelte` — candidate for a future `domJump.ts` sibling helper.
+- (e) Plan doc still says `WorkItemTree.svelte` for the muted class; reality is `TreeTable.svelte`.
+
+**PR #75 (Task 8):**
+- (a) PR body claimed "+9 new vitest cases" but actual count is +6.
+- (b) `simulateCheckboxChange` test helper is a near-tautology over `setToggle` — minor.
+
+**PR #77 (Task 9):**
+- (a) Extract `WorkItemTree.svelte` `groupChildCounts` derivation to a pure helper for vitest coverage.
+- (b) Add a comment in `+page.svelte` `onFiltersApply` noting that today only `hideClosed` is plumbed through filter toggles.
+- (c) Consider a nested `Filters.toggles: { hideClosed, … }` struct if a second non-field boolean ever lands.
+- (d) `groupChildCounts` walk is O(N²) worst-case for deeply-nested groupings — fine in practice, worth noting.
+
+**Persistent / unrelated:** 2 local `clippy::uninlined_format_args` errors in `ghui-app/src/telemetry.rs:188` and `ghui-app/src/updater.rs:90`. Toolchain drift only — CI uses an older Rust that doesn't lint this and passes. Unrelated to the pivoting plan; deserves a dedicated cleanup PR.
+
+### Archive
+
+- Inbox completion reports moved to [`.squad/decisions/archive/2026-05-19-phase4/`](decisions/archive/2026-05-19-phase4/) — Linus's Task 7, Task 8, and Task 9 reports.
+- Inbox is empty.
+
+🏁 **Phase 4 archived — Pivoting plan complete end-to-end (Phases 1 → 4).**
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
