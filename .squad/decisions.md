@@ -194,6 +194,20 @@ If Damyan rejects the deviation, the correct path is: (a) reject PR #73; (b) Tas
 
 ---
 
+## Wave A — Phase 2 PR fixes (Wave A) — 2026-05-19
+
+### 2026-05-18T17:19:25-07:00: PR #72 — set_filters preservation test added
+**By:** Basher
+**What:** Added `test_set_filters_preserves_pivot_config_in_cache` per Livingston's verdict.
+**Why:** Closes the test gap. PR #72 ready to merge once CI confirms green.
+
+### 2026-05-18T17:19:25-07:00: PR #73 — fixture + error tests added
+**By:** Livingston
+**What:** Added fixture-driven shim verification and recipeToString error-path test.
+**Why:** Per Damyan's call to keep Tauri delegation, parity is now enforced by the shim test forwarding all 14 fixtures + the Rust parser's existing fixture tests. PR #73 ready to merge once CI confirms green.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
