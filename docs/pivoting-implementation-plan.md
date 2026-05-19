@@ -380,18 +380,33 @@ implementations.
 **Modified files:**
 - `ghui-app/src/lib.rs` — switch the `NodeBuilder` call site to
   `RecipeNodeBuilder` driven by `self.pivot_config`.
-- `ghui-app/src/nodes.rs` — `pub use recipe_builder::*;`; delete
-  the old `NodeBuilder` once the new one is in.
-- `app/src-tauri/src/lib.rs` — `tauri::generate_handler![…,
-  get_pivot_config, set_pivot_config]`.
-- `app/src/lib/WorkItemContext.svelte.ts` — load
-  `PivotConfig` on startup, expose a setter that calls
-  `invoke("set_pivot_config", …)`.
+- `ghui-app/src/nodes.rs` — `pub(crate) use
+  recipe_builder::RecipeNodeBuilder;`; delete the old
+  `NodeBuilder` once the new one is in.
+- `app/src/lib/WorkItemContext.svelte.ts` — expose a setter that
+  calls `invoke("set_pivot_config", …)`.
 - `app/src/routes/+page.svelte` — mount `<RecipeBar bind:value=
-  {context.pivotConfig} onApply={…} />` in the toolbar.
-- `ghui-app/src/nodes/recipe_builder_tests.rs` — add an
-  end-to-end test that exercises `AppState::refresh()` with a
-  non-default recipe.
+  {context.data.pivotConfig} onApply={…} />` behind a toolbar
+  toggle (LogPanel pattern), below `</AppBar>`.
+- `ghui-app/src/nodes/recipe_builder.rs` — add a unit test
+  inside the existing `#[cfg(test)] mod tests` that exercises
+  `RecipeNodeBuilder::build()` directly with a non-default
+  recipe (driving `AppState::refresh()` from a test is not
+  practical — there is no in-memory `AppState` constructor —
+  and is not the right gate anyway).
+
+**Plan deviations resolved in PR #74 (kept here for reference):**
+1. **Tauri command registration:** Already done by Task 4 (PR
+   #72). Not part of Task 6.
+2. **End-to-end test target:** The original spec said "exercises
+   `AppState::refresh()`." That's a misnomer — the correct test
+   target is `RecipeNodeBuilder::build()` directly. Refresh just
+   calls into the builder.
+3. **`recipe_builder_tests.rs` standalone file:** Does not exist.
+   Tests live in `recipe_builder.rs`'s `#[cfg(test)] mod tests`.
+
+See `.squad/decisions/contracts/task6.md` for the full Task 6
+design contract written by the reviewer before split.
 
 **Acceptance:**
 - App runs (`cd app && npx tauri dev`).
