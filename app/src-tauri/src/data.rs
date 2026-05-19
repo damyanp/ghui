@@ -4,7 +4,7 @@ use ghui_app::{
     telemetry::{self, TelemetryEvent},
     DataState, DataUpdate, Filters, ItemToUpdate, RefreshSummary,
 };
-use github_graphql::pivot::PivotConfig;
+use github_graphql::pivot::{Axis, PivotConfig};
 use tauri::{ipc::Channel, State};
 
 #[tauri::command]
@@ -149,4 +149,14 @@ pub async fn get_telemetry_file_path() -> TauriCommandResult<String> {
 pub async fn record_telemetry(event: TelemetryEvent) -> TauriCommandResult<()> {
     telemetry::record(event);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn parse_recipe(text: String) -> TauriCommandResult<Vec<Axis>> {
+    Ok(github_graphql::pivot::parse_recipe(&text)?)
+}
+
+#[tauri::command]
+pub async fn recipe_to_string(recipe: Vec<Axis>) -> TauriCommandResult<String> {
+    Ok(github_graphql::pivot::recipe_to_string(&recipe))
 }
