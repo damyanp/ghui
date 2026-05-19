@@ -1,21 +1,40 @@
 <script lang="ts">
   import type { Axis } from "$lib/bindings/Axis";
+  import type { Filters } from "$lib/bindings/Filters";
   import type { PivotConfig } from "$lib/bindings/PivotConfig";
   import { parseRecipe, recipeToString } from "$lib/recipeParser";
   import { PRESETS } from "$lib/recipePresets";
   import {
     applyText,
+    getFilterToggleChecked,
+    getRenderToggleChecked,
     getToggleChecked,
+    setFilterToggle,
+    setRenderToggle,
     setToggle,
+    type FilterToggle,
     type RecipeBarToggle,
+    type RenderToggle,
   } from "./recipeBarState";
 
-  let { value = $bindable<PivotConfig>(), onApply }: {
+  let {
+    value = $bindable<PivotConfig>(),
+    filters,
+    showCounts = $bindable<boolean>(),
+    collapseSingleValue = $bindable<boolean>(),
+    onApply,
+    onFiltersApply,
+  }: {
     value: PivotConfig;
+    filters: Filters;
+    showCounts: boolean;
+    collapseSingleValue: boolean;
     onApply: (cfg: PivotConfig) => void;
+    onFiltersApply: (filters: Filters) => void;
   } = $props();
 
-  const liveToggles: ReadonlyArray<{
+  // PivotConfig-backed toggles (persisted via view config cache).
+  const pivotToggles: ReadonlyArray<{
     id: RecipeBarToggle;
     label: string;
   }> = [
@@ -27,6 +46,27 @@
       id: "showGhostAncestors",
       label: "Show ghost ancestors",
     },
+  ];
+
+  // Filters-backed toggles (persisted via view config cache).
+  const filterToggles: ReadonlyArray<{
+    id: FilterToggle;
+    label: string;
+  }> = [
+    {
+      id: "hideClosed",
+      label: "Hide closed",
+    },
+  ];
+
+  // Frontend-only render toggles. Intentionally NOT persisted — they revert
+  // to defaults on app restart, which is acceptable for pure render concerns.
+  const renderToggles: ReadonlyArray<{
+    id: RenderToggle;
+    label: string;
+  }> = [
+    { id: "showCounts", label: "Show counts" },
+    { id: "collapseSingleValue", label: "Collapse single-value groups" },
   ];
 
   let recipeText = $state("");
@@ -82,6 +122,20 @@
   function updateToggle(toggle: RecipeBarToggle, checked: boolean): void {
     emit(setToggle(value, toggle, checked));
   }
+
+  function updateFilterToggle(toggle: FilterToggle, checked: boolean): void {
+    onFiltersApply(setFilterToggle(filters, toggle, checked));
+  }
+
+  function updateRenderToggle(toggle: RenderToggle, checked: boolean): void {
+    const next = setRenderToggle(
+      { showCounts, collapseSingleValue },
+      toggle,
+      checked
+    );
+    showCounts = next.showCounts;
+    collapseSingleValue = next.collapseSingleValue;
+  }
 </script>
 
 <div class="flex flex-col gap-3 rounded border border-surface-300-700 bg-surface-100-900 p-3">
@@ -134,13 +188,37 @@
     </label>
 
     <div class="flex flex-wrap gap-4 pb-1">
-      {#each liveToggles as toggle}
+      {#each pivotToggles as toggle}
         <label class="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={getToggleChecked(value, toggle.id)}
             onchange={(event) => {
               updateToggle(toggle.id, (event.currentTarget as HTMLInputElement).checked);
+            }}
+          />
+          <span>{toggle.label}</span>
+        </label>
+      {/each}
+      {#each filterToggles as toggle}
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={getFilterToggleChecked(filters, toggle.id)}
+            onchange={(event) => {
+              updateFilterToggle(toggle.id, (event.currentTarget as HTMLInputElement).checked);
+            }}
+          />
+          <span>{toggle.label}</span>
+        </label>
+      {/each}
+      {#each renderToggles as toggle}
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={getRenderToggleChecked({ showCounts, collapseSingleValue }, toggle.id)}
+            onchange={(event) => {
+              updateRenderToggle(toggle.id, (event.currentTarget as HTMLInputElement).checked);
             }}
           />
           <span>{toggle.label}</span>

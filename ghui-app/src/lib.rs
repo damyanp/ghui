@@ -5,8 +5,8 @@ use github_graphql::{
         custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
     },
     data::{
-        Change, ChangeData, Changes, FieldOptionId, Fields, ProjectItemId, SanitizeConflict,
-        SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
+        Change, ChangeData, Changes, DelayLoad, FieldOptionId, Fields, ProjectItemId,
+        SanitizeConflict, SaveMode, UndoHistory, UpdateType, WorkItem, WorkItemId, WorkItems,
     },
     pivot::PivotConfig,
 };
@@ -63,10 +63,26 @@ pub struct Filters {
     workstream: Vec<Option<FieldOptionId>>,
     estimate: Vec<Option<FieldOptionId>>,
     priority: Vec<Option<FieldOptionId>>,
+
+    /// When true, items whose underlying GitHub state is closed (issues in
+    /// `CLOSED` state, pull requests in `CLOSED` or `MERGED` state) are
+    /// filtered out before bucketing. Items whose state hasn't loaded yet are
+    /// kept visible so we don't drop them based on unknown data.
+    ///
+    /// `#[serde(default)]` keeps existing cached `view_config.ghui.json`
+    /// files (which predate this field) deserializable.
+    #[serde(default)]
+    hide_closed: bool,
 }
 
 impl Filters {
     fn should_include(&self, work_item: &WorkItem) -> bool {
+        if self.hide_closed
+            && let DelayLoad::Loaded(true) = work_item.is_closed()
+        {
+            return false;
+        }
+
         let p = &work_item.project_item;
 
         !(self.status.contains(&p.status)
@@ -80,7 +96,8 @@ impl Filters {
     }
 
     /// Returns the total number of individual filter values that are active
-    /// across all fields.
+    /// across all fields. `hide_closed` counts as one active filter when
+    /// enabled.
     pub fn active_filter_count(&self) -> usize {
         self.status.len()
             + self.blocked.len()
@@ -90,6 +107,7 @@ impl Filters {
             + self.workstream.len()
             + self.estimate.len()
             + self.priority.len()
+            + usize::from(self.hide_closed)
     }
 }
 
@@ -794,6 +812,7 @@ fn summarize_refresh_changes(
 mod tests {
     use super::*;
     use github_graphql::data::test_helpers::TestData;
+    use github_graphql::data::{Issue, IssueState, PullRequest, PullRequestState, WorkItemData};
     use github_graphql::pivot::{Axis, MultiValueStrategy, PivotField};
     use std::sync::{Arc, Mutex};
     use tempfile::NamedTempFile;
@@ -932,6 +951,7 @@ mod tests {
         let expected = ViewConfigCache {
             filters: Filters {
                 status: vec![Some(FieldOptionId("status-a".to_string()))],
+                hide_closed: true,
                 ..Default::default()
             },
             pivot_config: PivotConfig {
@@ -950,6 +970,10 @@ mod tests {
 
         assert_eq!(loaded.pivot_config, expected.pivot_config);
         assert_eq!(loaded.filters.status, expected.filters.status);
+        assert!(
+            loaded.filters.hide_closed,
+            "hide_closed should round-trip via the cache file",
+        );
     }
 
     #[test]
@@ -1034,5 +1058,99 @@ mod tests {
 
         let observed = observed_configs.lock().unwrap();
         assert_eq!(observed.last().unwrap(), &next);
+    }
+
+    #[test]
+    fn test_filters_should_include_hide_closed_true_excludes_closed_issue() {
+        let mut data = TestData::default();
+        let open_id = data.build().issue_state(IssueState::OPEN).add();
+        let closed_id = data.build().issue_state(IssueState::CLOSED).add();
+
+        let filters = Filters {
+            hide_closed: true,
+            ..Default::default()
+        };
+
+        let open_item = data.work_items.get(&open_id).unwrap();
+        let closed_item = data.work_items.get(&closed_id).unwrap();
+
+        assert!(filters.should_include(open_item));
+        assert!(!filters.should_include(closed_item));
+    }
+
+    #[test]
+    fn test_filters_should_include_hide_closed_false_keeps_closed_issue() {
+        let mut data = TestData::default();
+        let closed_id = data.build().issue_state(IssueState::CLOSED).add();
+
+        let filters = Filters {
+            hide_closed: false,
+            ..Default::default()
+        };
+
+        let closed_item = data.work_items.get(&closed_id).unwrap();
+        assert!(filters.should_include(closed_item));
+    }
+
+    #[test]
+    fn test_filters_should_include_hide_closed_excludes_merged_pull_request() {
+        // Pull requests in either CLOSED or MERGED state are treated as closed
+        // by WorkItem::is_closed; verify both branches are filtered out.
+        let mut data = TestData::default();
+        let open_pr = data.build().add();
+        let closed_pr = data.build().add();
+        let merged_pr = data.build().add();
+        set_pull_request(&mut data, &open_pr, PullRequestState::OPEN);
+        set_pull_request(&mut data, &closed_pr, PullRequestState::CLOSED);
+        set_pull_request(&mut data, &merged_pr, PullRequestState::MERGED);
+
+        let filters = Filters {
+            hide_closed: true,
+            ..Default::default()
+        };
+
+        assert!(filters.should_include(data.work_items.get(&open_pr).unwrap()));
+        assert!(!filters.should_include(data.work_items.get(&closed_pr).unwrap()));
+        assert!(!filters.should_include(data.work_items.get(&merged_pr).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_should_include_hide_closed_keeps_items_with_unloaded_state() {
+        // Items whose underlying GitHub state hasn't loaded yet have an
+        // `is_closed()` of `DelayLoad::NotLoaded`; in that case we keep the
+        // item visible rather than guessing.
+        let mut data = TestData::default();
+        let id = data.build().add();
+        let item = data.work_items.get_mut(&id).unwrap();
+        item.data = WorkItemData::Issue(Issue::default());
+
+        let filters = Filters {
+            hide_closed: true,
+            ..Default::default()
+        };
+
+        assert!(matches!(item.is_closed(), DelayLoad::NotLoaded));
+        assert!(filters.should_include(item));
+    }
+
+    #[test]
+    fn test_filters_active_filter_count_includes_hide_closed() {
+        let mut filters = Filters::default();
+        assert_eq!(filters.active_filter_count(), 0);
+
+        filters.hide_closed = true;
+        assert_eq!(filters.active_filter_count(), 1);
+
+        filters
+            .status
+            .push(Some(FieldOptionId("status-a".to_string())));
+        assert_eq!(filters.active_filter_count(), 2);
+    }
+
+    fn set_pull_request(data: &mut TestData, id: &WorkItemId, state: PullRequestState) {
+        data.work_items.get_mut(id).unwrap().data = WorkItemData::PullRequest(PullRequest {
+            state: state.into(),
+            assignees: Vec::new(),
+        });
     }
 }

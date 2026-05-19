@@ -1,13 +1,48 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Axis } from "$lib/bindings/Axis";
+import type { Filters } from "$lib/bindings/Filters";
 import type { PivotConfig } from "$lib/bindings/PivotConfig";
-import { applyText, getToggleChecked, setToggle } from "./recipeBarState";
+import {
+  applyText,
+  getFilterToggleChecked,
+  getRenderToggleChecked,
+  getToggleChecked,
+  setFilterToggle,
+  setRenderToggle,
+  setToggle,
+  type RenderTogglesState,
+} from "./recipeBarState";
 
 function makeConfig(recipe: Axis[] = []): PivotConfig {
   return {
     recipe,
     multiValueStrategy: "combined",
     showGhostAncestors: true,
+  };
+}
+
+function makeFilters(overrides: Partial<Filters> = {}): Filters {
+  return {
+    status: [],
+    blocked: [],
+    epic: [],
+    iteration: [],
+    kind: [],
+    workstream: [],
+    estimate: [],
+    priority: [],
+    hideClosed: false,
+    ...overrides,
+  };
+}
+
+function makeRenderState(
+  overrides: Partial<RenderTogglesState> = {}
+): RenderTogglesState {
+  return {
+    showCounts: false,
+    collapseSingleValue: false,
+    ...overrides,
   };
 }
 
@@ -225,5 +260,111 @@ describe("RecipeBar Explode checkbox — onApply wiring", () => {
       multiValueStrategy: "explode",
       showGhostAncestors: false,
     });
+  });
+});
+
+describe("setFilterToggle", () => {
+  it("sets hideClosed to true when toggled on", () => {
+    expect(setFilterToggle(makeFilters(), "hideClosed", true).hideClosed).toBe(
+      true
+    );
+  });
+
+  it("sets hideClosed to false when toggled off", () => {
+    expect(
+      setFilterToggle(makeFilters({ hideClosed: true }), "hideClosed", false)
+        .hideClosed
+    ).toBe(false);
+  });
+
+  it("preserves the other Filters fields when hideClosed flips", () => {
+    const initial = makeFilters({ status: ["s1"], kind: ["k1"] });
+    const next = setFilterToggle(initial, "hideClosed", true);
+    expect(next).toEqual({ ...initial, hideClosed: true });
+    // Must not mutate the source object.
+    expect(initial.hideClosed).toBe(false);
+  });
+});
+
+describe("getFilterToggleChecked — initial state reflects bound Filters", () => {
+  it("reports hideClosed as checked when Filters.hideClosed is true", () => {
+    expect(
+      getFilterToggleChecked(makeFilters({ hideClosed: true }), "hideClosed")
+    ).toBe(true);
+  });
+
+  it("reports hideClosed as unchecked when Filters.hideClosed is false", () => {
+    expect(getFilterToggleChecked(makeFilters(), "hideClosed")).toBe(false);
+  });
+});
+
+describe("setRenderToggle", () => {
+  it("sets showCounts to true when toggled on", () => {
+    expect(
+      setRenderToggle(makeRenderState(), "showCounts", true).showCounts
+    ).toBe(true);
+  });
+
+  it("sets showCounts to false when toggled off", () => {
+    expect(
+      setRenderToggle(
+        makeRenderState({ showCounts: true }),
+        "showCounts",
+        false
+      ).showCounts
+    ).toBe(false);
+  });
+
+  it("sets collapseSingleValue to true when toggled on", () => {
+    expect(
+      setRenderToggle(makeRenderState(), "collapseSingleValue", true)
+        .collapseSingleValue
+    ).toBe(true);
+  });
+
+  it("sets collapseSingleValue to false when toggled off", () => {
+    expect(
+      setRenderToggle(
+        makeRenderState({ collapseSingleValue: true }),
+        "collapseSingleValue",
+        false
+      ).collapseSingleValue
+    ).toBe(false);
+  });
+
+  it("does not mutate the source RenderTogglesState", () => {
+    const initial = makeRenderState({ showCounts: false });
+    const next = setRenderToggle(initial, "showCounts", true);
+    expect(initial.showCounts).toBe(false);
+    expect(next.showCounts).toBe(true);
+    // Other render toggles preserved.
+    expect(next.collapseSingleValue).toBe(initial.collapseSingleValue);
+  });
+});
+
+describe("getRenderToggleChecked — initial state reflects bound RenderTogglesState", () => {
+  it("reports showCounts as checked when the bound value is true", () => {
+    expect(
+      getRenderToggleChecked(makeRenderState({ showCounts: true }), "showCounts")
+    ).toBe(true);
+  });
+
+  it("reports showCounts as unchecked when the bound value is false", () => {
+    expect(getRenderToggleChecked(makeRenderState(), "showCounts")).toBe(false);
+  });
+
+  it("reports collapseSingleValue as checked when the bound value is true", () => {
+    expect(
+      getRenderToggleChecked(
+        makeRenderState({ collapseSingleValue: true }),
+        "collapseSingleValue"
+      )
+    ).toBe(true);
+  });
+
+  it("reports collapseSingleValue as unchecked when the bound value is false", () => {
+    expect(
+      getRenderToggleChecked(makeRenderState(), "collapseSingleValue")
+    ).toBe(false);
   });
 });

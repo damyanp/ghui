@@ -244,6 +244,7 @@
       workstream: [],
       estimate: [],
       priority: [],
+      hideClosed: false,
     },
     pivotConfig: {
       recipe: [{ kind: "pivot", field: "epic" }, { kind: "hierarchy" }],

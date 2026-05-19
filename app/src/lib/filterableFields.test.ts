@@ -55,6 +55,7 @@ function makeData(): Data {
       workstream: [],
       estimate: [],
       priority: [],
+      hideClosed: false,
     },
   } as unknown as Data;
 }
@@ -116,6 +117,13 @@ describe("filterable field metadata", () => {
     expect(isFilterableField(data, "__proto__")).toBe(false);
     expect(isFilterableField(data, "toString")).toBe(false);
     expect(isFilterableField(data, "hasOwnProperty")).toBe(false);
+    // `hideClosed` lives on Filters but is a render-only boolean toggle, not
+    // a per-field option-id list — it must NOT be reported as filterable.
+    expect(isFilterableField(data, "hideClosed")).toBe(false);
+  });
+
+  it("getFilterableFields excludes non-field filter keys like hideClosed", () => {
+    expect(getFilterableFields(makeData())).not.toContain("hideClosed");
   });
 });
 
