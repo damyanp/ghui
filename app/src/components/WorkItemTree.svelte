@@ -90,8 +90,14 @@
     // edits, refresh, filtering, or revert. Show only a "Jump to primary"
     // action (or a text fallback when no primary is in view) so the menu is
     // never empty and edit affordances stay hidden.
+    //
+    // Ghost rows are always work-item rows (groups are never ghosts), so
+    // `node.data` narrows to the `workItem` variant here. We pass the
+    // underlying work-item id — not `node.id`, which is render-position
+    // unique and won't match other rows for the same work item.
     if (node.isGhost) {
-      return ghostContextMenuItems(rows, node.id, jumpToRowById);
+      if (node.data.type !== "workItem") return [{ type: "text", title: "No actions" }];
+      return ghostContextMenuItems(rows, node.data.workItemId, jumpToRowById);
     }
 
     let items: MenuItem[] = [];
@@ -184,7 +190,8 @@
     }
 
     if (node.data.type === "workItem") {
-      let item = context.data.workItems[node.id];
+      const workItemId = node.data.workItemId;
+      let item = context.data.workItems[workItemId];
       if (item) {
         const filterField = getFilterableField(column);
         if (filterField) {
@@ -194,7 +201,7 @@
         items.push({
           type: "action",
           title: "Refresh",
-          action: () => context.itemUpdateBatcher.add(node.id, true),
+          action: () => context.itemUpdateBatcher.add(workItemId, true),
         });
 
         if (item.data.type === "issue") {
@@ -421,7 +428,8 @@
   }
 
   function getItem(n: Node) {
-    return context.data.workItems[n.id];
+    if (n.data.type !== "workItem") return undefined;
+    return context.data.workItems[n.data.workItemId];
   }
 
   function renderTextCell(getText: (item: WorkItem) => string | null) {
@@ -454,22 +462,28 @@
 
     let change: Change | undefined;
 
+    // Both `draggedRowId` and `droppedOntoRowId` are render-position keys
+    // (path-prefixed Node ids), not WorkItemIds. Resolve the underlying
+    // work-item ids from the nodes' `data` payload before recording the
+    // change — Change.workItemId / setParent.value must reference the
+    // real WorkItemId, not the render key.
     if (draggedNode.data.type === "workItem") {
+      const draggedWorkItemId = draggedNode.data.workItemId;
       if (targetNode.data.type === "group") {
         // Currently the only group is epic
         change = {
-          workItemId: draggedRowId,
+          workItemId: draggedWorkItemId,
           data: {
             type: "epic",
             value: targetNode.data.fieldOptionId,
           },
         };
-      } else {
+      } else if (targetNode.data.type === "workItem") {
         change = {
-          workItemId: draggedRowId,
+          workItemId: draggedWorkItemId,
           data: {
             type: "setParent",
-            value: droppedOntoRowId,
+            value: targetNode.data.workItemId,
           },
         };
       }
@@ -479,7 +493,7 @@
   }
 
   function onRowFirstVisible(row: Node) {
-    if (row.data.type === "workItem") context.updateWorkItem(row.id);
+    if (row.data.type === "workItem") context.updateWorkItem(row.data.workItemId);
   }
 
   function isCurrentIteration(option: FieldOption<Iteration>) {

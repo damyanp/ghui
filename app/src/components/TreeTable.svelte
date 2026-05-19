@@ -1,4 +1,6 @@
 <script lang="ts" module>
+  import type { GhostAwareNodeData } from "$lib/ghostRouting";
+
   export type Column<ITEM> = {
     name: string;
     width: string;
@@ -8,7 +10,11 @@
     renderMenuContent?: Snippet<[Column<ITEM>]>;
   };
 
-  type Row<T> = {
+  // `data` carries a discriminated union so ghost-routing code can look up
+  // a row's underlying work-item id (only `Node.id` — the render-position
+  // unique key — is exposed here). `T` must extend the minimal shape so
+  // `handleRowClick` can narrow on `row.data.type` without unsafe casts.
+  type Row<T extends GhostAwareNodeData> = {
     level: number;
     id: string;
     hasChildren: boolean;
@@ -18,7 +24,7 @@
     data: T;
   };
 
-  type Props<T, GROUP, ITEM> = {
+  type Props<T extends GhostAwareNodeData, GROUP, ITEM> = {
     rows: Row<T>[];
     columns: Column<ITEM>[];
     hiddenColumns: Column<ITEM>[];
@@ -38,7 +44,7 @@
   };
 </script>
 
-<script lang="ts" generics="T, GROUP, ITEM">
+<script lang="ts" generics="T extends GhostAwareNodeData, GROUP, ITEM">
   import { ChevronDown, ChevronRight, CirclePlus } from "@lucide/svelte";
   import { tick, type Snippet } from "svelte";
   import TreeTableContextMenu, {
@@ -61,7 +67,7 @@
     ...props
   }: Props<T, GROUP, ITEM> = $props();
 
-  type MRow<T> = Row<T> & { modifiedDescendent: boolean };
+  type MRow<U extends GhostAwareNodeData> = Row<U> & { modifiedDescendent: boolean };
 
   let filterText = $state<string>("");
 
@@ -216,7 +222,12 @@
     const target = e.target as HTMLElement | null;
     if (target?.closest("button, a")) return;
 
-    const primaryId = findPrimaryRow(rows, row.id)?.id;
+    // Ghost rows are always work-item rows (groups are never ghosts —
+    // see recipe_builder.rs). Look up the primary occurrence by the
+    // underlying work-item id rather than the render-position key,
+    // since two rows with the same WorkItemId now have distinct ids.
+    if (row.data.type !== "workItem") return;
+    const primaryId = findPrimaryRow(rows, row.data.workItemId)?.id;
     if (!primaryId) {
       console.debug(
         `[TreeTable] ghost click on ${row.id}: no primary occurrence in view`,

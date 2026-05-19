@@ -199,7 +199,7 @@
         hasChildren: false,
         isModified: false,
         isGhost: false,
-        data: { type: "workItem" },
+        data: { type: "workItem", workItemId: "i-1" },
       },
       {
         level: 0,
@@ -207,7 +207,7 @@
         hasChildren: false,
         isModified: false,
         isGhost: false,
-        data: { type: "workItem" },
+        data: { type: "workItem", workItemId: "i-2" },
       },
       {
         level: 0,
@@ -215,7 +215,7 @@
         hasChildren: false,
         isModified: false,
         isGhost: false,
-        data: { type: "workItem" },
+        data: { type: "workItem", workItemId: "i-3" },
       },
       {
         level: 0,
@@ -223,7 +223,7 @@
         hasChildren: false,
         isModified: false,
         isGhost: false,
-        data: { type: "workItem" },
+        data: { type: "workItem", workItemId: "i-4" },
       },
       {
         level: 0,
@@ -231,7 +231,7 @@
         hasChildren: false,
         isModified: false,
         isGhost: false,
-        data: { type: "workItem" },
+        data: { type: "workItem", workItemId: "i-5" },
       },
     ],
     originalWorkItems: {},
