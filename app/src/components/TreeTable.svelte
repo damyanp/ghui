@@ -13,6 +13,7 @@
     id: string;
     hasChildren: boolean;
     isModified: boolean;
+    isGhost: boolean;
     isGroup: boolean;
     data: T;
   };

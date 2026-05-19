@@ -4,7 +4,7 @@ use ghui_app::{
     telemetry::{self, TelemetryEvent},
     DataState, DataUpdate, Filters, ItemToUpdate, RefreshSummary,
 };
-use github_graphql::pivot::Axis;
+use github_graphql::pivot::{Axis, PivotConfig};
 use tauri::{ipc::Channel, State};
 
 #[tauri::command]
@@ -104,6 +104,20 @@ pub async fn set_filters(
     });
     let mut data_state = data_state.lock().await;
     data_state.set_filters(filters).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_pivot_config(data_state: State<'_, DataState>) -> TauriCommandResult<PivotConfig> {
+    Ok(data_state.lock().await.get_pivot_config())
+}
+
+#[tauri::command]
+pub async fn set_pivot_config(
+    data_state: State<'_, DataState>,
+    cfg: PivotConfig,
+) -> TauriCommandResult<()> {
+    data_state.lock().await.set_pivot_config(cfg).await?;
     Ok(())
 }
 

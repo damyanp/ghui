@@ -198,6 +198,7 @@
         id: "i-1",
         hasChildren: false,
         isModified: false,
+        isGhost: false,
         data: { type: "workItem" },
       },
       {
@@ -205,6 +206,7 @@
         id: "i-2",
         hasChildren: false,
         isModified: false,
+        isGhost: false,
         data: { type: "workItem" },
       },
       {
@@ -212,6 +214,7 @@
         id: "i-3",
         hasChildren: false,
         isModified: false,
+        isGhost: false,
         data: { type: "workItem" },
       },
       {
@@ -219,6 +222,7 @@
         id: "i-4",
         hasChildren: false,
         isModified: false,
+        isGhost: false,
         data: { type: "workItem" },
       },
       {
@@ -226,6 +230,7 @@
         id: "i-5",
         hasChildren: false,
         isModified: false,
+        isGhost: false,
         data: { type: "workItem" },
       },
     ],
@@ -239,6 +244,11 @@
       workstream: [],
       estimate: [],
       priority: [],
+    },
+    pivotConfig: {
+      recipe: [{ kind: "pivot", field: "epic" }, { kind: "hierarchy" }],
+      multiValueStrategy: "combined",
+      showGhostAncestors: true,
     },
     changes: { data: {} },
     canUndo: false,
