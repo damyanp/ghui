@@ -1,13 +1,9 @@
 <script lang="ts">
+  import type { Axis } from "$lib/bindings/Axis";
   import type { PivotConfig } from "$lib/bindings/PivotConfig";
+  import { parseRecipe, recipeToString } from "$lib/recipeParser";
   import { PRESETS } from "$lib/recipePresets";
-  import {
-    applyPreset,
-    applyRecipeText,
-    format,
-    setToggle,
-    type RecipeBarToggle,
-  } from "$lib/recipeText";
+  import { applyText, setToggle, type RecipeBarToggle } from "./recipeBarState";
 
   let { value = $bindable<PivotConfig>(), onApply }: {
     value: PivotConfig;
@@ -31,50 +27,53 @@
     },
   ];
 
-  const shellOnlyToggles = [
-    "Show counts",
-    "Collapse single-valued groups",
-    "Hide closed items",
-  ];
-
-  let recipeText = $state(format(value.recipe));
+  let recipeText = $state("");
   let errorText = $state<string | null>(null);
-  let lastAppliedRecipeText = $state(format(value.recipe));
+
+  // Tracks the recipe reference we just emitted so the sync effect can skip
+  // redundant re-formatting when the update originated here.
+  let lastEmittedRecipe: Axis[] | null = null;
 
   $effect(() => {
-    const formatted = format(value.recipe);
-    if (formatted !== lastAppliedRecipeText) {
-      recipeText = formatted;
-      lastAppliedRecipeText = formatted;
-      errorText = null;
-    }
+    const recipe = value.recipe;
+    if (recipe === lastEmittedRecipe) return;
+    let cancelled = false;
+    recipeToString(recipe).then((text) => {
+      if (!cancelled) {
+        recipeText = text;
+        errorText = null;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   });
 
   function emit(next: PivotConfig): void {
+    lastEmittedRecipe = next.recipe;
     value = next;
-    lastAppliedRecipeText = format(next.recipe);
-    recipeText = lastAppliedRecipeText;
-    errorText = null;
     onApply(next);
   }
 
-  function applyCurrentText(): void {
-    try {
-      emit(applyRecipeText(value, recipeText));
-    } catch (error) {
-      errorText = error instanceof Error ? error.message : String(error);
+  async function applyCurrentText(): Promise<void> {
+    const result = await applyText(recipeText, value, parseRecipe, recipeToString);
+    if (result.ok) {
+      recipeText = result.formattedText;
+      emit(result.config);
+    } else {
+      errorText = result.error;
     }
   }
 
-  function pickPreset(nextRecipe: string): void {
+  async function pickPreset(nextRecipe: string): Promise<void> {
     if (!nextRecipe) return;
-
     recipeText = nextRecipe;
-
-    try {
-      emit(applyPreset(value, nextRecipe));
-    } catch (error) {
-      errorText = error instanceof Error ? error.message : String(error);
+    const result = await applyText(nextRecipe, value, parseRecipe, recipeToString);
+    if (result.ok) {
+      recipeText = result.formattedText;
+      emit(result.config);
+    } else {
+      errorText = result.error;
     }
   }
 
@@ -145,22 +144,12 @@
           <span>{toggle.label}</span>
         </label>
       {/each}
-
-      {#each shellOnlyToggles as label}
-        <label
-          class="flex items-center gap-2 text-sm text-surface-700-300"
-          title="Blocked on additional PivotConfig bindings"
-        >
-          <input type="checkbox" disabled />
-          <span>{label}</span>
-        </label>
-      {/each}
     </div>
   </div>
 
   {#if errorText}
     <div
-      class="rounded border border-error-500 bg-error-50 px-3 py-2 text-sm text-error-700"
+      class="rounded border border-error-500 bg-error-50-950 px-3 py-2 text-sm text-error-700-300"
       role="alert"
     >
       {errorText}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import RecipeBar from "../../../components/RecipeBar.svelte";
   import type { PivotConfig } from "$lib/bindings/PivotConfig";
-  import { format } from "$lib/recipeText";
+  import { recipeToString } from "$lib/recipeParser";
 
   const initialConfig: PivotConfig = {
     recipe: [{ kind: "pivot", field: "epic" }, { kind: "hierarchy" }],
@@ -12,7 +12,14 @@
   let value = $state<PivotConfig>(structuredClone(initialConfig));
 
   let applied = $state<PivotConfig>(structuredClone(initialConfig));
-  const formattedRecipe = $derived(format(applied.recipe));
+  let formattedRecipe = $state("");
+
+  $effect(() => {
+    const recipe = applied.recipe;
+    recipeToString(recipe).then((text) => {
+      formattedRecipe = text;
+    });
+  });
 </script>
 
 <svelte:head>
