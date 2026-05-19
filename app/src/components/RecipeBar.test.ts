@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Axis } from "$lib/bindings/Axis";
 import type { PivotConfig } from "$lib/bindings/PivotConfig";
-import { applyText, setToggle } from "./recipeBarState";
+import { applyText, getToggleChecked, setToggle } from "./recipeBarState";
 
 function makeConfig(recipe: Axis[] = []): PivotConfig {
   return {
@@ -129,5 +129,101 @@ describe("setToggle", () => {
     expect(
       setToggle(makeConfig(), "showGhostAncestors", false).showGhostAncestors
     ).toBe(false);
+  });
+});
+
+describe("getToggleChecked — initial state reflects bound PivotConfig", () => {
+  it("reports explodeMulti as checked when multiValueStrategy is 'explode'", () => {
+    const config: PivotConfig = {
+      ...makeConfig(),
+      multiValueStrategy: "explode",
+    };
+    expect(getToggleChecked(config, "explodeMulti")).toBe(true);
+  });
+
+  it("reports explodeMulti as unchecked when multiValueStrategy is 'combined'", () => {
+    const config: PivotConfig = {
+      ...makeConfig(),
+      multiValueStrategy: "combined",
+    };
+    expect(getToggleChecked(config, "explodeMulti")).toBe(false);
+  });
+
+  it("reports showGhostAncestors according to the bound config value", () => {
+    expect(
+      getToggleChecked(
+        { ...makeConfig(), showGhostAncestors: true },
+        "showGhostAncestors"
+      )
+    ).toBe(true);
+    expect(
+      getToggleChecked(
+        { ...makeConfig(), showGhostAncestors: false },
+        "showGhostAncestors"
+      )
+    ).toBe(false);
+  });
+});
+
+describe("RecipeBar Explode checkbox — onApply wiring", () => {
+  // These tests pin the wiring used in RecipeBar.svelte's `updateToggle`
+  // handler: `emit(setToggle(value, toggle, checked))` where `emit` ends
+  // by calling `onApply(next)`. Keeping the test free of Svelte runtime
+  // per the repo convention (extract pure logic, test the helper).
+  function simulateCheckboxChange(
+    value: PivotConfig,
+    toggle: Parameters<typeof setToggle>[1],
+    checked: boolean,
+    onApply: (cfg: PivotConfig) => void
+  ): void {
+    onApply(setToggle(value, toggle, checked));
+  }
+
+  it("calls onApply with multiValueStrategy: 'explode' when toggled on", () => {
+    const onApply = vi.fn<(cfg: PivotConfig) => void>();
+    const initial: PivotConfig = {
+      ...makeConfig(),
+      multiValueStrategy: "combined",
+    };
+
+    simulateCheckboxChange(initial, "explodeMulti", true, onApply);
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ multiValueStrategy: "explode" })
+    );
+  });
+
+  it("calls onApply with multiValueStrategy: 'combined' when toggled off", () => {
+    const onApply = vi.fn<(cfg: PivotConfig) => void>();
+    const initial: PivotConfig = {
+      ...makeConfig(),
+      multiValueStrategy: "explode",
+    };
+
+    simulateCheckboxChange(initial, "explodeMulti", false, onApply);
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ multiValueStrategy: "combined" })
+    );
+  });
+
+  it("preserves the rest of the PivotConfig when emitting the toggle change", () => {
+    const onApply = vi.fn<(cfg: PivotConfig) => void>();
+    const recipe: Axis[] = [{ kind: "pivot", field: "assignee" }];
+    const initial: PivotConfig = {
+      recipe,
+      multiValueStrategy: "combined",
+      showGhostAncestors: false,
+    };
+
+    simulateCheckboxChange(initial, "explodeMulti", true, onApply);
+
+    expect(onApply).toHaveBeenCalledWith({
+      recipe,
+      multiValueStrategy: "explode",
+      showGhostAncestors: false,
+    });
   });
 });
