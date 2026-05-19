@@ -17,6 +17,7 @@ import type { LogEntry } from "./bindings/LogEntry";
 import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
+import type { PivotConfig } from "./bindings/PivotConfig";
 import * as filterableFields from "./filterableFields";
 
 const key = Symbol("WorkItemContext");
@@ -256,6 +257,10 @@ export class WorkItemContext {
   ): void {
     this.data.filters[fieldName as keyof Filters] = filter;
     invoke("set_filters", { filters: this.data.filters });
+  }
+
+  public setPivotConfig(cfg: PivotConfig): void {
+    invoke("set_pivot_config", { cfg });
   }
 
   public async setFieldValue(
