@@ -12,14 +12,12 @@ use crate::Filters;
 
 use super::{Node, NodeData};
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum SortValue {
     Index(usize),
     Text(String),
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct FieldValue {
     key: String,
@@ -28,7 +26,6 @@ struct FieldValue {
     field_option_id: Option<FieldOptionId>,
 }
 
-#[allow(dead_code)]
 struct Bucket {
     key: String,
     label: String,
@@ -37,7 +34,6 @@ struct Bucket {
     items: Vec<WorkItemId>,
 }
 
-#[allow(dead_code)]
 pub(crate) struct RecipeNodeBuilder<'a> {
     fields: &'a Fields,
     work_items: &'a WorkItems,
@@ -47,7 +43,6 @@ pub(crate) struct RecipeNodeBuilder<'a> {
     nodes: Vec<Node>,
 }
 
-#[allow(dead_code)]
 impl<'a> RecipeNodeBuilder<'a> {
     pub fn new(
         fields: &'a Fields,
@@ -665,10 +660,10 @@ mod tests {
 
     use github_graphql::{
         data::{
-            IssueState, PullRequest, PullRequestState, WorkItemData, WorkItemId,
-            test_helpers::TestData,
+            Issue, IssueState, ProjectItem, PullRequest, PullRequestState, UpdateType, WorkItem,
+            WorkItemData, WorkItemId, test_helpers::TestData,
         },
-        pivot::{Axis, MultiValueStrategy, PivotConfig, parse_recipe},
+        pivot::{Axis, MultiValueStrategy, PivotConfig, PivotField, parse_recipe},
     };
     use serde_json::Value;
 
@@ -1140,5 +1135,176 @@ mod tests {
     fn set_workstream(data: &mut TestData, id: &WorkItemId, value: Option<&str>) {
         let option = data.fields.workstream.option_id(value).cloned();
         data.work_items.get_mut(id).unwrap().project_item.workstream = option.into();
+    }
+
+    #[test]
+    fn test_recipe_node_builder_filters_closed() {
+        let mut data = TestData::default();
+
+        let child1_id = data.build().status("Closed").add();
+        let child2_id = data.build().status("Closed").add();
+        let parent1_id = data
+            .build()
+            .sub_issues(&[&child1_id, &child2_id])
+            .status("Closed")
+            .add();
+
+        let grandchild1_id = data.build().status("Open").add();
+        let child3_id = data
+            .build()
+            .sub_issues(&[&grandchild1_id])
+            .status("Closed")
+            .add();
+        let parent2_id = data
+            .build()
+            .sub_issues(&[&child3_id])
+            .status("Closed")
+            .add();
+
+        let filters = Filters {
+            status: vec![Some(FieldOptionId("id(Closed)".into()))],
+            ..Filters::default()
+        };
+        let original_work_items = HashMap::new();
+        let config = PivotConfig {
+            recipe: vec![Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: false,
+        };
+        let mut builder = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        );
+        let nodes = builder.build();
+
+        assert!(!nodes.iter().any(|n| n.id == parent1_id.0));
+        assert!(!nodes.iter().any(|n| n.id == child1_id.0));
+        assert!(!nodes.iter().any(|n| n.id == child2_id.0));
+
+        assert!(nodes.iter().any(|n| n.id == grandchild1_id.0));
+        assert!(nodes.iter().any(|n| n.id == child3_id.0));
+        assert!(nodes.iter().any(|n| n.id == parent2_id.0));
+    }
+
+    #[test]
+    fn test_recipe_node_builder_new_item_after_update_appears() {
+        let mut data = TestData::default();
+        let existing_id = data.build().epic("EpicA").add();
+
+        let new_item = WorkItem {
+            id: WorkItemId("new-item".to_owned()),
+            project_item: {
+                let mut pi = ProjectItem::default_loaded();
+                pi.epic = data.fields.epic.option_id(Some("EpicA")).cloned();
+                pi
+            },
+            data: WorkItemData::Issue(Issue::default_loaded()),
+            ..WorkItem::default_loaded()
+        };
+        let update_type = data.work_items.update(new_item);
+        assert_eq!(update_type, UpdateType::ChangesHierarchy);
+
+        let filters = Filters::default();
+        let original_work_items = HashMap::new();
+        let config = PivotConfig {
+            recipe: vec![Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: false,
+        };
+        let mut builder = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        );
+        let nodes = builder.build();
+
+        assert!(
+            nodes.iter().any(|n| n.id == existing_id.0),
+            "Existing item should still be in nodes"
+        );
+        assert!(
+            nodes.iter().any(|n| n.id == "new-item"),
+            "New item added via update() should appear in nodes"
+        );
+    }
+
+    #[test]
+    fn test_recipe_node_builder_non_default_recipe_produces_correct_shape() {
+        let mut data = TestData::default();
+        let item1 = data.build().add();
+        let item2 = data.build().add();
+        let item3 = data.build().add();
+
+        set_workstream(&mut data, &item1, Some("WS1"));
+        set_workstream(&mut data, &item2, Some("WS1"));
+        set_workstream(&mut data, &item3, Some("WS2"));
+
+        set_title(&mut data, &item1, "Alpha");
+        set_title(&mut data, &item2, "Beta");
+        set_title(&mut data, &item3, "Gamma");
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Workstream), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: false,
+        };
+
+        let filters = Filters::default();
+        let original_work_items = HashMap::new();
+        let mut builder = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        );
+        let nodes = builder.build();
+
+        // 2 group nodes (WS1, WS2) + 3 item nodes
+        assert_eq!(nodes.len(), 5);
+
+        let group_names: Vec<&str> = nodes
+            .iter()
+            .filter_map(|n| match &n.data {
+                NodeData::Group { name, .. } => Some(name.as_str()),
+                NodeData::WorkItem => None,
+            })
+            .collect();
+        assert_eq!(group_names, vec!["WS1", "WS2"]);
+
+        // Items in WS1 appear at level 1; item in WS2 also at level 1
+        let item1_node = nodes.iter().find(|n| n.id == item1.0).unwrap();
+        let item2_node = nodes.iter().find(|n| n.id == item2.0).unwrap();
+        let item3_node = nodes.iter().find(|n| n.id == item3.0).unwrap();
+        assert_eq!(item1_node.level, 1);
+        assert_eq!(item2_node.level, 1);
+        assert_eq!(item3_node.level, 1);
+
+        // WS1 group comes before WS2 group
+        let ws1_pos = nodes
+            .iter()
+            .position(|n| matches!(&n.data, NodeData::Group { name, .. } if name == "WS1"))
+            .unwrap();
+        let ws2_pos = nodes
+            .iter()
+            .position(|n| matches!(&n.data, NodeData::Group { name, .. } if name == "WS2"))
+            .unwrap();
+        assert!(ws1_pos < ws2_pos, "WS1 group should precede WS2 group");
+
+        // item1 and item2 appear before item3 (they're under WS1 which sorts first)
+        let item3_pos = nodes.iter().position(|n| n.id == item3.0).unwrap();
+        assert!(
+            nodes.iter().position(|n| n.id == item1.0).unwrap() < item3_pos,
+            "WS1 items should appear before WS2 items"
+        );
+        assert!(
+            nodes.iter().position(|n| n.id == item2.0).unwrap() < item3_pos,
+            "WS1 items should appear before WS2 items"
+        );
     }
 }
