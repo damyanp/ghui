@@ -81,7 +81,7 @@ impl<'a> RecipeNodeBuilder<'a> {
             let mut items = items;
             items.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
             for id in items {
-                self.push_item(&id, level, false, false);
+                self.push_item(&id, level, false, false, path);
             }
             return;
         }
@@ -190,7 +190,13 @@ impl<'a> RecipeNodeBuilder<'a> {
         path: &str,
     ) {
         let children = self.children_in_scope(id, scope_ids);
-        self.push_item(id, level, ghost_ids.contains(id), !children.is_empty());
+        self.push_item(
+            id,
+            level,
+            ghost_ids.contains(id),
+            !children.is_empty(),
+            path,
+        );
 
         if children.is_empty() {
             return;
@@ -564,14 +570,23 @@ impl<'a> RecipeNodeBuilder<'a> {
         }
     }
 
-    fn push_item(&mut self, id: &WorkItemId, level: u32, is_ghost: bool, has_children: bool) {
+    fn push_item(
+        &mut self,
+        id: &WorkItemId,
+        level: u32,
+        is_ghost: bool,
+        has_children: bool,
+        path: &str,
+    ) {
         if self.item(id).is_none() {
             return;
         }
         self.nodes.push(Node {
             level,
-            id: id.0.clone(),
-            data: NodeData::WorkItem,
+            id: self.child_path(path, id),
+            data: NodeData::WorkItem {
+                work_item_id: id.clone(),
+            },
             has_children,
             is_modified: self.original_work_items.contains_key(id),
             is_ghost,
@@ -982,6 +997,71 @@ mod tests {
         );
     }
 
+    /// Regression test for the `each_key_duplicate` Svelte crash that hit
+    /// users running `Pivot(Epic) + Hierarchy` with `show_ghost_ancestors`
+    /// on. With that recipe, the same work item legitimately appears in
+    /// multiple Epic buckets — once as a real item in its own bucket and
+    /// again as a ghost ancestor in every other Epic bucket whose items
+    /// descend from it. Each [`Node`] must therefore carry a
+    /// render-position-unique `id` (path-prefixed) so the frontend's keyed
+    /// `{#each}` doesn't see duplicates and break expand/collapse.
+    #[test]
+    fn test_recipe_node_builder_no_duplicate_node_ids_with_ghost_ancestors_across_buckets() {
+        let mut data = TestData::default();
+        let child = data.build().epic("EpicB").add();
+        let parent = data.build().epic("EpicA").sub_issues(&[&child]).add();
+        set_title(&mut data, &child, "Child in EpicB");
+        set_title(&mut data, &parent, "Parent in EpicA");
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Epic), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        let filters = Filters::default();
+        let original_work_items = HashMap::new();
+        let mut builder = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        );
+        let nodes = builder.build();
+
+        // Every Node.id must be unique — this is what the Svelte `{#each}`
+        // keys on, and a collision causes `each_key_duplicate` at runtime.
+        let ids: std::collections::HashSet<&str> = nodes.iter().map(|n| n.id.as_str()).collect();
+        assert_eq!(
+            ids.len(),
+            nodes.len(),
+            "duplicate Node.id values found in {nodes:#?}"
+        );
+
+        // The parent should appear in *both* Epic buckets: once as the real
+        // item in EpicA, and once as a ghost ancestor in EpicB (anchoring
+        // its child). This is the intended UX and the source of the
+        // duplicate ids before the fix.
+        let parent_occurrences: Vec<&Node> = nodes
+            .iter()
+            .filter(|n| match &n.data {
+                NodeData::WorkItem { work_item_id } => work_item_id == &parent,
+                _ => false,
+            })
+            .collect();
+        assert_eq!(
+            parent_occurrences.len(),
+            2,
+            "parent should appear in both Epic buckets (once real, once ghost)"
+        );
+        let ghost_flags: Vec<bool> = parent_occurrences.iter().map(|n| n.is_ghost).collect();
+        assert!(
+            ghost_flags.contains(&false) && ghost_flags.contains(&true),
+            "parent should appear once as real (is_ghost=false) and once as ghost (is_ghost=true), got is_ghost flags {ghost_flags:?}"
+        );
+    }
+
     fn build_snapshot_fixture() -> TestData {
         let mut data = TestData::default();
 
@@ -1074,9 +1154,9 @@ mod tests {
                 NodeData::Group { name, .. } => {
                     format!("{} group {} {}", node.level, node.id, name)
                 }
-                NodeData::WorkItem => format!(
+                NodeData::WorkItem { work_item_id } => format!(
                     "{} item {} ghost={} children={}",
-                    node.level, node.id, node.is_ghost, node.has_children
+                    node.level, work_item_id.0, node.is_ghost, node.has_children
                 ),
             })
             .collect::<Vec<_>>()
@@ -1180,13 +1260,20 @@ mod tests {
         );
         let nodes = builder.build();
 
-        assert!(!nodes.iter().any(|n| n.id == parent1_id.0));
-        assert!(!nodes.iter().any(|n| n.id == child1_id.0));
-        assert!(!nodes.iter().any(|n| n.id == child2_id.0));
+        let has_work_item = |id: &WorkItemId| {
+            nodes.iter().any(|n| match &n.data {
+                NodeData::WorkItem { work_item_id } => work_item_id == id,
+                _ => false,
+            })
+        };
 
-        assert!(nodes.iter().any(|n| n.id == grandchild1_id.0));
-        assert!(nodes.iter().any(|n| n.id == child3_id.0));
-        assert!(nodes.iter().any(|n| n.id == parent2_id.0));
+        assert!(!has_work_item(&parent1_id));
+        assert!(!has_work_item(&child1_id));
+        assert!(!has_work_item(&child2_id));
+
+        assert!(has_work_item(&grandchild1_id));
+        assert!(has_work_item(&child3_id));
+        assert!(has_work_item(&parent2_id));
     }
 
     #[test]
@@ -1223,12 +1310,20 @@ mod tests {
         );
         let nodes = builder.build();
 
+        let new_item_id = WorkItemId("new-item".to_owned());
+        let has_work_item = |id: &WorkItemId| {
+            nodes.iter().any(|n| match &n.data {
+                NodeData::WorkItem { work_item_id } => work_item_id == id,
+                _ => false,
+            })
+        };
+
         assert!(
-            nodes.iter().any(|n| n.id == existing_id.0),
+            has_work_item(&existing_id),
             "Existing item should still be in nodes"
         );
         assert!(
-            nodes.iter().any(|n| n.id == "new-item"),
+            has_work_item(&new_item_id),
             "New item added via update() should appear in nodes"
         );
     }
@@ -1272,15 +1367,28 @@ mod tests {
             .iter()
             .filter_map(|n| match &n.data {
                 NodeData::Group { name, .. } => Some(name.as_str()),
-                NodeData::WorkItem => None,
+                NodeData::WorkItem { .. } => None,
             })
             .collect();
         assert_eq!(group_names, vec!["WS1", "WS2"]);
 
         // Items in WS1 appear at level 1; item in WS2 also at level 1
-        let item1_node = nodes.iter().find(|n| n.id == item1.0).unwrap();
-        let item2_node = nodes.iter().find(|n| n.id == item2.0).unwrap();
-        let item3_node = nodes.iter().find(|n| n.id == item3.0).unwrap();
+        let find_item = |id: &WorkItemId| {
+            nodes
+                .iter()
+                .find(|n| matches!(&n.data, NodeData::WorkItem { work_item_id } if work_item_id == id))
+                .unwrap()
+        };
+        let position_item = |id: &WorkItemId| {
+            nodes
+                .iter()
+                .position(|n| matches!(&n.data, NodeData::WorkItem { work_item_id } if work_item_id == id))
+                .unwrap()
+        };
+
+        let item1_node = find_item(&item1);
+        let item2_node = find_item(&item2);
+        let item3_node = find_item(&item3);
         assert_eq!(item1_node.level, 1);
         assert_eq!(item2_node.level, 1);
         assert_eq!(item3_node.level, 1);
@@ -1297,13 +1405,13 @@ mod tests {
         assert!(ws1_pos < ws2_pos, "WS1 group should precede WS2 group");
 
         // item1 and item2 appear before item3 (they're under WS1 which sorts first)
-        let item3_pos = nodes.iter().position(|n| n.id == item3.0).unwrap();
+        let item3_pos = position_item(&item3);
         assert!(
-            nodes.iter().position(|n| n.id == item1.0).unwrap() < item3_pos,
+            position_item(&item1) < item3_pos,
             "WS1 items should appear before WS2 items"
         );
         assert!(
-            nodes.iter().position(|n| n.id == item2.0).unwrap() < item3_pos,
+            position_item(&item2) < item3_pos,
             "WS1 items should appear before WS2 items"
         );
     }

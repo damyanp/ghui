@@ -1,4 +1,4 @@
-use github_graphql::data::FieldOptionId;
+use github_graphql::data::{FieldOptionId, WorkItemId};
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -19,7 +19,8 @@ pub struct Node {
 #[derive(Serialize, TS, Debug)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum NodeData {
-    WorkItem,
+    #[serde(rename_all = "camelCase")]
+    WorkItem { work_item_id: WorkItemId },
     #[serde(rename_all = "camelCase")]
     Group {
         name: String,

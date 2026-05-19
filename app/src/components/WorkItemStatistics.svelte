@@ -49,7 +49,11 @@
     const items: IssueWorkItem[] = [];
     for (const node of context.data.nodes) {
       if (node.data.type !== "workItem") continue;
-      const item = context.data.workItems[node.id];
+      // Node.id is a render-position key (path-prefixed); the real
+      // work-item id lives on `node.data.workItemId`. Using node.id
+      // here returns `undefined` for items in pivot/group recipes
+      // (where the path differs from the bare WorkItemId).
+      const item = context.data.workItems[node.data.workItemId];
       if (isIssueWorkItem(item)) {
         items.push(item);
       }
