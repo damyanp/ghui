@@ -22,3 +22,37 @@
 - 📌 `BufWriter` without explicit flush is an existing pattern (2026-05-18, PR #72 Task 4): `save_fields_to_appdata` and `save_workitems_to_appdata` on main both use `BufWriter::new(writer)` passed to `serde_json::to_writer_pretty`. This predates PR #72. Drop-based flush silently swallows errors. Worth a cleanup PR but don't block individual feature PRs that follow the established pattern.
 - 📌 Team update (2026-05-19): Phase 2 review batch complete. PR #72 ready to merge with 1 test. PR #73 needs architectural decision from Damyan (async vs sync parser tradeoff). PR #70 and #71 need CI runs and title fixes. Lessons learned: (1) PR title convention `pivoting(taskN):` must be enforced early. (2) Dead-stub UI toggles violate "no UI before functionality" — detect and reject during review. (3) Parallel agents can collide on parser implementation strategy (sync TS vs async Tauri delegation) — catch cross-PR coupling in architectural review and escalate if unresolved.
 - 📌 Task 6 wire-up (2026-05-19): Phase 2 tasks pre-completed part of Task 6's spec — `get_pivot_config`/`set_pivot_config` were registered in `tauri::generate_handler!` by PR #72, not Task 6. When a later phase's sub-tasks arrive pre-done by an earlier phase, flag as a plan deviation rather than silently re-doing or skipping them. The single Rust call site switch (`NodeBuilder` → `RecipeNodeBuilder`) is a one-liner; the real task risk is default-recipe equivalence verification and `NodeBuilder` deletion safety.
+
+## 2026-05-19 — PR #78 review: duplicate Node.id with cross-bucket ghost ancestors
+
+**Branch:** `fix/duplicate-node-keys` @ `8316c84` (author: Linus, requested by Damyan)
+**Decision:** APPROVE (posted as `--comment` — GitHub blocks self-approval since Damyan authored the PR)
+
+### What the fix does
+- `Node.id` for work-item nodes becomes `child_path(path, id)` (path-prefixed), matching the convention groups already used. Render-position-unique.
+- `NodeData::WorkItem` gains a `work_item_id: WorkItemId` field so the frontend can recover the semantic id without parsing the path string.
+- 8 frontend call sites switched from `row.id`/`node.id` (treated as WorkItemId) to `node.data.workItemId` after narrowing on `node.data.type === "workItem"`. Render-position uses (`{#each}` key, `data-row-id`, expand state, visibility set, drag-tracking) intentionally stay on the render-id.
+- `findPrimaryRow` semantics changed: now matches on `data.workItemId` (skips groups), still returns the row whose `.id` is the render-key (the scroll target).
+
+### What I verified
+1. **Path uniqueness across recipes.** Traced Pivot, Group, Hierarchy, Sort, Combined, Explode, multi-level. Buckets get distinct paths via `group_node_id(path, field, key)`. Hierarchy descent appends `/<parent_id>` per level. Same-id-multiple-bucket (the bug case) gets distinct prefixes via per-bucket `group_id`. ✓
+2. **TS narrowing.** All 8 call sites narrow before access. The `handleDrop` else-branch correctly became `else if (targetNode.data.type === "workItem")` — exhaustive on the two-variant union, strictly safer than implicit fallthrough. ✓
+3. **`findPrimaryRow` scroll contract.** Still returns render-id; `jumpToRowById` and `[data-row-id="..."]` still find the right DOM row. New test asserts `jumpTo` receives the render-id, not the workItemId. ✓
+4. **Snapshot stability.** `render_recipe_nodes` formats work-item lines by `work_item_id.0`, not `node.id`. Group lines use `node.id` but groups were already path-prefixed pre-PR. So `test_recipe_builder_preset_snapshots` literal correctly didn't need updating. ✓
+5. **Regression test quality.** Reproduces exact failure mode (`Pivot(Epic) + Hierarchy`, ghost ancestors, parent in EpicA, child in EpicB). Asserts uniqueness AND dual real/ghost occurrence. Strong. ✓
+6. **Anti-patterns.** No new `.unwrap()`/`.expect()` in non-test code. No path-string parsing on the frontend (the only `.split()`/`.substring()` hits are pre-existing code on `resourcePath` and date strings, unrelated to Node.id). ✓
+7. **Pre-existing clippy errors.** `git diff origin/main -- ghui-app/src/telemetry.rs ghui-app/src/updater.rs` is empty. Not this PR's problem. ✓
+
+### Latent drag bug — Linus's "only worked by coincidence" claim
+True in the strict sense: old code set `Change.workItemId = draggedRowId` and `setParent.value = droppedOntoRowId`, relying on `Node.id == WorkItemId.0`. User-visible? No — the identity held, so values were semantically correct. The fix is necessary now (since Node.id is no longer the WorkItemId), but not a separately ship-worthy bug.
+
+### Nits
+- `app/src/lib/ghostRouting.ts:16` comment says "PR #79" — should be #78. Mentioned in PR review as non-blocking.
+
+### Patterns learned
+- **Render-id vs semantic-id separation.** Once you key a `{#each}` block on something, that thing is a render-position key, not a semantic id. The instant you have a recipe where the same semantic id can legitimately appear twice in the rendered list, you MUST split them. Group nodes already had this pattern via `group_node_id` — work items just needed parity. Worth promoting to a project-level skill: "If two rows can render with the same semantic id, key on a path-prefixed render-id and carry the semantic id as a data payload."
+- **Self-approval is blocked by GitHub.** For solo-author repos, post reviews as `--comment` and state the verdict explicitly in the body. Decision is recorded in `.squad/decisions.md` for team-side authority.
+
+- 📌 PR #79 review (2026-05-19): Livingston's testing-gap follow-up to #78 — adds structural Node.id uniqueness, level monotonicity, and WorkItem id presence invariants in a matrix test (14 presets × 2 ghost × 2 strategy = 56 combinations). Also augments the snapshot with `total=N unique_ids=N` headers so duplicate re-recording becomes visually obvious. Verified Explode-bonus case (item 4 alice+bob multi-assigned) mentally — distinct `path/assignee=…` prefixes via #78's `child_path` fix resolve it. Posted COMMENT review with implied APPROVE vote (Damyan authored, can't formally approve). One stale doc-comment nit on `assert_work_item_ids_present` (claims node.id == WorkItemId — no longer true post-#78). Recommended merge.
+- 📌 Test-gap pattern (general): when a snapshot test exercised the buggy code path but didn't catch the bug, the snapshot itself locked the wrong output in as expected. The fix is structural invariants layered on top of the snapshot, plus a visible aggregate (like `total=N unique_ids=N`) in the snapshot text so a future re-record makes the regression visible. PR #79 is the canonical example.
+- 📌 Bug-class taxonomy worth keeping ahead of: Svelte's keyed `{#each}` panics at runtime on `each_key_duplicate` — duplicate Node.id values are silent in unit tests but fatal in the UI. Always assert Node.id uniqueness for any code path that emits keyed lists.

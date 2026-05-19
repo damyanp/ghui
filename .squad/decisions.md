@@ -376,6 +376,82 @@ Non-blocking notes Rusty raised during APPROVE_WITH_NITS. Open as separate issue
 
 ---
 
+## 2026-05-19 — Hotfix: duplicate `Node.id` with ghost ancestors + testing-gap closure
+
+**Status:** 🏁 Both PRs merged to `main`. Damyan's runtime `each_key_duplicate` crash is fixed; the bug class is now pinned by structural invariants.
+
+### Shipped PRs
+
+| PR | Title | Branch | Commit | Author | Reviewer |
+|---|---|---|---|---|---|
+| [#78](https://github.com/damyanp/ghui/pull/78) | `fix: duplicate Node.id when same work item appears in multiple Pivot buckets` | `fix/duplicate-node-keys` | `e696d6f` | Linus | Rusty — APPROVE |
+| [#79](https://github.com/damyanp/ghui/pull/79) | `test: add structural Node.id uniqueness invariant to recipe builder` | `test/node-id-invariants` | `ce54c92` | Livingston | Rusty — APPROVE |
+
+PR #79 was intentionally merged second: its matrix tests fail on pre-#78 main by design, and pass once `child_path`-prefixed work-item ids land.
+
+### Symptom (Damyan's report)
+
+Selecting `Pivot(Epic) + Hierarchy + show_ghost_ancestors` produced a runtime Svelte `each_key_duplicate` crash in `TreeTable.svelte`. Visible failure mode: many top-level items wouldn't expand, others appeared missing entirely. Expand/collapse, drag, and visibility tracking — all keyed on `row.id` — silently died for every row after the first duplicate.
+
+### Root cause
+
+`RecipeNodeBuilder::push_item` (`ghui-app/src/nodes/recipe_builder.rs:567` pre-fix) set `Node.id = id.0.clone()` — the bare `WorkItemId`. With ghost ancestors enabled in a `Pivot(Epic)` recipe, the same work item legitimately appears in **multiple** Epic buckets: once as a real item in its own Epic bucket, and once as a ghost ancestor in every other Epic bucket whose items descend from it. Two `Node` entries with the same `id` violate Svelte's keyed-`{#each}` contract, which aborts the loop. Group nodes already had a path-prefixed id (`group_node_id`); work-item nodes didn't.
+
+### Fix shape (PR #78)
+
+Render-id and semantic-id are now separate fields, both consumed across the frontend:
+
+- **Render-id:** `Node.id = child_path(path, id)` — guaranteed unique by virtue of the bucket path prefix. Used everywhere render-position matters: `{#each}` key, `data-row-id`, expand/visibility/drag state, scroll target.
+- **Semantic-id:** `NodeData::WorkItem` becomes a struct variant carrying `work_item_id: WorkItemId`. Used everywhere semantic identity matters: `workItems[...]` lookup, `Change` records, `itemUpdateBatcher`, `findPrimaryRow`.
+- **Type-level enforcement:** `TreeTable.svelte` constrains `Row<T>` to `T extends GhostAwareNodeData` so `node.data.type === "workItem"` narrowing is required before accessing `workItemId`. TypeScript caught all 8 frontend call sites after ts-rs regenerated `NodeData.ts`.
+- **Forbidden anti-pattern:** path-string parsing of `Node.id` on the frontend. WorkItemIds can contain `/`; `node.data.workItemId` is the only correct source.
+
+9 files, +286 / -82. Regression test `test_recipe_node_builder_no_duplicate_node_ids_with_ghost_ancestors_across_buckets` reproduces the exact failure mode.
+
+### Testing-gap reflection (Damyan's "how did we miss this?")
+
+`test_recipe_builder_preset_snapshots` had the bug baked into its snapshot literal: "item 4" appeared twice in the `Pivot(Epic) → Hierarchy` block with the same `Node.id`, locked in by an opaque `assert_eq!(actual, "<giant literal>")`. The string compare rewarded "render exactly what you currently render" but couldn't catch the duplicate the human eye missed. Three lessons:
+
+1. **Snapshot tests lock a string, not a structural property.** When the platform supplies a key invariant (e.g. Svelte's keyed-`{#each}` unique-key requirement), assert that invariant directly: `HashSet::from_iter(nodes.iter().map(|n| &n.id)).len() == nodes.len()`. Don't rely on the eye spotting it in a multi-hundred-line diff.
+2. **Snapshot tests must be paired with structural assertions over the same data**, not replaced by them. Layer the invariants on top of the snapshot and add a visible aggregate (e.g. `total=N unique_ids=N`) inside the snapshot literal so re-recorded regressions become visually obvious.
+3. **No frontend test fed builder output into TreeTable.** The Svelte runtime contract "keyed each needs unique keys" lived only at runtime. The class of bug is now pinned at the Rust layer (where the tree is built) instead of waiting to surface in the UI.
+
+### Structural invariants now enforced (PR #79)
+
+`test_recipe_builder_node_id_uniqueness_invariant` is a matrix test over every preset in `recipes.json` × `show_ghost_ancestors ∈ {true, false}` × `multi_value_strategy ∈ {Combined, Explode}` (14 × 2 × 2 = 56 combinations). Per combination it asserts:
+
+1. **`Node.id` uniqueness** — no duplicate render keys.
+2. **Level monotonicity** — first node at level 0; consecutive nodes never jump down by more than 1 level.
+3. **WorkItem id presence** — every `NodeData::WorkItem { work_item_id }` resolves in `work_items`.
+
+Plus an in-test uniqueness assertion in `test_recipe_builder_preset_snapshots` (hard stop before the opaque string compare) and `total=N unique_ids=M` headers in each preset block of the snapshot literal. The matrix surfaced one additional bug-class case: `Pivot(Assignee) → Group(Epic)` with `ghost=false, strategy=Explode` produces a duplicate when an item is assigned to multiple users — also resolved by #78's `child_path` fix.
+
+**Convention going forward:** snapshot tests over `Vec<Node>` MUST be paired with structural assertions (uniqueness, monotonicity, id presence). Opaque string compares are insufficient — they reward "render exactly what you currently render" but cannot catch invariant violations the eye misses.
+
+### Architectural takeaway (decision-level, applies beyond this PR)
+
+> **Render-id vs semantic-id MUST be separate fields whenever the same semantic id can legitimately appear in multiple rendered rows.** Frontend code uses `row.id` / `node.id` for render-position concerns (`{#each}` key, `data-row-id`, expand/visibility/drag state, scroll target). It uses `node.data.workItemId` (after narrowing on `node.data.type === "workItem"`) for semantic lookups (`workItems[...]`, `Change` records, `itemUpdateBatcher`). Path-string parsing of `Node.id` on the frontend is forbidden — that would defeat the whole separation. If a new variant of `NodeData` is added later, every site that does `data.type === "workItem"` narrowing must be re-audited.
+
+### Follow-ups
+
+Non-blocking items surfaced during the cycle. Open as separate issues if Damyan wants them addressed:
+
+- **Pre-existing clippy debt.** Two `clippy::uninlined_format_args` errors at `ghui-app/src/telemetry.rs:188` and `ghui-app/src/updater.rs:90` use old-style `format!("{}", x)`. Both pre-date this cycle and CI passes (older toolchain). Suggest a one-shot chore PR (`cargo clippy --fix`) or, if intentional, downgrade the lint with an explicit `#[allow]` on each site with a comment explaining why.
+- **`has_children` consistency invariant** (Rusty's nice-to-have for the matrix test). Confirm `has_children=true` iff the next node is at `level + 1`, and `has_children=false` iff the next node is at `level <= current`. One more assertion to add inside `test_recipe_builder_node_id_uniqueness_invariant`.
+- **Empty-group detection invariant** (Rusty). A `NodeData::Group` followed immediately by a node at `level <= group.level` is a builder bug. Adds a fourth invariant to the matrix test.
+- **Stale doc comment on `assert_work_item_ids_present`** (Rusty's nit on #79). The helper's doc claims `node.id == WorkItemId` and warns about a hypothetical future path-prefix fix — which has already landed in #78. The code is correct (it reads `work_item_id` from the `NodeData::WorkItem` variant); only the comment is wrong. Trim in a future drive-by.
+- **Doc typo in `app/src/lib/ghostRouting.ts:16`** (Rusty's nit on #78). Comment references "PR #79" but should be "PR #78". Trim in the same drive-by as the helper comment above.
+- **Open question for Damyan post-merge.** Does the ghost-ancestor rendering UX make sense in the `Pivot(Epic) + Hierarchy` case now that the duplicate-key crash is gone? If the visual behaviour (same work item shown once-real / many-times-ghost across Epic buckets) matches expectations, we're done. If not, follow up to make ghost rendering more discriminating (e.g. cap ghost depth, suppress ghosts when the bucket has no real descendants of the ghosted ancestor's subtree, or add a per-recipe ghost toggle).
+
+### Archive
+
+- Inbox completion reports moved to [`.squad/decisions/archive/2026-05-19-hotfix-node-keys/`](decisions/archive/2026-05-19-hotfix-node-keys/) — Linus's PR #78 close-out, Livingston's PR #79 close-out, Rusty's two reviews.
+- Inbox is empty.
+
+🏁 **Hotfix archived — duplicate-key bug class is now pinned by structural invariants at the Rust layer.**
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
