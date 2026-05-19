@@ -30,6 +30,7 @@
   import SingleSelectColumnMenu from "./SingleSelectColumnMenu.svelte";
   import IterationColumnMenu from "./IterationColumnMenu.svelte";
   import AddItemDialog from "./AddItemDialog.svelte";
+  import { ghostContextMenuItems } from "$lib/ghostRouting";
 
   dayjs.extend(isBetween);
 
@@ -62,10 +63,36 @@
     addItemDialogOpen = true;
   }
 
+  // Scrolls the row with the given id into the centre of the viewport, used
+  // by the ghost-row context menu's "Jump to primary occurrence" action. If
+  // the row is not currently in the DOM (e.g. an ancestor is collapsed) the
+  // call is a silent no-op aside from a debug log.
+  function jumpToRowById(id: string) {
+    if (typeof document === "undefined") return;
+    const element = document.querySelector<HTMLElement>(
+      `[data-row-id="${CSS.escape(id)}"]`
+    );
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      console.debug(
+        `[WorkItemTree] jumpToRowById: row ${id} not currently in DOM`
+      );
+    }
+  }
+
   function getContextMenuItems(
     node: Node,
     column?: Column<WorkItem>
   ): MenuItem[] {
+    // Ghost rows are reflections of a primary occurrence; they don't support
+    // edits, refresh, filtering, or revert. Show only a "Jump to primary"
+    // action (or a text fallback when no primary is in view) so the menu is
+    // never empty and edit affordances stay hidden.
+    if (node.isGhost) {
+      return ghostContextMenuItems(rows, node.id, jumpToRowById);
+    }
+
     let items: MenuItem[] = [];
 
     function getFilterableField(

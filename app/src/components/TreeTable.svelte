@@ -51,6 +51,7 @@
   import TableColumnMenu from "./TableColumnMenu.svelte";
   import AddColumnButton from "./AddColumnButton.svelte";
   import { recordTelemetry } from "$lib/WorkItemContext.svelte";
+  import { isRowDraggable, findPrimaryRow } from "$lib/ghostRouting";
 
   let {
     columns = $bindable(),
@@ -128,7 +129,18 @@
     let element = e.target as HTMLElement;
     let rowId = element.getAttribute("data-row-id");
 
-    if (rowId && e.dataTransfer !== null) {
+    if (!rowId) return;
+
+    // Defense-in-depth: even though `draggable` is bound to isRowDraggable
+    // and should already be false on ghost rows, suppress the drag start
+    // here too so a stale browser attribute can't initiate a drag.
+    const row = rows.find((r) => r.id === rowId);
+    if (row?.isGhost) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.dataTransfer !== null) {
       e.dataTransfer.dropEffect = "move";
       draggedRowId = rowId;
     }
@@ -185,9 +197,43 @@
   function getRowClass(row: MRow<T>) {
     if (row.id === draggedRowId) return "outline-1 bg-primary-500";
     if (row.id === currentDropRowId) return "outline-2 bg-secondary-500";
+    // Ghost rows are reflections of a primary occurrence elsewhere in the
+    // tree. Render them muted (italic + lower-contrast text) and suppress
+    // the hover background so they feel less interactive than real rows.
+    if (row.isGhost) return "italic text-surface-500-500";
     if (row.isModified) return "bg-secondary-300-700";
     if (row.modifiedDescendent) return "bg-secondary-50-950";
     return "hover:bg-surface-100-900";
+  }
+
+  // Handles a left-click on a row. For ghost rows it routes the click to the
+  // primary occurrence (scrolls it into view). For non-ghost rows it is a
+  // no-op — TreeTable has no row-selection concept of its own. Clicks that
+  // originated on an interactive child (button, link) are ignored so the
+  // expander/link handlers stay authoritative.
+  function handleRowClick(e: MouseEvent, row: MRow<T>) {
+    if (!row.isGhost) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button, a")) return;
+
+    const primaryId = findPrimaryRow(rows, row.id)?.id;
+    if (!primaryId) {
+      console.debug(
+        `[TreeTable] ghost click on ${row.id}: no primary occurrence in view`,
+      );
+      return;
+    }
+
+    const element = document.querySelector<HTMLElement>(
+      `[data-row-id="${CSS.escape(primaryId)}"]`,
+    );
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      console.debug(
+        `[TreeTable] ghost click on ${row.id}: primary ${primaryId} not in DOM`,
+      );
+    }
   }
 
   let columnResize:
@@ -400,8 +446,9 @@
                 menuOpen ? "outline-2 bg-primary-500" : getRowClass(row),
               ]}
               style={`padding-left: ${1 * row.level}rem; grid-column: ${gridColumn};`}
-              draggable={!row.isGroup}
+              draggable={isRowDraggable(row)}
               data-row-id={row.id}
+              onclick={(e) => handleRowClick(e, row)}
               ondragstart={dragStartHandler}
               ondragend={dragEndHandler}
               ondragenter={dragEnterHandler}
