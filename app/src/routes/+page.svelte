@@ -75,26 +75,15 @@
   const canRedo = $derived(context.data.canRedo);
   const numEpicConflicts = $derived(context.data.epicConflicts.length);
 
-  // "Hide Closed" toggle is a convenience UI on top of the existing status
-  // filter: when active, the "Closed" status option id is included in
-  // `filters.status`, which already filters those items out via the existing
-  // filter pipeline.
-  const closedStatusOptionId = $derived(
-    context.data.fields.status.options.find((o) => o.value === "Closed")?.id ??
-      null,
-  );
-  const hideClosed = $derived(
-    closedStatusOptionId !== null &&
-      context.data.filters.status.some((id) => id === closedStatusOptionId),
-  );
+  // "Hide Closed" toggle — backed by the `hide_closed` field on Filters
+  // (Rust). When true, items whose underlying GitHub state is closed
+  // (issues in CLOSED state, PRs in CLOSED or MERGED state) are filtered
+  // out before bucketing. The same toggle also appears in RecipeBar so the
+  // two UIs stay in sync via the shared `context.data.filters.hideClosed`
+  // state.
+  const hideClosed = $derived(context.data.filters.hideClosed);
   function toggleHideClosed(): void {
-    if (closedStatusOptionId === null) return;
-    const current = context.getFilter("status");
-    const isHidden = current.includes(closedStatusOptionId);
-    const next = isHidden
-      ? current.filter((id) => id !== closedStatusOptionId)
-      : [...current, closedStatusOptionId];
-    context.setFilter("status", next);
+    context.setHideClosed(!hideClosed);
   }
 
   let saveProgress = $state(0);
@@ -289,7 +278,7 @@
         text="Hide Closed"
         icon={hideClosed ? CircleSlash : CircleCheck}
         active={hideClosed}
-        disabled={disabled || closedStatusOptionId === null}
+        disabled={disabled}
         onclick={toggleHideClosed}
       />
 
@@ -429,7 +418,11 @@
     <div class="border-b border-surface-300-700 px-4 py-2">
       <RecipeBar
         bind:value={context.data.pivotConfig}
+        filters={context.data.filters}
+        bind:showCounts={context.showCounts}
+        bind:collapseSingleValue={context.collapseSingleValue}
         onApply={(cfg) => context.setPivotConfig(cfg)}
+        onFiltersApply={(filters) => context.setHideClosed(filters.hideClosed)}
       />
     </div>
   {/if}

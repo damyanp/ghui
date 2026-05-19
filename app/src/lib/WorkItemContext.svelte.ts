@@ -9,7 +9,6 @@ import type { FieldOptionId } from "./bindings/FieldOptionId";
 import { type DataUpdate } from "./bindings/DataUpdate";
 import { ItemUpdateBatcher } from "./ItemUpdater";
 import type { WorkItem } from "./bindings/WorkItem";
-import type { Filters } from "./bindings/Filters";
 import type { SingleSelect } from "./bindings/SingleSelect";
 import type { Iteration } from "./bindings/Iteration";
 import type { ProjectItem } from "./bindings/ProjectItem";
@@ -19,6 +18,7 @@ import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
 import type { PivotConfig } from "./bindings/PivotConfig";
 import * as filterableFields from "./filterableFields";
+import type { FilterableField } from "./filterableFields";
 
 const key = Symbol("WorkItemContext");
 
@@ -50,6 +50,7 @@ export class WorkItemContext {
       workstream: [],
       estimate: [],
       priority: [],
+      hideClosed: false,
     },
     pivotConfig: {
       recipe: [{ kind: "pivot", field: "epic" }, { kind: "hierarchy" }],
@@ -64,6 +65,15 @@ export class WorkItemContext {
   });
 
   workItemTreeExpandedItems = $state<string[]>([]);
+
+  /**
+   * Frontend-only toolbar toggles (Task 9). Pure render concerns — these do
+   * NOT round-trip through Tauri and do NOT persist across app restart.
+   * `showCounts` appends a `(N)` decorator on group headers. `collapseSingleValue`
+   * hides group rows whose bucket contains exactly one work item, so that
+   * lone item renders inline. */
+  showCounts = $state<boolean>(false);
+  collapseSingleValue = $state<boolean>(false);
 
   logs = $state<LogEntry[]>([]);
   unreadErrorCount = $state<number>(0);
@@ -226,36 +236,47 @@ export class WorkItemContext {
     }
   }
 
-  public get filterableFields(): Array<keyof Filters> {
+  public get filterableFields(): Array<FilterableField> {
     return filterableFields.getFilterableFields(this.data);
   }
 
-  public isFilterableField(name: string): name is keyof Filters {
+  public isFilterableField(name: string): name is FilterableField {
     return filterableFields.isFilterableField(this.data, name);
   }
 
   public getFilterableFieldValue(
-    fieldName: keyof Filters,
+    fieldName: FilterableField,
     workItem: WorkItem
   ): FieldOptionId | null | undefined {
     return filterableFields.getFilterableFieldValue(workItem, fieldName);
   }
 
   public getFilterableFieldOptionIds(
-    fieldName: keyof Filters
+    fieldName: FilterableField
   ): Array<FieldOptionId | null> {
     return filterableFields.getFilterableFieldOptionIds(this.data, fieldName);
   }
 
   public getFilter(fieldName: keyof Fields): Array<FieldOptionId | null> {
-    return this.data.filters[fieldName as keyof Filters];
+    return this.data.filters[fieldName as FilterableField];
   }
 
   public setFilter(
     fieldName: keyof Fields,
     filter: Array<FieldOptionId | null>
   ): void {
-    this.data.filters[fieldName as keyof Filters] = filter;
+    this.data.filters[fieldName as FilterableField] = filter;
+    invoke("set_filters", { filters: this.data.filters });
+  }
+
+  /**
+   * Set the `hideClosed` filter. Mirrors `setFilter`: mutates the local
+   * filters bag (so reactive UI updates immediately) and fires the
+   * `set_filters` command so the backend re-runs `should_include`, rebuilds
+   * the node tree, and persists the new value to the view config cache.
+   */
+  public setHideClosed(hide: boolean): void {
+    this.data.filters.hideClosed = hide;
     invoke("set_filters", { filters: this.data.filters });
   }
 

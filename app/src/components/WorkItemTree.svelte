@@ -20,6 +20,7 @@
   import { type PullRequestState } from "$lib/bindings/PullRequestState";
   import { type Fields } from "$lib/bindings/Fields";
   import type { Filters } from "$lib/bindings/Filters";
+  import type { FilterableField } from "$lib/filterableFields";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
   import ItemMiniIcon from "./ItemMiniIcon.svelte";
   import TableFieldSelect from "./TableFieldSelect.svelte";
@@ -97,7 +98,7 @@
 
     function getFilterableField(
       column: Column<WorkItem> | undefined
-    ): keyof Filters | undefined {
+    ): FilterableField | undefined {
       if (column && context.isFilterableField(column.name)) {
         return column.name;
       }
@@ -105,7 +106,7 @@
     }
 
     function quickFilterItems(
-      field: keyof Filters,
+      field: FilterableField,
       item: WorkItem
     ): MenuItem[] {
       const value = context.getFilterableFieldValue(field, item);
@@ -241,10 +242,39 @@
     else return items;
   }
 
+  // Count of workItem descendants for each group node. Computed by walking
+  // the flat depth-first node array: every descendant of `group` is contiguous
+  // and at a strictly greater level until we hit a node at `<= group.level`.
+  // Used by the showCounts and collapseSingleValue toolbar toggles.
+  let groupChildCounts = $derived.by(() => {
+    const counts = new Map<string, number>();
+    const nodes = context.data.nodes;
+    for (let i = 0; i < nodes.length; i++) {
+      const head = nodes[i];
+      if (head.data.type !== "group") continue;
+      let count = 0;
+      for (let j = i + 1; j < nodes.length; j++) {
+        const child = nodes[j];
+        if (child.level <= head.level) break;
+        if (child.data.type === "workItem") count++;
+      }
+      counts.set(head.id, count);
+    }
+    return counts;
+  });
+
   let rows = $derived.by(() => {
-    return context.data.nodes.map((n) => {
-      return { ...n, isGroup: n.data.type === "group" };
-    });
+    const all = context.data.nodes.map((n) => ({
+      ...n,
+      isGroup: n.data.type === "group",
+    }));
+    if (!context.collapseSingleValue) return all;
+    // When collapseSingleValue is on, hide group rows whose bucket contains
+    // exactly one work item so the lone item renders inline. The child stays
+    // at its own level — visually it just loses its group header.
+    return all.filter(
+      (row) => !(row.isGroup && groupChildCounts.get(row.id) === 1)
+    );
   });
 
   let columns = $state<Column<WorkItem>[]>([
@@ -385,7 +415,9 @@
   }
 
   function getGroup(n: Node) {
-    if (n.data.type === "group") return n.data.name;
+    if (n.data.type === "group") {
+      return { name: n.data.name, count: groupChildCounts.get(n.id) ?? 0 };
+    }
   }
 
   function getItem(n: Node) {
@@ -503,8 +535,12 @@
   <IterationColumnMenu fieldName={column.name as keyof Fields} />
 {/snippet}
 
-{#snippet renderGroup(name: string | undefined)}
-  {name}
+{#snippet renderGroup(group: { name: string; count: number } | undefined)}
+  {#if group}
+    {group.name}{#if context.showCounts}
+      <span class="ml-2 text-surface-700-300">({group.count})</span>
+    {/if}
+  {/if}
 {/snippet}
 
 {#snippet renderTitle(item: WorkItem | undefined)}

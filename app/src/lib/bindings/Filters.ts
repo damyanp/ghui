@@ -10,4 +10,14 @@ export type Filters = {
   workstream: Array<FieldOptionId | null>;
   estimate: Array<FieldOptionId | null>;
   priority: Array<FieldOptionId | null>;
+  /**
+   * When true, items whose underlying GitHub state is closed (issues in
+   * `CLOSED` state, pull requests in `CLOSED` or `MERGED` state) are
+   * filtered out before bucketing. Items whose state hasn't loaded yet are
+   * kept visible so we don't drop them based on unknown data.
+   *
+   * `#[serde(default)]` keeps existing cached `view_config.ghui.json`
+   * files (which predate this field) deserializable.
+   */
+  hideClosed: boolean;
 };
