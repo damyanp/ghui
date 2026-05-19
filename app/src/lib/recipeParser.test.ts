@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Axis } from "$lib/bindings/Axis";
 import { parseRecipe, recipeToString } from "./recipeParser";
+import fixtureData from "../../../github-graphql/tests/fixtures/recipes.json";
 
 const { invokeMock } = vi.hoisted(() => ({
   invokeMock: vi.fn(),
@@ -57,14 +56,7 @@ describe("recipeParser", () => {
   });
 
   it("forwards every canonical fixture recipe to the parse_recipe command", async () => {
-    const fixturesPath = resolve(
-      import.meta.dirname,
-      "../../../github-graphql/tests/fixtures/recipes.json"
-    );
-    const fixtures = JSON.parse(readFileSync(fixturesPath, "utf-8")) as Record<
-      string,
-      Axis[]
-    >;
+    const fixtures = fixtureData as Record<string, Axis[]>;
 
     for (const [text, axes] of Object.entries(fixtures)) {
       invokeMock.mockResolvedValueOnce(axes);
