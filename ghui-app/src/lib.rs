@@ -250,8 +250,14 @@ impl AppState {
             HashMap::default()
         };
 
-        let nodes =
-            NodeBuilder::new(&fields, &work_items, &self.filters, &original_work_items).build();
+        let nodes = RecipeNodeBuilder::new(
+            &fields,
+            &work_items,
+            &self.filters,
+            &original_work_items,
+            &self.pivot_config,
+        )
+        .build();
 
         (self.watcher)(DataUpdate::Data(Box::new(Data {
             nodes,
