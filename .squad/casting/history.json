@@ -1,0 +1,21 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "Ocean's Eleven",
+      "assignment_id": "ghui-pivoting-2026-05-19",
+      "used_at": "2026-05-19T00:19:25Z"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "ghui-pivoting-2026-05-19": {
+      "universe": "Ocean's Eleven",
+      "agents": {
+        "lead": "Rusty",
+        "backend": "Basher",
+        "frontend": "Linus",
+        "tester": "Livingston"
+      },
+      "created_at": "2026-05-19T00:19:25Z"
+    }
+  }
+}
