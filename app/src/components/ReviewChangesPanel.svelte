@@ -8,14 +8,14 @@
   import type { Fields } from "$lib/bindings/Fields";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
-
-  type Tab = "changes" | "conflicts";
+  import { getInitialActiveTab, type Tab } from "./reviewChangesPanelState";
 
   type Props = {
     open?: boolean;
+    tab?: Tab;
   };
 
-  let { open = $bindable(false) }: Props = $props();
+  let { open = $bindable(false), tab }: Props = $props();
 
   const context = getWorkItemContext();
 
@@ -162,11 +162,7 @@
   // do not override a tab the user selected manually.
   $effect(() => {
     if (open && !wasOpen) {
-      if (changes.length === 0 && conflicts.length > 0) {
-        activeTab = "conflicts";
-      } else {
-        activeTab = "changes";
-      }
+      activeTab = getInitialActiveTab(changes.length, conflicts.length, tab);
     }
 
     wasOpen = open;
