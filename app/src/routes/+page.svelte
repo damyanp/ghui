@@ -90,6 +90,7 @@
   let refreshSummaryMessage = $state<string | null>(null);
   let refreshSummaryTimer: ReturnType<typeof setTimeout> | null = null;
   let reviewChangesOpen = $state(false);
+  let reviewChangesTab = $state<"changes" | "conflicts">("changes");
   let addItemDialogOpen = $state(false);
   let logPanelOpen = $state(false);
   let recipeBarOpen = $state(false);
@@ -256,14 +257,23 @@
       />
       <AppBarButton
         icon={ClipboardList}
-        text="Review"
-        disabled={!(numChanges || numEpicConflicts) || disabled}
-        badge={numChanges + numEpicConflicts || undefined}
+        text="Pending"
+        disabled={!numChanges || disabled}
+        badge={numChanges || undefined}
         onclick={() => {
+          reviewChangesTab = "changes";
           reviewChangesOpen = true;
-          if (numChanges) {
-            recordTelemetry({ event: "pending_changes_opened" });
-          }
+          recordTelemetry({ event: "pending_changes_opened" });
+        }}
+      />
+      <AppBarButton
+        icon={ClipboardList}
+        text="Conflicts"
+        disabled={!numEpicConflicts || disabled}
+        badge={numEpicConflicts || undefined}
+        onclick={() => {
+          reviewChangesTab = "conflicts";
+          reviewChangesOpen = true;
         }}
       />
       <AppBarButton
@@ -427,7 +437,7 @@
     </div>
   {/if}
 
-  <ReviewChangesPanel bind:open={reviewChangesOpen} />
+  <ReviewChangesPanel bind:open={reviewChangesOpen} tab={reviewChangesTab} />
   <AddItemDialog bind:open={addItemDialogOpen} />
 
   <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
