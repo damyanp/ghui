@@ -531,17 +531,25 @@ impl AppState {
 
     /// Builds a snapshot of the current view state (filters, pivot config, and
     /// the computed node tree) and saves it to a timestamped file in the home
-    /// directory.  Returns the path of the saved file so the caller can reveal
-    /// it in the file system.
-    pub fn capture_view(&self) -> anyhow::Result<PathBuf> {
+    /// directory. When preview changes are enabled, pending edits are applied
+    /// to the snapshot so captured nodes match the current UI view. Returns the
+    /// path of the saved file so the caller can reveal it in the file system.
+    pub fn capture_view(&self) -> Result<PathBuf> {
         use time::OffsetDateTime;
 
         let nodes = if let (Some(fields), Some(work_items)) = (&self.fields, &self.work_items) {
+            let mut work_items = work_items.clone();
+            let original_work_items = if self.preview_changes {
+                self.apply_changes(&mut work_items)
+            } else {
+                HashMap::default()
+            };
+
             RecipeNodeBuilder::new(
                 fields,
-                work_items,
+                &work_items,
                 &self.filters,
-                &HashMap::default(),
+                &original_work_items,
                 &self.pivot_config,
             )
             .build()
@@ -551,13 +559,14 @@ impl AppState {
 
         let now = OffsetDateTime::now_utc();
         let timestamp = format!(
-            "{:04}-{:02}-{:02}T{:02}-{:02}-{:02}",
+            "{:04}-{:02}-{:02}T{:02}-{:02}-{:02}.{:03}",
             now.year(),
             now.month() as u8,
             now.day(),
             now.hour(),
             now.minute(),
             now.second(),
+            now.millisecond(),
         );
 
         let capture = ViewCapture {
@@ -1120,6 +1129,53 @@ mod tests {
 
         let observed = observed_configs.lock().unwrap();
         assert_eq!(observed.last().unwrap(), &next);
+    }
+
+    #[test]
+    fn test_capture_view_includes_preview_changes_in_nodes() {
+        struct CaptureCleanup(PathBuf);
+        impl Drop for CaptureCleanup {
+            fn drop(&mut self) {
+                let _ = fs::remove_file(&self.0);
+            }
+        }
+
+        let mut data = TestData::default();
+        let parent = data.build().issue().add();
+        let child = data.build().issue().add();
+
+        let mut state = AppState::new();
+        state.fields = Some(data.fields);
+        state.work_items = Some(data.work_items);
+        state.preview_changes = true;
+
+        state.changes.add(Change {
+            work_item_id: child.clone(),
+            data: ChangeData::SetParent(parent),
+        });
+
+        let path = state.capture_view().unwrap();
+        let _cleanup = CaptureCleanup(path.clone());
+        let contents = fs::read_to_string(&path).unwrap();
+        let capture: serde_json::Value = serde_json::from_str(&contents).unwrap();
+
+        assert_eq!(
+            capture.get("filters").unwrap(),
+            &serde_json::to_value(&state.filters).unwrap()
+        );
+        assert_eq!(
+            capture.get("pivotConfig").unwrap(),
+            &serde_json::to_value(&state.pivot_config).unwrap()
+        );
+
+        let nodes = capture.get("nodes").unwrap().as_array().unwrap();
+        assert!(!nodes.is_empty());
+        assert!(
+            nodes
+                .iter()
+                .any(|node| node["isModified"] == serde_json::Value::Bool(true)),
+            "preview changes should mark at least one captured node as modified",
+        );
     }
 
     #[test]
