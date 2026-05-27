@@ -573,7 +573,7 @@ impl AppState {
             .join(filename);
 
         let writer = fs::File::create(&path)?;
-        serde_json::to_writer_pretty(BufWriter::new(writer), &capture)?;
+        serde_json::to_writer_pretty(writer, &capture)?;
 
         info!("View captured to {path:?}");
         Ok(path)
@@ -779,7 +779,7 @@ const VIEW_CONFIG_FILENAME: &str = "view_config";
 /// Snapshot written to disk by [`AppState::capture_view`].  Includes the
 /// active filter settings, the pivot configuration, and the rendered node tree
 /// so that a developer can fully reproduce the view from the file alone.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ViewCapture {
     captured_at: String,
