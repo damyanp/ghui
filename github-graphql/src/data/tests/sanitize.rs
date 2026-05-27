@@ -170,6 +170,33 @@ fn test_set_workstream_on_blank_parent_from_child() {
 }
 
 #[test]
+fn test_add_missing_parent_to_project() {
+    let mut data = TestData::default();
+
+    let child = data.build().issue().add();
+    let missing_parent = WorkItemId("missing-parent".to_owned());
+
+    if let Some(WorkItem {
+        data: WorkItemData::Issue(issue),
+        ..
+    }) = data.work_items.get_mut(&child)
+    {
+        issue.parent_id = Some(missing_parent.clone());
+    }
+
+    let report = data.work_items.sanitize(&data.fields);
+
+    let mut expected_changes = Changes::default();
+    expected_changes.add(Change {
+        work_item_id: missing_parent,
+        data: ChangeData::AddToProject,
+    });
+
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
+}
+
+#[test]
 fn test_blank_parent_with_conflicting_children_workstreams_no_change() {
     let mut data = TestData::default();
 
