@@ -23,7 +23,6 @@
     ListTree,
     LinkIcon,
     Redo2,
-    ClipboardList,
     Save,
     ScrollText,
     Search,
@@ -256,7 +255,7 @@
         onclick={saveChanges}
       />
       <AppBarButton
-        icon={ClipboardList}
+        icon={CircleCheck}
         text="Pending"
         disabled={!numChanges || disabled}
         badge={numChanges || undefined}
@@ -267,7 +266,7 @@
         }}
       />
       <AppBarButton
-        icon={ClipboardList}
+        icon={CircleSlash}
         text="Conflicts"
         disabled={!numEpicConflicts || disabled}
         badge={numEpicConflicts || undefined}

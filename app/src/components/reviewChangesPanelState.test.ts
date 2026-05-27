@@ -14,7 +14,15 @@ describe("getInitialActiveTab", () => {
     expect(getInitialActiveTab(3, 2, "changes")).toBe("changes");
   });
 
+  it("falls back to conflicts when pending is preferred but empty", () => {
+    expect(getInitialActiveTab(0, 2, "changes")).toBe("conflicts");
+  });
+
   it("honors a preferred conflicts tab when conflicts exist", () => {
     expect(getInitialActiveTab(3, 2, "conflicts")).toBe("conflicts");
+  });
+
+  it("falls back to pending when conflicts is preferred but empty", () => {
+    expect(getInitialActiveTab(3, 0, "conflicts")).toBe("changes");
   });
 });
