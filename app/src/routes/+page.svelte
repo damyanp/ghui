@@ -35,6 +35,7 @@
   import LogPanel from "../components/LogPanel.svelte";
   import RecipeBar from "../components/RecipeBar.svelte";
   import ReviewChangesPanel from "../components/ReviewChangesPanel.svelte";
+  import type { Tab } from "../components/reviewChangesPanelState";
   import AddItemDialog from "../components/AddItemDialog.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
@@ -89,7 +90,7 @@
   let refreshSummaryMessage = $state<string | null>(null);
   let refreshSummaryTimer: ReturnType<typeof setTimeout> | null = null;
   let reviewChangesOpen = $state(false);
-  let reviewChangesTab = $state<"changes" | "conflicts">("changes");
+  let reviewChangesTab = $state<Tab>("changes");
   let addItemDialogOpen = $state(false);
   let logPanelOpen = $state(false);
   let recipeBarOpen = $state(false);
