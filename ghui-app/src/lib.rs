@@ -528,6 +528,56 @@ impl AppState {
     pub fn changes_count(&self) -> usize {
         self.changes.len()
     }
+
+    /// Builds a snapshot of the current view state (filters, pivot config, and
+    /// the computed node tree) and saves it to a timestamped file in the home
+    /// directory.  Returns the path of the saved file so the caller can reveal
+    /// it in the file system.
+    pub fn capture_view(&self) -> anyhow::Result<PathBuf> {
+        use time::OffsetDateTime;
+
+        let nodes = if let (Some(fields), Some(work_items)) = (&self.fields, &self.work_items) {
+            RecipeNodeBuilder::new(
+                fields,
+                work_items,
+                &self.filters,
+                &HashMap::default(),
+                &self.pivot_config,
+            )
+            .build()
+        } else {
+            Vec::new()
+        };
+
+        let now = OffsetDateTime::now_utc();
+        let timestamp = format!(
+            "{:04}-{:02}-{:02}T{:02}-{:02}-{:02}",
+            now.year(),
+            now.month() as u8,
+            now.day(),
+            now.hour(),
+            now.minute(),
+            now.second(),
+        );
+
+        let capture = ViewCapture {
+            captured_at: timestamp.clone(),
+            filters: self.filters.clone(),
+            pivot_config: self.pivot_config.clone(),
+            nodes,
+        };
+
+        let filename = format!("view_capture_{timestamp}.ghui.json");
+        let path = home_dir()
+            .ok_or_else(|| anyhow::anyhow!("could not determine home directory"))?
+            .join(filename);
+
+        let writer = fs::File::create(&path)?;
+        serde_json::to_writer_pretty(BufWriter::new(writer), &capture)?;
+
+        info!("View captured to {path:?}");
+        Ok(path)
+    }
 }
 
 impl DataState {
@@ -725,6 +775,18 @@ fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
 const WORK_ITEMS_EXTRA_DATA: &str = "work_items_extra_data";
 
 const VIEW_CONFIG_FILENAME: &str = "view_config";
+
+/// Snapshot written to disk by [`AppState::capture_view`].  Includes the
+/// active filter settings, the pivot configuration, and the rendered node tree
+/// so that a developer can fully reproduce the view from the file alone.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ViewCapture {
+    captured_at: String,
+    filters: Filters,
+    pivot_config: PivotConfig,
+    nodes: Vec<Node>,
+}
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -12,6 +12,7 @@
   } from "$lib/WorkItemContext.svelte";
   import {
     Bubbles,
+    Camera,
     ChartColumnBig,
     ChartGantt,
     ChartNetwork,
@@ -43,6 +44,7 @@
   } from "../components/WorkItemExecutionTracker.svelte";
   import WorkItemStatistics from "../components/WorkItemStatistics.svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import type { ReleaseInfo } from "$lib/bindings/ReleaseInfo";
   import type { RefreshSummary } from "$lib/bindings/RefreshSummary";
 
@@ -101,6 +103,13 @@
   async function openFind(): Promise<void> {
     await tick();
     document.dispatchEvent(new CustomEvent("ghui:open-find"));
+  }
+
+  async function captureView(): Promise<void> {
+    await runBusy(async () => {
+      const path = await invoke<string>("capture_view");
+      await revealItemInDir(path);
+    });
   }
 
   // Update check state
@@ -384,6 +393,12 @@
             label: "Find",
             disabled: disabled || mode !== "items",
             onclick: () => { void openFind(); },
+          },
+          {
+            icon: Camera,
+            label: "Capture View",
+            disabled,
+            onclick: () => { void captureView(); },
           },
           {
             icon: ArrowDownToLine,
