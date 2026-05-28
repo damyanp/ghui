@@ -2,4 +2,4 @@
 import type { Change } from "./Change";
 import type { ChangeKey } from "./ChangeKey";
 
-export type Changes = { data: { [key in ChangeKey]?: Change } };
+export type Changes = { data: { [key in ChangeKey]: Change } };

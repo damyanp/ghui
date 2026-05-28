@@ -10,9 +10,9 @@ import type { WorkItemId } from "./WorkItemId";
 
 export type Data = {
   fields: Fields;
-  workItems: { [key in WorkItemId]?: WorkItem };
+  workItems: { [key in WorkItemId]: WorkItem };
   nodes: Array<Node>;
-  originalWorkItems: { [key in WorkItemId]?: WorkItem };
+  originalWorkItems: { [key in WorkItemId]: WorkItem };
   filters: Filters;
   pivotConfig: PivotConfig;
   changes: Changes;
