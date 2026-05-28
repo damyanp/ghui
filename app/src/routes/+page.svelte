@@ -411,13 +411,6 @@
             onclick: () => { void captureView(); },
           },
           {
-            icon: ArrowDownToLine,
-            label: updateButtonText,
-            iconClass: updateIconClass,
-            disabled: updateButtonDisabled,
-            onclick: () => { void onUpdateClicked(); },
-          },
-          {
             icon: ScrollText,
             label: "Output",
             badge: context.unreadErrorCount > 0 ? context.unreadErrorCount : undefined,
@@ -435,6 +428,13 @@
     {/snippet}
 
     {#snippet trail()}
+      <AppBarButton
+        icon={ArrowDownToLine}
+        iconClass={updateIconClass}
+        text={updateButtonText}
+        disabled={updateButtonDisabled}
+        onclick={() => { void onUpdateClicked(); }}
+      />
       <Pat />
     {/snippet}
   </AppBar>
