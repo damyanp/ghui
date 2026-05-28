@@ -1038,8 +1038,8 @@ total=6 unique_ids=6
         let mut data = TestData::default();
 
         // child_a: in EpicA, parent_id points to a missing (out-of-project) issue
-        let child_a = data.build().epic("EpicA").add();
-        let child_b = data.build().epic("EpicA").add();
+        let child_a = data.build().epic("EpicA").issue().add();
+        let child_b = data.build().epic("EpicA").issue().add();
 
         // Give both items a parent_id that is NOT in work_items
         let missing_parent_id = WorkItemId("missing-parent".to_owned());
