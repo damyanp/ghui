@@ -179,6 +179,8 @@ impl UndoHistory {
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Changes {
+    // Keep indexed access optional in generated TS to model missing map entries.
+    #[ts(type = "{ [key in import(\"./ChangeKey\").ChangeKey]?: import(\"./Change\").Change }")]
     data: HashMap<ChangeKey, Change>,
 }
 

@@ -116,12 +116,20 @@ impl Filters {
 #[ts(export)]
 pub struct Data {
     fields: Fields,
+    // Keep indexed access optional in generated TS to model missing map entries.
+    #[ts(
+        type = "{ [key in import(\"./WorkItemId\").WorkItemId]?: import(\"./WorkItem\").WorkItem }"
+    )]
     work_items: HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
 
     // When changes have been applied, work_items contains the modified versions
     // (and nodes is derived from this). Copies of the original, unmodified,
     // ones are stored here.  When changes aren't applied this will be empty.
+    // Keep indexed access optional in generated TS to model missing map entries.
+    #[ts(
+        type = "{ [key in import(\"./WorkItemId\").WorkItemId]?: import(\"./WorkItem\").WorkItem }"
+    )]
     original_work_items: HashMap<WorkItemId, WorkItem>,
 
     filters: Filters,
