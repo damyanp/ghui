@@ -1773,7 +1773,7 @@ dependencies = [
 
 [[package]]
 name = "ghui"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "dirs",
@@ -1793,7 +1793,7 @@ dependencies = [
 
 [[package]]
 name = "ghui-app"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "dirs",
@@ -1811,7 +1811,7 @@ dependencies = [
 
 [[package]]
 name = "ghui-util"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "github-graphql"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "futures",
