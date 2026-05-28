@@ -85,7 +85,16 @@ npx tauri build   # Release build (produces MSI + NSIS installers)
 - **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, `npm run check`, and `npm test` (vitest) on `windows-latest` for push/PR to main.
 - **build-installer.yml**: Builds Windows installer on push to main.
 
-The CI runs on Windows. If you can't run a full `cargo build` locally (missing system deps on Linux), validate with `cargo fmt --all -- --check`, `cargo clippy --all -- -D warnings`, `cargo test -p github-graphql`, `cd app && npm run check`, and `cd app && npm test`.
+The CI runs on Windows. The Copilot cloud agent environment is Linux, and `.github/workflows/copilot-setup-steps.yml` preinstalls the GTK/WebKit/glib `-dev` packages that `app/src-tauri` links against, so `cargo clippy --all -- -D warnings` should work end-to-end. If you ever find those packages missing (for example, in a fresh local Linux environment), install them with:
+
+```bash
+sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+  libwebkit2gtk-4.1-dev libdbus-1-dev libglib2.0-dev libgtk-3-dev \
+  libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev \
+  librsvg2-dev build-essential pkg-config
+```
+
+Do **not** fall back to `cargo clippy -p github-graphql` as a substitute for `cargo clippy --all` — install the deps and run the full workspace check.
 
 ## Rust Conventions
 
@@ -155,7 +164,7 @@ pub async fn my_command(
 - Use `assert_eq!` and `assert!` for assertions.
 - Snapshot testing with `insta` is available in `github-graphql`.
 - Tests live in `github-graphql/src/data/tests.rs` with helpers in `test_helpers.rs`.
-- NodeBuilder tests live in `ghui-app/src/nodes.rs` (run with `cargo test -p ghui-app`, requires `libdbus-1-dev` on Linux).
+- NodeBuilder tests live in `ghui-app/src/nodes.rs` (run with `cargo test -p ghui-app`; requires the Tauri system deps on Linux — see the apt-get command in the Build/Test/Lint section).
 
 #### Frontend tests (vitest)
 
