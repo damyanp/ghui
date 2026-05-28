@@ -126,6 +126,11 @@ impl<'a> RecipeNodeBuilder<'a> {
             for root in &roots {
                 let mut parent = self.parent_id(root);
                 while let Some(parent_id) = parent {
+                    // Skip parents that don't exist in work_items: they can't
+                    // be rendered and would silently swallow all descendants.
+                    if self.item(&parent_id).is_none() {
+                        break;
+                    }
                     if in_scope.contains(&parent_id) || ghost_ids.contains(&parent_id) {
                         break;
                     }
@@ -1022,6 +1027,56 @@ total=6 unique_ids=6
         );
     }
 
+    /// Regression test: when a root item's `parent_id` points to a work item
+    /// that is **not** in `work_items` (i.e. not part of the project), the
+    /// ghost ancestor walk must stop rather than adding an unrenderable ghost.
+    /// Previously the ghost was added to `scope_ids`, became the only display
+    /// root, and its children (the real items) were never emitted — the group
+    /// showed `has_children: true` but contained zero nodes.
+    #[test]
+    fn test_recipe_builder_ghost_ancestor_not_in_work_items_does_not_swallow_children() {
+        let mut data = TestData::default();
+
+        // Create two issues in EpicA; we'll set their parent_id to a missing item.
+        let child_a = data.build().epic("EpicA").issue().add();
+        let child_b = data.build().epic("EpicA").issue().add();
+
+        // Give both items a parent_id that is NOT in work_items.
+        // (No test builder helper exists for setting parent_id directly.)
+        let missing_parent_id = WorkItemId("missing-parent".to_owned());
+        for id in [&child_a, &child_b] {
+            let item = data
+                .work_items
+                .get_mut(id)
+                .expect("test child should exist in work_items");
+            assert!(
+                matches!(item.data, WorkItemData::Issue(_)),
+                "test child {:?} should be an Issue variant",
+                id
+            );
+            let WorkItemData::Issue(issue) = &mut item.data else {
+                unreachable!("assert above guarantees Issue variant");
+            };
+            issue.parent_id = Some(missing_parent_id.clone());
+        }
+        set_title(&mut data, &child_a, "Alpha");
+        set_title(&mut data, &child_b, "Beta");
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Epic), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        // Both children must appear; the missing parent must NOT appear
+        assert_eq!(
+            render_recipe_nodes(&data.fields, &data.work_items, &config),
+            r#"0 group path/epic=id(EpicA) EpicA
+1 item 1 ghost=false children=false
+1 item 2 ghost=false children=false"#
+        );
+    }
+
     /// Regression test for the `each_key_duplicate` Svelte crash that hit
     /// users running `Pivot(Epic) + Hierarchy` with `show_ghost_ancestors`
     /// on. With that recipe, the same work item legitimately appears in
@@ -1137,6 +1192,7 @@ total=6 unique_ids=6
                     assert_node_ids_unique(&label, &nodes);
                     assert_levels_monotonic(&label, &nodes);
                     assert_work_item_ids_present(&label, &nodes, &fixture.work_items);
+                    assert_has_children_consistent(&label, &nodes);
                 }
             }
         }
@@ -1330,6 +1386,29 @@ total=6 unique_ids=6
                     work_item_id,
                 );
             }
+        }
+    }
+
+    /// Invariant: every node whose `has_children` flag is `true` must be
+    /// immediately followed (at depth `level + 1`) by at least one child
+    /// node. This catches the class of bug where a group or item claims to
+    /// have children but the renderer silently drops them — for example when
+    /// a ghost ancestor that is not in `work_items` becomes the sole display
+    /// root and swallows all real items beneath it.
+    fn assert_has_children_consistent(label: &str, nodes: &[Node]) {
+        for (i, node) in nodes.iter().enumerate() {
+            if !node.has_children {
+                continue;
+            }
+            let expected_child_level = node.level + 1;
+            let has_child = nodes
+                .get(i + 1)
+                .is_some_and(|next| next.level == expected_child_level);
+            assert!(
+                has_child,
+                "{label}: node at index {i} (id={:?}, level={}) has has_children=true but no child node follows at level {}",
+                node.id, node.level, expected_child_level,
+            );
         }
     }
 
