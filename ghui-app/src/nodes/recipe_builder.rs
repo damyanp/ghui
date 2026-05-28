@@ -1037,16 +1037,27 @@ total=6 unique_ids=6
     fn test_recipe_builder_ghost_ancestor_not_in_work_items_does_not_swallow_children() {
         let mut data = TestData::default();
 
-        // child_a: in EpicA, parent_id points to a missing (out-of-project) issue
+        // Create two issues in EpicA; we'll set their parent_id to a missing item.
         let child_a = data.build().epic("EpicA").issue().add();
         let child_b = data.build().epic("EpicA").issue().add();
 
-        // Give both items a parent_id that is NOT in work_items
+        // Give both items a parent_id that is NOT in work_items.
+        // (No test builder helper exists for setting parent_id directly.)
         let missing_parent_id = WorkItemId("missing-parent".to_owned());
-        for id in &[&child_a, &child_b] {
-            if let WorkItemData::Issue(issue) = &mut data.work_items.get_mut(id).unwrap().data {
-                issue.parent_id = Some(missing_parent_id.clone());
-            }
+        for id in [&child_a, &child_b] {
+            let item = data
+                .work_items
+                .get_mut(id)
+                .expect("test child should exist in work_items");
+            assert!(
+                matches!(item.data, WorkItemData::Issue(_)),
+                "test child {:?} should be an Issue variant",
+                id
+            );
+            let WorkItemData::Issue(issue) = &mut item.data else {
+                unreachable!("assert above guarantees Issue variant");
+            };
+            issue.parent_id = Some(missing_parent_id.clone());
         }
         set_title(&mut data, &child_a, "Alpha");
         set_title(&mut data, &child_b, "Beta");
