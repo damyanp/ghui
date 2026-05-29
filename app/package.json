@@ -24,7 +24,7 @@
     "@tauri-apps/plugin-opener": "^2.3.0",
     "@tauri-apps/plugin-window-state": "^2.2.2",
     "@zag-js/select": "^1.41.1",
-    "@zag-js/svelte": "^1.15.0",
+    "@zag-js/svelte": "^1.41.1",
     "bits-ui": "^2.18.0",
     "dayjs": "^1.11.13",
     "monaco-editor": "^0.55.1"
