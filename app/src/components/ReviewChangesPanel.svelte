@@ -9,6 +9,10 @@
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import type { WorkItemId } from "$lib/bindings/WorkItemId";
   import { getInitialActiveTab, type Tab } from "./reviewChangesPanelState";
+  import {
+    findAddToProjectContext,
+    type AddToProjectContext,
+  } from "./addToProjectContext";
 
   type Props = {
     open?: boolean;
@@ -46,6 +50,28 @@
     return item?.title ?? "";
   }
 
+  /**
+   * For an `AddToProject` change whose target work item isn't in the project
+   * yet (and therefore isn't in `workItems`), find a known item that
+   * references it so we can show meaningful context to the user instead of
+   * the opaque GitHub node ID.
+   */
+  function getAddToProjectContext(
+    workItemId: WorkItemId
+  ): AddToProjectContext | null {
+    if (context.data.workItems[workItemId]) return null;
+    return findAddToProjectContext(workItemId, context.data.workItems);
+  }
+
+  function describeAddToProject(workItemId: WorkItemId): string {
+    const ctx = getAddToProjectContext(workItemId);
+    if (!ctx) return "Add to project";
+    const referrerLabel = getDisplayName(ctx.referrer);
+    return ctx.kind === "parent"
+      ? `Add to project (parent of ${referrerLabel})`
+      : `Add to project (sub-issue of ${referrerLabel})`;
+  }
+
   function describeChange(change: Change): string {
     switch (change.data.type) {
       case "setParent": {
@@ -54,7 +80,7 @@
         return `Set parent to '${parentDisplay}'`;
       }
       case "addToProject": {
-        return "Add to project";
+        return describeAddToProject(change.workItemId);
       }
       case "issueType": {
         let item = context.data.workItems[change.workItemId];
@@ -88,8 +114,32 @@
 
     return Array.from(grouped.entries())
       .map(([workItemId, itemChanges]) => {
-        const label = getWorkItemLabel(workItemId);
-        const title = getWorkItemTitle(workItemId);
+        const knownItem =
+          context.data.workItems[workItemId] ??
+          context.data.originalWorkItems[workItemId];
+        let label: string;
+        let title: string;
+        if (knownItem) {
+          label = getDisplayName(knownItem);
+          title = knownItem.title ?? "";
+        } else {
+          // The item isn't in workItems (likely because an AddToProject
+          // change is staged for it). Try to derive context from items that
+          // reference it so the user sees something more meaningful than
+          // the raw GitHub node ID.
+          const ctx = getAddToProjectContext(workItemId);
+          if (ctx) {
+            const referrerLabel = getDisplayName(ctx.referrer);
+            label =
+              ctx.kind === "parent"
+                ? `Parent of ${referrerLabel}`
+                : `Sub-issue of ${referrerLabel}`;
+            title = ctx.referrer.title ?? "";
+          } else {
+            label = getWorkItemLabel(workItemId);
+            title = getWorkItemTitle(workItemId);
+          }
+        }
         const summary = itemChanges.map(describeChange).join("; ");
         return { workItemId, label, title, summary };
       })
