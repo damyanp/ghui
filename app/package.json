@@ -16,7 +16,7 @@
   "license": "MIT",
   "dependencies": {
     "@floating-ui/dom": "^1.7.0",
-    "@lucide/svelte": "0.x",
+    "@lucide/svelte": "1.x",
     "@monaco-editor/loader": "^1.5.0",
     "@primer/octicons": "^19.15.2",
     "@tauri-apps/api": "^2",
