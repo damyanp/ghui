@@ -3,6 +3,7 @@
   import type { Fields } from "$lib/bindings/Fields";
   import { getWorkItemContext } from "$lib/WorkItemContext.svelte";
   import { Switch } from "@skeletonlabs/skeleton-svelte";
+  import { untrack } from "svelte";
 
   let context = getWorkItemContext();
 
@@ -12,9 +13,11 @@
 
   const { fieldName }: Props = $props();
 
-  let field = context.getIterationField(fieldName);
+  // fieldName is a configuration prop fixed at mount; capture initial
+  // values intentionally for the lookup and local filter state.
+  let field = untrack(() => context.getIterationField(fieldName));
 
-  let filter = $state(context.getFilter(fieldName));
+  let filter = $state(untrack(() => context.getFilter(fieldName)));
 
   let options = [{ id: null, value: "-", data: undefined }, ...field.options];
 

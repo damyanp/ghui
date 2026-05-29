@@ -22,3 +22,6 @@ log = "0.4"
 
 [dev-dependencies]
 insta = { version = "1", features = ["json"] }
+
+[lints]
+workspace = true

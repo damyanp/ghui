@@ -1,6 +1,6 @@
 <script lang="ts">
   import loader from "@monaco-editor/loader";
-  import { editor } from "monaco-editor";
+  import type { editor } from "monaco-editor";
 
   let editorContainer: HTMLElement;
   let theEditor: editor.IStandaloneCodeEditor;
