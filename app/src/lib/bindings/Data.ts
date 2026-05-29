@@ -5,14 +5,16 @@ import type { Filters } from "./Filters";
 import type { Node } from "./Node";
 import type { PivotConfig } from "./PivotConfig";
 import type { SanitizeConflict } from "./SanitizeConflict";
-import type { WorkItem } from "./WorkItem";
-import type { WorkItemId } from "./WorkItemId";
 
 export type Data = {
   fields: Fields;
-  workItems: { [key in WorkItemId]?: WorkItem };
+  workItems: {
+    [key in import("./WorkItemId").WorkItemId]?: import("./WorkItem").WorkItem;
+  };
   nodes: Array<Node>;
-  originalWorkItems: { [key in WorkItemId]?: WorkItem };
+  originalWorkItems: {
+    [key in import("./WorkItemId").WorkItemId]?: import("./WorkItem").WorkItem;
+  };
   filters: Filters;
   pivotConfig: PivotConfig;
   changes: Changes;
