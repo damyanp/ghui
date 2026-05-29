@@ -12,6 +12,7 @@
   } from "$lib/WorkItemContext.svelte";
   import {
     Bubbles,
+    Camera,
     ChartColumnBig,
     ChartGantt,
     ChartNetwork,
@@ -23,7 +24,6 @@
     ListTree,
     LinkIcon,
     Redo2,
-    ClipboardList,
     Save,
     ScrollText,
     Search,
@@ -36,6 +36,7 @@
   import LogPanel from "../components/LogPanel.svelte";
   import RecipeBar from "../components/RecipeBar.svelte";
   import ReviewChangesPanel from "../components/ReviewChangesPanel.svelte";
+  import type { Tab } from "../components/reviewChangesPanelState";
   import AddItemDialog from "../components/AddItemDialog.svelte";
   import WorkItemExecutionTracker, {
     setWorkItemExecutionTrackerContext,
@@ -43,6 +44,7 @@
   } from "../components/WorkItemExecutionTracker.svelte";
   import WorkItemStatistics from "../components/WorkItemStatistics.svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import type { ReleaseInfo } from "$lib/bindings/ReleaseInfo";
   import type { RefreshSummary } from "$lib/bindings/RefreshSummary";
 
@@ -90,6 +92,7 @@
   let refreshSummaryMessage = $state<string | null>(null);
   let refreshSummaryTimer: ReturnType<typeof setTimeout> | null = null;
   let reviewChangesOpen = $state(false);
+  let reviewChangesTab = $state<Tab>("changes");
   let addItemDialogOpen = $state(false);
   let logPanelOpen = $state(false);
   let recipeBarOpen = $state(false);
@@ -101,6 +104,13 @@
   async function openFind(): Promise<void> {
     await tick();
     document.dispatchEvent(new CustomEvent("ghui:open-find"));
+  }
+
+  async function captureView(): Promise<void> {
+    await runBusy(async () => {
+      const path = await invoke<string>("capture_view");
+      await revealItemInDir(path);
+    });
   }
 
   // Update check state
@@ -255,15 +265,24 @@
         onclick={saveChanges}
       />
       <AppBarButton
-        icon={ClipboardList}
-        text="Review"
-        disabled={!(numChanges || numEpicConflicts) || disabled}
-        badge={numChanges + numEpicConflicts || undefined}
+        icon={CircleCheck}
+        text="Pending"
+        disabled={!numChanges || disabled}
+        badge={numChanges || undefined}
         onclick={() => {
+          reviewChangesTab = "changes";
           reviewChangesOpen = true;
-          if (numChanges) {
-            recordTelemetry({ event: "pending_changes_opened" });
-          }
+          recordTelemetry({ event: "pending_changes_opened" });
+        }}
+      />
+      <AppBarButton
+        icon={CircleSlash}
+        text="Conflicts"
+        disabled={!numEpicConflicts || disabled}
+        badge={numEpicConflicts || undefined}
+        onclick={() => {
+          reviewChangesTab = "conflicts";
+          reviewChangesOpen = true;
         }}
       />
       <AppBarButton
@@ -386,11 +405,10 @@
             onclick: () => { void openFind(); },
           },
           {
-            icon: ArrowDownToLine,
-            label: updateButtonText,
-            iconClass: updateIconClass,
-            disabled: updateButtonDisabled,
-            onclick: () => { void onUpdateClicked(); },
+            icon: Camera,
+            label: "Capture View",
+            disabled,
+            onclick: () => { void captureView(); },
           },
           {
             icon: ScrollText,
@@ -410,6 +428,13 @@
     {/snippet}
 
     {#snippet trail()}
+      <AppBarButton
+        icon={ArrowDownToLine}
+        iconClass={updateIconClass}
+        text={updateButtonText}
+        disabled={updateButtonDisabled}
+        onclick={() => { void onUpdateClicked(); }}
+      />
       <Pat />
     {/snippet}
   </AppBar>
@@ -427,7 +452,7 @@
     </div>
   {/if}
 
-  <ReviewChangesPanel bind:open={reviewChangesOpen} />
+  <ReviewChangesPanel bind:open={reviewChangesOpen} tab={reviewChangesTab} />
   <AddItemDialog bind:open={addItemDialogOpen} />
 
   <div class="flex flex-col flex-1 min-h-0 overflow-hidden">

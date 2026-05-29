@@ -198,6 +198,15 @@ impl WorkItems {
             parent_workstream: &Option<FieldOptionId>,
         ) {
             if let Some(item) = items.get(id) {
+                if let Some(parent_id) = item.get_parent() {
+                    if items.get(parent_id).is_none() {
+                        report.changes.add(Change {
+                            work_item_id: parent_id.clone(),
+                            data: ChangeData::AddToProject,
+                        });
+                    }
+                }
+
                 let this_item_epic = &item.project_item.epic;
 
                 if epic.is_some() && item.project_item.epic != *epic {

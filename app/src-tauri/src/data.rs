@@ -152,6 +152,12 @@ pub async fn record_telemetry(event: TelemetryEvent) -> TauriCommandResult<()> {
 }
 
 #[tauri::command]
+pub async fn capture_view(data_state: State<'_, DataState>) -> TauriCommandResult<String> {
+    let path = data_state.lock().await.capture_view()?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
 pub async fn parse_recipe(text: String) -> TauriCommandResult<Vec<Axis>> {
     Ok(github_graphql::pivot::parse_recipe(&text)?)
 }

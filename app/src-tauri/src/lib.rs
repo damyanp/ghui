@@ -63,6 +63,7 @@ pub fn run() {
             data::get_log_file_path,
             data::get_telemetry_file_path,
             data::record_telemetry,
+            data::capture_view,
             data::parse_recipe,
             data::recipe_to_string,
             actions::convert_tracked_to_sub_issues,

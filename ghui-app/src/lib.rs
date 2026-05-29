@@ -116,12 +116,20 @@ impl Filters {
 #[ts(export)]
 pub struct Data {
     fields: Fields,
+    // Keep indexed access optional in generated TS to model missing map entries.
+    #[ts(
+        type = "{ [key in import(\"./WorkItemId\").WorkItemId]?: import(\"./WorkItem\").WorkItem }"
+    )]
     work_items: HashMap<WorkItemId, WorkItem>,
     nodes: Vec<Node>,
 
     // When changes have been applied, work_items contains the modified versions
     // (and nodes is derived from this). Copies of the original, unmodified,
     // ones are stored here.  When changes aren't applied this will be empty.
+    // Keep indexed access optional in generated TS to model missing map entries.
+    #[ts(
+        type = "{ [key in import(\"./WorkItemId\").WorkItemId]?: import(\"./WorkItem\").WorkItem }"
+    )]
     original_work_items: HashMap<WorkItemId, WorkItem>,
 
     filters: Filters,
@@ -528,6 +536,65 @@ impl AppState {
     pub fn changes_count(&self) -> usize {
         self.changes.len()
     }
+
+    /// Builds a snapshot of the current view state (filters, pivot config, and
+    /// the computed node tree) and saves it to a timestamped file in the home
+    /// directory. When preview changes are enabled, pending edits are applied
+    /// to the snapshot so captured nodes match the current UI view. Returns the
+    /// path of the saved file so the caller can reveal it in the file system.
+    pub fn capture_view(&self) -> Result<PathBuf> {
+        use time::OffsetDateTime;
+
+        let nodes = if let (Some(fields), Some(work_items)) = (&self.fields, &self.work_items) {
+            let mut work_items = work_items.clone();
+            let original_work_items = if self.preview_changes {
+                self.apply_changes(&mut work_items)
+            } else {
+                HashMap::default()
+            };
+
+            RecipeNodeBuilder::new(
+                fields,
+                &work_items,
+                &self.filters,
+                &original_work_items,
+                &self.pivot_config,
+            )
+            .build()
+        } else {
+            Vec::new()
+        };
+
+        let now = OffsetDateTime::now_utc();
+        let timestamp = format!(
+            "{:04}-{:02}-{:02}T{:02}-{:02}-{:02}.{:03}",
+            now.year(),
+            now.month() as u8,
+            now.day(),
+            now.hour(),
+            now.minute(),
+            now.second(),
+            now.millisecond(),
+        );
+
+        let capture = ViewCapture {
+            captured_at: timestamp.clone(),
+            filters: self.filters.clone(),
+            pivot_config: self.pivot_config.clone(),
+            nodes,
+        };
+
+        let filename = format!("view_capture_{timestamp}.ghui.json");
+        let path = home_dir()
+            .ok_or_else(|| anyhow::anyhow!("could not determine home directory"))?
+            .join(filename);
+
+        let writer = fs::File::create(&path)?;
+        serde_json::to_writer_pretty(writer, &capture)?;
+
+        info!("View captured to {path:?}");
+        Ok(path)
+    }
 }
 
 impl DataState {
@@ -725,6 +792,18 @@ fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
 const WORK_ITEMS_EXTRA_DATA: &str = "work_items_extra_data";
 
 const VIEW_CONFIG_FILENAME: &str = "view_config";
+
+/// Snapshot written to disk by [`AppState::capture_view`].  Includes the
+/// active filter settings, the pivot configuration, and the rendered node tree
+/// so that a developer can fully reproduce the view from the file alone.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ViewCapture {
+    captured_at: String,
+    filters: Filters,
+    pivot_config: PivotConfig,
+    nodes: Vec<Node>,
+}
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1058,6 +1137,53 @@ mod tests {
 
         let observed = observed_configs.lock().unwrap();
         assert_eq!(observed.last().unwrap(), &next);
+    }
+
+    #[test]
+    fn test_capture_view_includes_preview_changes_in_nodes() {
+        struct CaptureCleanup(PathBuf);
+        impl Drop for CaptureCleanup {
+            fn drop(&mut self) {
+                let _ = fs::remove_file(&self.0);
+            }
+        }
+
+        let mut data = TestData::default();
+        let parent = data.build().issue().add();
+        let child = data.build().issue().add();
+
+        let mut state = AppState::new();
+        state.fields = Some(data.fields);
+        state.work_items = Some(data.work_items);
+        state.preview_changes = true;
+
+        state.changes.add(Change {
+            work_item_id: child.clone(),
+            data: ChangeData::SetParent(parent),
+        });
+
+        let path = state.capture_view().unwrap();
+        let _cleanup = CaptureCleanup(path.clone());
+        let contents = fs::read_to_string(&path).unwrap();
+        let capture: serde_json::Value = serde_json::from_str(&contents).unwrap();
+
+        assert_eq!(
+            capture.get("filters").unwrap(),
+            &serde_json::to_value(&state.filters).unwrap()
+        );
+        assert_eq!(
+            capture.get("pivotConfig").unwrap(),
+            &serde_json::to_value(&state.pivot_config).unwrap()
+        );
+
+        let nodes = capture.get("nodes").unwrap().as_array().unwrap();
+        assert!(!nodes.is_empty());
+        assert!(
+            nodes
+                .iter()
+                .any(|node| node["isModified"] == serde_json::Value::Bool(true)),
+            "preview changes should mark at least one captured node as modified",
+        );
     }
 
     #[test]

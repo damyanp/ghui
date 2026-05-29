@@ -1,6 +1,6 @@
 [package]
 name = "ghui-util"
-version = "0.6.0"
+version = "0.7.1"
 edition = "2021"
 
 [dependencies]
@@ -18,6 +18,6 @@ keyring = { version = "3", features = [
     "crypto-rust",
 ] }
 thiserror = "2.0.12"
-anyhow = "1.0.98"
+anyhow = "1.0.102"
 tokio-stream = "0.1.17"
 env_logger = "0.11"
