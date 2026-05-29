@@ -23,3 +23,6 @@ reqwest = { version = "0.13", features = ["json"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+[lints]
+workspace = true

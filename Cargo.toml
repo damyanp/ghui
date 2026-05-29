@@ -2,6 +2,11 @@
 resolver="2"
 members=[ "ghui-util","github-graphql", "app/src-tauri", "ghui-app"]
 
+# Treat any compiler warning as a build error across the workspace.
+# This is the build-time complement to the `cargo clippy -- -D warnings`
+# check already used in CI.
+[workspace.lints.rust]
+warnings = "deny"
 
 [profile.dev]
 incremental = true

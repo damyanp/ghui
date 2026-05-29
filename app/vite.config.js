@@ -30,4 +30,48 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  build: {
+    // The monaco-editor entry chunk and its language workers are inherently
+    // large (the TypeScript worker alone is ~7 MB). Bumping the threshold to
+    // 5 MB silences the noise while still flagging any new code that grows
+    // unexpectedly large.
+    chunkSizeWarningLimit: 5000,
+    rollupOptions: {
+      onLog(level, log, defaultHandler) {
+        if (level !== "warn") {
+          defaultHandler(level, log);
+          return;
+        }
+        // Known false positives we deliberately allow:
+        //
+        // - UNUSED_EXTERNAL_IMPORT: only fires in the SSR build for symbols
+        //   (e.g. `writeText` from the Tauri clipboard plugin and the
+        //   monaco-editor loader) that are referenced inside `$effect` or
+        //   event handlers stripped during prerendering. They are used in
+        //   the client bundle.
+        if (log.code === "UNUSED_EXTERNAL_IMPORT") return;
+        // - SOURCEMAP_ERROR / INVALID_ANNOTATION: rollup occasionally fails
+        //   to map the location of `/* @__PURE__ */` annotations the Svelte
+        //   compiler emits for TypeScript `as` casts. Harmless: the
+        //   annotation is simply dropped by rollup.
+        if (log.code === "SOURCEMAP_ERROR") return;
+        if (log.code === "INVALID_ANNOTATION") return;
+        // - CIRCULAR_DEPENDENCY entirely inside third-party packages
+        //   (e.g. svelte's internal runtime) is out of our control.
+        if (
+          log.code === "CIRCULAR_DEPENDENCY" &&
+          log.ids?.every((id) => id.includes("node_modules"))
+        )
+          return;
+
+        // Everything else is escalated to a hard error so the build fails
+        // on any new warning.
+        const message = log.code
+          ? `[rollup:${log.code}] ${log.message}`
+          : `[rollup] ${log.message}`;
+        throw new Error(message);
+      },
+    },
+  },
 }));

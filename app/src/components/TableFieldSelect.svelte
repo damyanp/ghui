@@ -4,7 +4,7 @@
   import type { FieldOption } from "$lib/bindings/FieldOption";
   import * as select from "@zag-js/select";
   import { portal, useMachine, normalizeProps } from "@zag-js/svelte";
-  import { onMount, tick, type Snippet } from "svelte";
+  import { onMount, tick, untrack, type Snippet } from "svelte";
   import type { Attachment } from "svelte/attachments";
 
   type Props = {
@@ -17,7 +17,9 @@
 
   const { field, defaultValue, ...props }: Props = $props();
 
-  const options = [{ id: undefined }, ...field.options];
+  // `field` and `defaultValue` are configuration props fixed at mount; the
+  // zag-js machine takes its initial collection / defaultValue once.
+  const options = untrack(() => [{ id: undefined }, ...field.options]);
 
   const collection = select.collection({
     items: options,
@@ -28,10 +30,11 @@
   });
 
   const id = $props.id();
+  const initialDefaultValue = untrack(() => defaultValue);
   const service = useMachine(select.machine, {
     id,
     collection,
-    defaultValue: [defaultValue || ""],
+    defaultValue: [initialDefaultValue || ""],
     onValueChange,
   });
   const api = $derived(select.connect(service, normalizeProps));

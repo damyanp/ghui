@@ -3,6 +3,7 @@
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { SingleSelect } from "$lib/bindings/SingleSelect";
   import { Switch } from "@skeletonlabs/skeleton-svelte";
+  import { untrack } from "svelte";
 
   type Props = {
     field: Field<SingleSelect>;
@@ -11,8 +12,15 @@
   };
 
   const props: Props = $props();
-  let filter = $state(props.filter);
-  let options = [{ id: null, value: "-" }, ...props.field.options];
+  // We intentionally capture only the initial value of the parent's filter
+  // (this component owns the filter locally until it flushes back via
+  // onFilterChange) and of the field's option list (which is fixed for the
+  // lifetime of the menu).
+  let filter = $state(untrack(() => props.filter));
+  let options = untrack(() => [
+    { id: null, value: "-" },
+    ...props.field.options,
+  ]);
 
   let filterChanged = $state(false);
 

@@ -21,3 +21,6 @@ thiserror = "2.0.12"
 anyhow = "1.0.102"
 tokio-stream = "0.1.17"
 env_logger = "0.11"
+
+[lints]
+workspace = true
