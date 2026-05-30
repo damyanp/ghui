@@ -70,27 +70,51 @@ export function computeGroupSiblingCounts(nodes: Node[]): Map<string, number> {
  *  - the bucket is the only bucket among its siblings (a single-distinct-value
  *    bucket — every item under the parent shares the same field value).
  *
- * In both cases the items render inline at their own level, just without the
- * redundant header.
+ * Hiding a group header would leave its descendants indented one level too deep
+ * (the row array is rendered as a tree by `level`, so a gap makes `TreeTable`
+ * skip the now-orphaned children entirely). To keep the tree contiguous, each
+ * collapsed group's descendants are shifted up by one level, so they slot in as
+ * direct children of the collapsed group's parent.
  */
 export function computeVisibleRows(
   nodes: Node[],
   collapseSingleValue: boolean
 ): TreeRow[] {
-  const all: TreeRow[] = nodes.map((n) => ({
-    ...n,
-    isGroup: n.data.type === "group",
-  }));
-  if (!collapseSingleValue) return all;
+  if (!collapseSingleValue) {
+    return nodes.map((n) => ({ ...n, isGroup: n.data.type === "group" }));
+  }
 
   const childCounts = computeGroupChildCounts(nodes);
   const siblingCounts = computeGroupSiblingCounts(nodes);
 
-  return all.filter(
-    (row) =>
-      !(
-        row.isGroup &&
-        (childCounts.get(row.id) === 1 || siblingCounts.get(row.id) === 1)
-      )
-  );
+  const shouldCollapse = (node: Node): boolean =>
+    node.data.type === "group" &&
+    (childCounts.get(node.id) === 1 || siblingCounts.get(node.id) === 1);
+
+  const rows: TreeRow[] = [];
+  // Original levels of collapsed group ancestors still enclosing the current
+  // node. Its length is how many levels the current node should shift up by.
+  const collapsedAncestorLevels: number[] = [];
+
+  for (const node of nodes) {
+    while (
+      collapsedAncestorLevels.length > 0 &&
+      collapsedAncestorLevels[collapsedAncestorLevels.length - 1] >= node.level
+    ) {
+      collapsedAncestorLevels.pop();
+    }
+
+    if (shouldCollapse(node)) {
+      collapsedAncestorLevels.push(node.level);
+      continue;
+    }
+
+    rows.push({
+      ...node,
+      level: node.level - collapsedAncestorLevels.length,
+      isGroup: node.data.type === "group",
+    });
+  }
+
+  return rows;
 }

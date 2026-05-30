@@ -89,11 +89,14 @@ describe("computeVisibleRows", () => {
   it("keeps every row when the toggle is off", () => {
     const rows = computeVisibleRows(nodes, false);
     expect(rows.map((r) => r.id)).toEqual(["only", "a", "b"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1, 1]);
   });
 
-  it("collapses a single-distinct-value bucket when the toggle is on", () => {
+  it("collapses a single-distinct-value bucket and promotes its items", () => {
     const rows = computeVisibleRows(nodes, true);
     expect(rows.map((r) => r.id)).toEqual(["a", "b"]);
+    // The lone bucket is removed, so its items rise to the bucket's level.
+    expect(rows.map((r) => r.level)).toEqual([0, 0]);
   });
 
   it("still collapses single-item buckets", () => {
@@ -108,6 +111,51 @@ describe("computeVisibleRows", () => {
     // g1 has one item -> collapsed; g2 has two items but is one of two
     // sibling buckets -> kept.
     expect(rows.map((r) => r.id)).toEqual(["a", "g2", "b", "c"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 0, 1, 1]);
+  });
+
+  it("promotes a collapsed bucket's items under their work-item parent", () => {
+    // Reproduces the reported regression: a parent work item whose only child
+    // bucket is a single-distinct-value group. Collapsing the group must keep
+    // the grandchild visible as a direct child of the parent (level 1), not
+    // drop it and leave the parent with a dangling expander.
+    const tree = [
+      item("parent", 0),
+      group("bucket", 1),
+      item("child", 2),
+    ];
+    const rows = computeVisibleRows(tree, true);
+    expect(rows.map((r) => r.id)).toEqual(["parent", "child"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1]);
+  });
+
+  it("stacks the shift across nested collapsed buckets", () => {
+    const tree = [
+      item("parent", 0),
+      group("outer", 1),
+      group("inner", 2),
+      item("child", 3),
+    ];
+    const rows = computeVisibleRows(tree, true);
+    expect(rows.map((r) => r.id)).toEqual(["parent", "child"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1]);
+  });
+
+  it("does not shift siblings of a collapsed bucket", () => {
+    // Two top-level buckets: each is kept (siblingCount 2), but the first holds
+    // a single item so... actually both have one item -> both collapse. Use
+    // two-item buckets to keep them and verify levels are untouched.
+    const tree = [
+      group("g1", 0),
+      item("a", 1),
+      item("b", 1),
+      group("g2", 0),
+      item("c", 1),
+      item("d", 1),
+    ];
+    const rows = computeVisibleRows(tree, true);
+    expect(rows.map((r) => r.id)).toEqual(["g1", "a", "b", "g2", "c", "d"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1, 1, 0, 1, 1]);
   });
 
   it("decorates rows with isGroup", () => {
