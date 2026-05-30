@@ -100,17 +100,17 @@ fn test_child_epic_before_parent_no_conflict() {
 fn test_child_epic_propagates_to_grandchild() {
     let mut data = TestData::default();
 
-    const GRANDPARENT_EPIC: &str = "SM 6.9 Preview";
-    const CHILD_EPIC: &str = "DML Demo";
+    const GRANDPARENT_LATER_EPIC: &str = "SM 6.9 Preview";
+    const PARENT_EARLIER_EPIC: &str = "DML Demo";
 
     let grandchild = data.build().add();
     let child = data
         .build()
-        .epic(CHILD_EPIC)
+        .epic(PARENT_EARLIER_EPIC)
         .sub_issues(&[&grandchild])
         .add();
     data.build()
-        .epic(GRANDPARENT_EPIC)
+        .epic(GRANDPARENT_LATER_EPIC)
         .sub_issues(&[&child])
         .add();
 
@@ -119,7 +119,12 @@ fn test_child_epic_propagates_to_grandchild() {
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {
         work_item_id: grandchild,
-        data: ChangeData::Epic(data.fields.epic.option_id(CHILD_EPIC.into()).cloned()),
+        data: ChangeData::Epic(
+            data.fields
+                .epic
+                .option_id(PARENT_EARLIER_EPIC.into())
+                .cloned(),
+        ),
     });
 
     assert_eq!(report.changes, expected_changes);
@@ -130,23 +135,26 @@ fn test_child_epic_propagates_to_grandchild() {
 fn test_child_epic_after_parent_with_grandchild() {
     let mut data = TestData::default();
 
-    const PARENT_EPIC: &str = "DML Demo";
-    const CHILD_EPIC: &str = "SM 6.9 Preview";
+    const PARENT_EARLIER_EPIC: &str = "DML Demo";
+    const CHILD_LATER_EPIC: &str = "SM 6.9 Preview";
 
     let grandchild = data.build().add();
     let child = data
         .build()
-        .epic(CHILD_EPIC)
+        .epic(CHILD_LATER_EPIC)
         .sub_issues(&[&grandchild])
         .add();
-    data.build().epic(PARENT_EPIC).sub_issues(&[&child]).add();
+    data.build()
+        .epic(PARENT_EARLIER_EPIC)
+        .sub_issues(&[&child])
+        .add();
 
     let report = data.work_items.sanitize(&data.fields);
 
     let mut expected_changes = Changes::default();
     expected_changes.add(Change {
         work_item_id: grandchild,
-        data: ChangeData::Epic(data.fields.epic.option_id(CHILD_EPIC.into()).cloned()),
+        data: ChangeData::Epic(data.fields.epic.option_id(CHILD_LATER_EPIC.into()).cloned()),
     });
     assert_eq!(report.changes, expected_changes);
 
@@ -157,7 +165,7 @@ fn test_child_epic_after_parent_with_grandchild() {
         conflict.current_epic,
         data.fields
             .epic
-            .option_id(CHILD_EPIC.into())
+            .option_id(CHILD_LATER_EPIC.into())
             .cloned()
             .unwrap()
     );
@@ -165,7 +173,7 @@ fn test_child_epic_after_parent_with_grandchild() {
         conflict.proposed_epic,
         data.fields
             .epic
-            .option_id(PARENT_EPIC.into())
+            .option_id(PARENT_EARLIER_EPIC.into())
             .cloned()
             .unwrap()
     );
