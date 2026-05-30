@@ -3,7 +3,9 @@ use crate::data::{
     PullRequestStructDiffEnumRef, WorkItemDataStructDiffEnumRef,
 };
 
-use super::{Change, ChangeData, Changes, Fields, WorkItem, WorkItemData, WorkItemId};
+use super::{
+    Change, ChangeData, Changes, Field, Fields, SingleSelect, WorkItem, WorkItemData, WorkItemId,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use structdiff::StructDiff;
@@ -187,14 +189,15 @@ impl WorkItems {
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(self, &mut report, &root_item_id, &None, &None);
+            sanitize_issue_hierarchy(self, &fields.epic, &mut report, &root_item_id, &None, &None);
         }
 
         fn sanitize_issue_hierarchy(
             items: &WorkItems,
+            epic_field: &Field<SingleSelect>,
             report: &mut SanitizeReport,
             id: &WorkItemId,
-            epic: &Option<FieldOptionId>,
+            parent_epic: &Option<FieldOptionId>,
             parent_workstream: &Option<FieldOptionId>,
         ) {
             if let Some(item) = items.get(id) {
@@ -209,26 +212,36 @@ impl WorkItems {
 
                 let this_item_epic = &item.project_item.epic;
 
-                if epic.is_some() && item.project_item.epic != *epic {
+                if let Some(ancestor_epic) = parent_epic {
+                    let parent_index = epic_field.option_index(Some(ancestor_epic));
+
                     if let Some(current) = this_item_epic {
-                        // Item already has a different Epic — record the conflict
-                        // so the user can review and selectively override it.
-                        report.epic_conflicts.push(SanitizeConflict {
-                            work_item_id: id.clone(),
-                            current_epic: current.clone(),
-                            proposed_epic: epic.clone().unwrap(),
-                        });
+                        let child_index = epic_field.option_index(Some(current));
+                        if child_index > parent_index {
+                            // Child's epic is after the parent's — record as
+                            // a conflict for user review.
+                            report.epic_conflicts.push(SanitizeConflict {
+                                work_item_id: id.clone(),
+                                current_epic: current.clone(),
+                                proposed_epic: ancestor_epic.clone(),
+                            });
+                        }
+                        // Child's epic is at or before the parent's — OK.
                     } else {
+                        // Blank child epic inherits the parent's.
                         report.changes.add(Change {
                             work_item_id: id.clone(),
-                            data: ChangeData::Epic(epic.clone()),
+                            data: ChangeData::Epic(parent_epic.clone()),
                         });
                     }
                 }
 
-                let epic = match epic {
-                    Some(_) => epic,
-                    None => this_item_epic,
+                // The effective epic for this item's subtree is its own epic
+                // if set, otherwise the inherited parent epic.
+                let effective_epic = if this_item_epic.is_some() {
+                    this_item_epic
+                } else {
+                    parent_epic
                 };
 
                 // Workstream rule (minimal):
@@ -250,7 +263,14 @@ impl WorkItems {
                     let this_workstream = item.project_item.workstream.expect_loaded().clone();
 
                     for child_id in &issue.sub_issues {
-                        sanitize_issue_hierarchy(items, report, child_id, epic, &this_workstream);
+                        sanitize_issue_hierarchy(
+                            items,
+                            epic_field,
+                            report,
+                            child_id,
+                            effective_epic,
+                            &this_workstream,
+                        );
                     }
                 }
             } else {

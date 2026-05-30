@@ -36,15 +36,16 @@ fn test_set_epic_from_parent() {
     let mut data = TestData::default();
 
     const RIGHT_EPIC: &str = "DML Demo";
-    const WRONG_EPIC: &str = "MiniEngine Demo";
+    const LATER_EPIC: &str = "MiniEngine Demo";
+    const EARLIER_EPIC: &str = "DML Demo"; // same position = at or before
 
     let child_no_epic = data.build().add();
-    let child_wrong_epic = data.build().epic(WRONG_EPIC).add();
+    let child_later_epic = data.build().epic(LATER_EPIC).add();
     let child_right_epic = data.build().epic(RIGHT_EPIC).add();
 
     data.build()
         .epic(RIGHT_EPIC)
-        .sub_issues(&[&child_no_epic, &child_wrong_epic, &child_right_epic])
+        .sub_issues(&[&child_no_epic, &child_later_epic, &child_right_epic])
         .add();
 
     let report = data.work_items.sanitize(&data.fields);
@@ -57,9 +58,9 @@ fn test_set_epic_from_parent() {
 
     assert_eq!(report.changes, expected_changes);
 
-    // child_wrong_epic has a conflicting Epic — it must appear in conflicts.
+    // child_later_epic has a later Epic than parent — it must appear in conflicts.
     assert_eq!(report.epic_conflicts.len(), 1);
-    assert_eq!(report.epic_conflicts[0].work_item_id, child_wrong_epic);
+    assert_eq!(report.epic_conflicts[0].work_item_id, child_later_epic);
     assert_eq!(
         report.epic_conflicts[0].proposed_epic,
         data.fields
@@ -72,12 +73,13 @@ fn test_set_epic_from_parent() {
         report.epic_conflicts[0].current_epic,
         data.fields
             .epic
-            .option_id(WRONG_EPIC.into())
+            .option_id(LATER_EPIC.into())
             .cloned()
             .unwrap()
     );
-    // child_right_epic already has the correct Epic — no conflict.
+    // child_right_epic has the same Epic — no conflict.
     let _ = child_right_epic;
+    let _ = EARLIER_EPIC;
 }
 
 #[test]
@@ -374,4 +376,89 @@ fn test_epic_conflict_recorded_not_changed() {
             .cloned()
             .unwrap()
     );
+}
+
+#[test]
+fn test_child_epic_before_parent_no_conflict() {
+    let mut data = TestData::default();
+
+    // Parent has a later epic; child has an earlier one — no conflict.
+    const PARENT_EPIC: &str = "MiniEngine Demo"; // index 1
+    const CHILD_EPIC: &str = "DML Demo"; // index 0
+
+    let child_id = data.build().epic(CHILD_EPIC).add();
+    data.build()
+        .epic(PARENT_EPIC)
+        .sub_issues(&[&child_id])
+        .add();
+
+    let report = data.work_items.sanitize(&data.fields);
+
+    assert_eq!(report.changes, Changes::default());
+    assert!(report.epic_conflicts.is_empty());
+}
+
+#[test]
+fn test_child_epic_propagates_to_grandchild() {
+    let mut data = TestData::default();
+
+    // Grandparent has a later epic; child has an earlier one.
+    // Grandchild (blank) should inherit the child's epic, not the grandparent's.
+    const GRANDPARENT_EPIC: &str = "SM 6.9 Preview"; // index 2
+    const CHILD_EPIC: &str = "DML Demo"; // index 0
+
+    let grandchild = data.build().add();
+    let child = data
+        .build()
+        .epic(CHILD_EPIC)
+        .sub_issues(&[&grandchild])
+        .add();
+    data.build()
+        .epic(GRANDPARENT_EPIC)
+        .sub_issues(&[&child])
+        .add();
+
+    let report = data.work_items.sanitize(&data.fields);
+
+    let mut expected_changes = Changes::default();
+    expected_changes.add(Change {
+        work_item_id: grandchild,
+        data: ChangeData::Epic(data.fields.epic.option_id(CHILD_EPIC.into()).cloned()),
+    });
+
+    assert_eq!(report.changes, expected_changes);
+    assert!(report.epic_conflicts.is_empty());
+}
+
+#[test]
+fn test_child_epic_after_parent_with_grandchild() {
+    let mut data = TestData::default();
+
+    // Parent has earlier epic; child has a later one (conflict).
+    // Grandchild is blank — should inherit the child's epic (nearest ancestor).
+    const PARENT_EPIC: &str = "DML Demo"; // index 0
+    const CHILD_EPIC: &str = "SM 6.9 Preview"; // index 2
+
+    let grandchild = data.build().add();
+    let child = data
+        .build()
+        .epic(CHILD_EPIC)
+        .sub_issues(&[&grandchild])
+        .add();
+    data.build().epic(PARENT_EPIC).sub_issues(&[&child]).add();
+
+    let report = data.work_items.sanitize(&data.fields);
+
+    // Grandchild inherits child's epic
+    let mut expected_changes = Changes::default();
+    expected_changes.add(Change {
+        work_item_id: grandchild,
+        data: ChangeData::Epic(data.fields.epic.option_id(CHILD_EPIC.into()).cloned()),
+    });
+
+    assert_eq!(report.changes, expected_changes);
+
+    // Child's epic is after parent's — conflict recorded
+    assert_eq!(report.epic_conflicts.len(), 1);
+    assert_eq!(report.epic_conflicts[0].work_item_id, child);
 }
