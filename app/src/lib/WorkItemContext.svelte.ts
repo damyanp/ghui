@@ -70,8 +70,9 @@ export class WorkItemContext {
    * Frontend-only toolbar toggles (Task 9). Pure render concerns — these do
    * NOT round-trip through Tauri and do NOT persist across app restart.
    * `showCounts` appends a `(N)` decorator on group headers. `collapseSingleValue`
-   * hides group rows whose bucket contains exactly one work item, so that
-   * lone item renders inline. */
+   * hides redundant group rows — buckets with exactly one work item, or buckets
+   * that are the only distinct value among their siblings — so those items
+   * render inline. */
   showCounts = $state<boolean>(false);
   collapseSingleValue = $state<boolean>(false);
 
