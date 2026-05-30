@@ -3,7 +3,9 @@ use crate::data::{
     PullRequestStructDiffEnumRef, WorkItemDataStructDiffEnumRef,
 };
 
-use super::{Change, ChangeData, Changes, Fields, WorkItem, WorkItemData, WorkItemId};
+use super::{
+    Change, ChangeData, Changes, Field, Fields, SingleSelect, WorkItem, WorkItemData, WorkItemId,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use structdiff::StructDiff;
@@ -187,15 +189,16 @@ impl WorkItems {
         }
 
         for root_item_id in self.get_roots() {
-            sanitize_issue_hierarchy(self, &mut report, &root_item_id, &None, &None);
+            sanitize_issue_hierarchy(self, &mut report, &root_item_id, &None, &None, &fields.epic);
         }
 
         fn sanitize_issue_hierarchy(
             items: &WorkItems,
             report: &mut SanitizeReport,
             id: &WorkItemId,
-            epic: &Option<FieldOptionId>,
+            parent_epic: &Option<FieldOptionId>,
             parent_workstream: &Option<FieldOptionId>,
+            epic_field: &Field<SingleSelect>,
         ) {
             if let Some(item) = items.get(id) {
                 if let Some(parent_id) = item.get_parent() {
@@ -209,26 +212,31 @@ impl WorkItems {
 
                 let this_item_epic = &item.project_item.epic;
 
-                if epic.is_some() && item.project_item.epic != *epic {
+                if let Some(parent_epic_id) = parent_epic {
                     if let Some(current) = this_item_epic {
-                        // Item already has a different Epic — record the conflict
-                        // so the user can review and selectively override it.
-                        report.epic_conflicts.push(SanitizeConflict {
-                            work_item_id: id.clone(),
-                            current_epic: current.clone(),
-                            proposed_epic: epic.clone().unwrap(),
-                        });
+                        let current_idx = epic_field.option_index(Some(current));
+                        let parent_idx = epic_field.option_index(Some(parent_epic_id));
+                        if current_idx > parent_idx {
+                            // Child epic is later than parent epic — record conflict
+                            // so the user can review and selectively override it.
+                            report.epic_conflicts.push(SanitizeConflict {
+                                work_item_id: id.clone(),
+                                current_epic: current.clone(),
+                                proposed_epic: parent_epic_id.clone(),
+                            });
+                        }
                     } else {
                         report.changes.add(Change {
                             work_item_id: id.clone(),
-                            data: ChangeData::Epic(epic.clone()),
+                            data: ChangeData::Epic(Some(parent_epic_id.clone())),
                         });
                     }
                 }
 
-                let epic = match epic {
-                    Some(_) => epic,
-                    None => this_item_epic,
+                let effective_epic = if this_item_epic.is_some() {
+                    this_item_epic
+                } else {
+                    parent_epic
                 };
 
                 // Workstream rule (minimal):
@@ -250,7 +258,14 @@ impl WorkItems {
                     let this_workstream = item.project_item.workstream.expect_loaded().clone();
 
                     for child_id in &issue.sub_issues {
-                        sanitize_issue_hierarchy(items, report, child_id, epic, &this_workstream);
+                        sanitize_issue_hierarchy(
+                            items,
+                            report,
+                            child_id,
+                            effective_epic,
+                            &this_workstream,
+                            epic_field,
+                        );
                     }
                 }
             } else {
