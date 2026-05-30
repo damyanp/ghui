@@ -10,6 +10,10 @@
     linkTitle,
   } from "$lib/WorkItemContext.svelte";
   import { type MenuItem } from "./TreeTableContextMenu.svelte";
+  import {
+    computeGroupChildCounts,
+    computeVisibleRows,
+  } from "./workItemTreeRows";
   import TreeTable, { type Column } from "./TreeTable.svelte";
   import { createRawSnippet, onMount, type Snippet } from "svelte";
   import type { Change } from "$lib/bindings/Change";
@@ -249,40 +253,17 @@
     else return items;
   }
 
-  // Count of workItem descendants for each group node. Computed by walking
-  // the flat depth-first node array: every descendant of `group` is contiguous
-  // and at a strictly greater level until we hit a node at `<= group.level`.
-  // Used by the showCounts and collapseSingleValue toolbar toggles.
-  let groupChildCounts = $derived.by(() => {
-    const counts = new Map<string, number>();
-    const nodes = context.data.nodes;
-    for (let i = 0; i < nodes.length; i++) {
-      const head = nodes[i];
-      if (head.data.type !== "group") continue;
-      let count = 0;
-      for (let j = i + 1; j < nodes.length; j++) {
-        const child = nodes[j];
-        if (child.level <= head.level) break;
-        if (child.data.type === "workItem") count++;
-      }
-      counts.set(head.id, count);
-    }
-    return counts;
-  });
+  // Count of workItem descendants for each group node. Used by the showCounts
+  // decorator and the collapseSingleValue toggle (see workItemTreeRows.ts).
+  let groupChildCounts = $derived(computeGroupChildCounts(context.data.nodes));
 
-  let rows = $derived.by(() => {
-    const all = context.data.nodes.map((n) => ({
-      ...n,
-      isGroup: n.data.type === "group",
-    }));
-    if (!context.collapseSingleValue) return all;
-    // When collapseSingleValue is on, hide group rows whose bucket contains
-    // exactly one work item so the lone item renders inline. The child stays
-    // at its own level — visually it just loses its group header.
-    return all.filter(
-      (row) => !(row.isGroup && groupChildCounts.get(row.id) === 1)
-    );
-  });
+  // When collapseSingleValue is on, hide group rows that are redundant: buckets
+  // holding a single work item, or buckets that are the only distinct value
+  // among their siblings. Descendants of a collapsed group are promoted (their
+  // level is shifted up) to fill the gap left by the hidden header.
+  let rows = $derived(
+    computeVisibleRows(context.data.nodes, context.collapseSingleValue)
+  );
 
   let columns = $state<Column<WorkItem>[]>([
     { name: "Title", width: "5fr", disableMenu: true, render: renderTitle },

@@ -3,6 +3,10 @@
     { "kind": "pivot", "field": "epic" },
     { "kind": "hierarchy" }
   ],
+  "Hierarchy → Pivot(Epic)": [
+    { "kind": "hierarchy" },
+    { "kind": "pivot", "field": "epic" }
+  ],
   "Hierarchy → Group(Workstream)": [
     { "kind": "hierarchy" },
     { "kind": "group", "field": "workstream" }
