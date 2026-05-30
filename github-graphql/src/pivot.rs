@@ -228,8 +228,9 @@ mod tests {
 
     use super::*;
 
-    const PRESETS: [&str; 14] = [
+    const PRESETS: [&str; 15] = [
         "Pivot(Epic) → Hierarchy",
+        "Hierarchy → Pivot(Epic)",
         "Hierarchy → Group(Workstream)",
         "Hierarchy → Group(Status)",
         "Pivot(Status)",
@@ -334,6 +335,15 @@ mod tests {
             {
               "field": "workstream",
               "kind": "group"
+            }
+          ],
+          "Hierarchy → Pivot(Epic)": [
+            {
+              "kind": "hierarchy"
+            },
+            {
+              "field": "epic",
+              "kind": "pivot"
             }
           ],
           "Pivot(Assignee) → Group(Epic)": [

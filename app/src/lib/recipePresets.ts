@@ -4,6 +4,10 @@ export const PRESETS: ReadonlyArray<{ label: string; recipe: string }> = [
     recipe: "Pivot(Epic) → Hierarchy",
   },
   {
+    label: "Hierarchy first, pivoted by epic at every level",
+    recipe: "Hierarchy → Pivot(Epic)",
+  },
+  {
     label: "Hierarchy first, sub-grouped by workstream",
     recipe: "Hierarchy → Group(Workstream)",
   },

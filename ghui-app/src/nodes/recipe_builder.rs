@@ -179,9 +179,75 @@ impl<'a> RecipeNodeBuilder<'a> {
         level: u32,
         path: &str,
     ) {
+        // `Hierarchy → Pivot(field)`: re-apply the pivot at every level of the
+        // tree, bucketing each node's children (and the roots themselves) by
+        // the field. This differs from `Group` after `Hierarchy`, which only
+        // buckets the first level of children.
+        if let [Axis::Pivot(field)] = child_recipe {
+            self.render_pivot_level(roots, scope_ids, ghost_ids, field, level, path);
+            return;
+        }
+
         roots.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
         for root in roots {
             self.render_tree_node(&root, scope_ids, ghost_ids, child_recipe, level, path);
+        }
+    }
+
+    /// Recursively bucket `items` by `field` and render each bucket's items
+    /// with their hierarchy descendants, re-applying the pivot at every level.
+    /// Used for the `Hierarchy → Pivot(field)` recipe so the pivot "follows"
+    /// the parent ↔ sub-issue tree all the way down.
+    fn render_pivot_level(
+        &mut self,
+        items: Vec<WorkItemId>,
+        scope_ids: &std::collections::HashSet<WorkItemId>,
+        ghost_ids: &std::collections::HashSet<WorkItemId>,
+        field: &PivotField,
+        level: u32,
+        path: &str,
+    ) {
+        if items.is_empty() {
+            return;
+        }
+
+        for bucket in self.bucket_by_field(items, field) {
+            let group_id = self.group_node_id(path, field, &bucket.key);
+            self.nodes.push(Node {
+                level,
+                id: group_id.clone(),
+                data: NodeData::Group {
+                    name: bucket.label,
+                    field_option_id: bucket.field_option_id,
+                },
+                has_children: !bucket.items.is_empty(),
+                is_modified: false,
+                is_ghost: false,
+            });
+
+            let mut bucket_items = bucket.items;
+            bucket_items.sort_by(|a, b| self.item_title(a).cmp(self.item_title(b)));
+            for id in bucket_items {
+                let children = self.children_in_scope(&id, scope_ids);
+                self.push_item(
+                    &id,
+                    level + 1,
+                    ghost_ids.contains(&id),
+                    !children.is_empty(),
+                    &group_id,
+                );
+                if !children.is_empty() {
+                    let child_path = self.child_path(&group_id, &id);
+                    self.render_pivot_level(
+                        children,
+                        scope_ids,
+                        ghost_ids,
+                        field,
+                        level + 2,
+                        &child_path,
+                    );
+                }
+            }
         }
     }
 
@@ -766,6 +832,20 @@ total=8 unique_ids=8
 0 item 5 ghost=false children=false
 0 item 6 ghost=false children=false
 
+== Hierarchy → Pivot(Epic) ==
+total=11 unique_ids=11
+0 group path/epic=id(EpicA) EpicA
+1 item 2 ghost=false children=true
+2 group path/epic=id(EpicA)/2/epic=id(EpicA) EpicA
+3 item 1 ghost=false children=false
+0 group path/epic=id(EpicB) EpicB
+1 item 5 ghost=false children=false
+0 group path/epic=(none) (none)
+1 item 4 ghost=false children=true
+2 group path/epic=(none)/4/epic=id(EpicB) EpicB
+3 item 3 ghost=false children=false
+1 item 6 ghost=false children=false
+
 == Pivot(Assignee) → Group(Epic) ==
 total=15 unique_ids=15
 0 group path/assignee=(none) (none)
@@ -963,6 +1043,62 @@ total=6 unique_ids=6
 0 group path/epic=id(EpicB) EpicB
 1 item 3 ghost=true children=true
 2 item 2 ghost=false children=false"#
+        );
+    }
+
+    #[test]
+    fn test_recipe_builder_hierarchy_then_pivot_recurses_every_level() {
+        // Reproduces the issue example: pivot on Epic follows the parent ↔
+        // sub-issue tree, bucketing children by Epic at every level (and the
+        // roots themselves).
+        //
+        //   IssueA (EpicA)
+        //   ├─ IssueA-A (EpicA)
+        //   │  ├─ IssueA-A-A (EpicA)
+        //   │  └─ IssueA-A-B (EpicA)
+        //   ├─ IssueA-B (EpicB)
+        //   └─ IssueA-C (EpicA)
+        let mut data = TestData::default();
+        let issue_a_a_a = data.build().epic("EpicA").add();
+        let issue_a_a_b = data.build().epic("EpicA").add();
+        let issue_a_a = data
+            .build()
+            .epic("EpicA")
+            .sub_issues(&[&issue_a_a_a, &issue_a_a_b])
+            .add();
+        let issue_a_b = data.build().epic("EpicB").add();
+        let issue_a_c = data.build().epic("EpicA").add();
+        let issue_a = data
+            .build()
+            .epic("EpicA")
+            .sub_issues(&[&issue_a_a, &issue_a_b, &issue_a_c])
+            .add();
+
+        set_title(&mut data, &issue_a, "IssueA");
+        set_title(&mut data, &issue_a_a, "IssueA-A");
+        set_title(&mut data, &issue_a_b, "IssueA-B");
+        set_title(&mut data, &issue_a_c, "IssueA-C");
+        set_title(&mut data, &issue_a_a_a, "IssueA-A-A");
+        set_title(&mut data, &issue_a_a_b, "IssueA-A-B");
+
+        let config = PivotConfig {
+            recipe: parse_recipe("Hierarchy → Pivot(Epic)").unwrap(),
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        assert_eq!(
+            render_recipe_nodes(&data.fields, &data.work_items, &config),
+            r#"0 group path/epic=id(EpicA) EpicA
+1 item 6 ghost=false children=true
+2 group path/epic=id(EpicA)/6/epic=id(EpicA) EpicA
+3 item 3 ghost=false children=true
+4 group path/epic=id(EpicA)/6/epic=id(EpicA)/3/epic=id(EpicA) EpicA
+5 item 1 ghost=false children=false
+5 item 2 ghost=false children=false
+3 item 5 ghost=false children=false
+2 group path/epic=id(EpicA)/6/epic=id(EpicB) EpicB
+3 item 4 ghost=false children=false"#
         );
     }
 
