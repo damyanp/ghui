@@ -259,7 +259,8 @@
 
   // When collapseSingleValue is on, hide group rows that are redundant: buckets
   // holding a single work item, or buckets that are the only distinct value
-  // among their siblings. The items then render inline at their own level.
+  // among their siblings. Descendants of a collapsed group are promoted (their
+  // level is shifted up) to fill the gap left by the hidden header.
   let rows = $derived(
     computeVisibleRows(context.data.nodes, context.collapseSingleValue)
   );

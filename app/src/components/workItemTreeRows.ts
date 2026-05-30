@@ -6,23 +6,31 @@ export type TreeRow = Node & { isGroup: boolean };
 const ROOT_PARENT_KEY = "\0root";
 
 /**
- * Count of `workItem` descendants for each group node. Computed by walking the
- * flat depth-first node array: every descendant of a group is contiguous and at
- * a strictly greater level until we hit a node at `<= group.level`.
+ * Count of `workItem` descendants for each group node. Computed in a single
+ * pass: a stack tracks all open group ancestors; each `workItem` node
+ * increments every ancestor's count.
  */
 export function computeGroupChildCounts(nodes: Node[]): Map<string, number> {
   const counts = new Map<string, number>();
-  for (let i = 0; i < nodes.length; i++) {
-    const head = nodes[i];
-    if (head.data.type !== "group") continue;
-    let count = 0;
-    for (let j = i + 1; j < nodes.length; j++) {
-      const child = nodes[j];
-      if (child.level <= head.level) break;
-      if (child.data.type === "workItem") count++;
+  const openGroups: { id: string; level: number }[] = [];
+
+  for (const node of nodes) {
+    while (
+      openGroups.length > 0 &&
+      openGroups[openGroups.length - 1].level >= node.level
+    ) {
+      openGroups.pop();
     }
-    counts.set(head.id, count);
+    if (node.data.type === "group") {
+      counts.set(node.id, 0);
+      openGroups.push({ id: node.id, level: node.level });
+    } else if (node.data.type === "workItem") {
+      for (const g of openGroups) {
+        counts.set(g.id, (counts.get(g.id) ?? 0) + 1);
+      }
+    }
   }
+
   return counts;
 }
 

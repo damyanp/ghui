@@ -21,7 +21,7 @@ function item(id: string, level: number): Node {
   return {
     id,
     level,
-    data: { type: "workItem", workItemId: { id } as never },
+    data: { type: "workItem", workItemId: id },
     hasChildren: false,
     isModified: false,
     isGhost: false,

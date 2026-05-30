@@ -4,7 +4,7 @@ export const PRESETS: ReadonlyArray<{ label: string; recipe: string }> = [
     recipe: "Pivot(Epic) → Hierarchy",
   },
   {
-    label: "Hierarchy first, pivoted by epic at every level",
+    label: "Hierarchy first, pivoted by Epic at every level",
     recipe: "Hierarchy → Pivot(Epic)",
   },
   {

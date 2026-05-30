@@ -249,8 +249,9 @@
 
       <ul class="list-disc space-y-1 pl-5">
         <li><code>Pivot(field)</code> — bucket items by their own field value.
-          After <code>Hierarchy</code>, the pivot recurses, re-bucketing each
-          item's sub-issues by the field at every level.</li>
+          When <code>Hierarchy</code> is followed by exactly
+          <code>Pivot(field)</code> (and nothing else), the pivot recurses,
+          re-bucketing each item's sub-issues by the field at every level.</li>
         <li><code>Group(field)</code> — subgroup within the current scope.</li>
         <li><code>Hierarchy</code> — render the parent ↔ sub-issue tree.</li>
         <li><code>Sort(field)</code> — sort items by the field’s natural order.</li>
