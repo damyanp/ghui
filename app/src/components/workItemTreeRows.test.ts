@@ -142,9 +142,8 @@ describe("computeVisibleRows", () => {
   });
 
   it("does not shift siblings of a collapsed bucket", () => {
-    // Two top-level buckets: each is kept (siblingCount 2), but the first holds
-    // a single item so... actually both have one item -> both collapse. Use
-    // two-item buckets to keep them and verify levels are untouched.
+    // Two top-level buckets with two items each are kept (siblingCount 2,
+    // childCount 2). Verify their levels remain unchanged.
     const tree = [
       group("g1", 0),
       item("a", 1),
