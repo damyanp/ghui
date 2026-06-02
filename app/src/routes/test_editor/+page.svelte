@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Modal } from "@skeletonlabs/skeleton-svelte";
   import WorkItemExtraDataEditor from "../../components/WorkItemExtraDataEditor.svelte";
 
   let text = $state("{}");

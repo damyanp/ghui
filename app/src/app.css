@@ -6,5 +6,6 @@
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
 @source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
+@import '@skeletonlabs/skeleton-svelte';
 
 @custom-variant dark (&:where([data-mode=dark], [data-mode=dark] *));

@@ -1,6 +1,6 @@
 <script lang="ts" generics="ITEM">
   import { CirclePlus } from "@lucide/svelte";
-  import { Popover } from "@skeletonlabs/skeleton-svelte";
+  import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
   import type { Column } from "./TreeTable.svelte";
 
   type Props = {
@@ -12,32 +12,35 @@
   let open = $state(false);
 </script>
 
-<Popover
-  {open}
-  onOpenChange={(o) => (open = o.open)}
-  classes="flex items-center"
-  triggerClasses="btn btn-icon btn-icon-s m-0 p-1"
-  arrow
-  arrowBackground="!bg-surface-100 dark:!bg-surface-900"
-  contentBase="card bg-surface-100-900 p-4 space-y-4 max-w-[320px] "
->
-  {#snippet trigger()}
+<Popover {open} onOpenChange={(o) => (open = o.open)}>
+  <Popover.Trigger class="btn btn-icon btn-icon-s m-0 p-1 flex items-center">
     <CirclePlus />
-  {/snippet}
+  </Popover.Trigger>
 
-  {#snippet content()}
-    <div class="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto">
-      {#each columns as column}
-        <button
-          class="btn preset-tonal justify-start"
-          onclick={() => {
-            open = false;
-            onColumnSelected(column);
-          }}
+  <Portal>
+    <Popover.Positioner>
+      <Popover.Content
+        class="card bg-surface-100-900 p-4 space-y-4 max-w-[320px]"
+      >
+        <Popover.Arrow
+          class="[--arrow-size:8px] [--arrow-background:var(--color-surface-100)] dark:[--arrow-background:var(--color-surface-900)]"
         >
-          {column.name}
-        </button>
-      {/each}
-    </div>
-  {/snippet}
+          <Popover.ArrowTip />
+        </Popover.Arrow>
+        <div class="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto">
+          {#each columns as column}
+            <button
+              class="btn preset-tonal justify-start"
+              onclick={() => {
+                open = false;
+                onColumnSelected(column);
+              }}
+            >
+              {column.name}
+            </button>
+          {/each}
+        </div>
+      </Popover.Content>
+    </Popover.Positioner>
+  </Portal>
 </Popover>
