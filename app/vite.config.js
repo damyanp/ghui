@@ -38,6 +38,11 @@ export default defineConfig(async () => ({
     // unexpectedly large.
     chunkSizeWarningLimit: 5000,
     rollupOptions: {
+      /**
+       * @param {import('vite').Rollup.LogLevel} level
+       * @param {import('vite').Rollup.RollupLog} log
+       * @param {(level: import('vite').Rollup.LogLevel, log: import('vite').Rollup.RollupLog) => void} defaultHandler
+       */
       onLog(level, log, defaultHandler) {
         if (level !== "warn") {
           defaultHandler(level, log);
@@ -57,6 +62,10 @@ export default defineConfig(async () => ({
         //   annotation is simply dropped by rollup.
         if (log.code === "SOURCEMAP_ERROR") return;
         if (log.code === "INVALID_ANNOTATION") return;
+        // - PLUGIN_TIMINGS is a performance-timing notice emitted by rolldown
+        //   (the bundler Vite 8 uses under the hood). It's informational, not
+        //   an actual build problem.
+        if (log.code === "PLUGIN_TIMINGS") return;
         // - CIRCULAR_DEPENDENCY entirely inside third-party packages
         //   (e.g. svelte's internal runtime) is out of our control.
         if (

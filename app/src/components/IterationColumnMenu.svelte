@@ -96,13 +96,19 @@
     <Switch
       checked={showAll}
       onCheckedChange={(d) => (showAll = d.checked)}
-      classes="text-xs"
+      class="text-xs"
     >
-      {#if showAll}
-        Show All
-      {:else}
-        Show Used
-      {/if}
+      <Switch.Control>
+        <Switch.Thumb />
+      </Switch.Control>
+      <Switch.HiddenInput />
+      <Switch.Label>
+        {#if showAll}
+          Show All
+        {:else}
+          Show Used
+        {/if}
+      </Switch.Label>
     </Switch>
   </div>
   <div class="border-surface-500 border-t"></div>
@@ -110,19 +116,24 @@
     {#each values as value}
       <div>
         <Switch
-          classes="py-1 text-s text-nowrap"
+          class="py-1 text-sm text-nowrap"
           checked={value.checked}
           onCheckedChange={({ checked }) => onCheckedChange(value.id, checked)}
         >
-          {value.value}
-          {#if value.data}
-            <span class="text-xs text-nowrap">{value.data.startDate}</span>
-          {/if}
-          {#snippet activeChild()}
-            {#if value.count > 0}
-              <span class="text-xs">{value.count}</span>
+          <Switch.Control>
+            <Switch.Thumb>
+              {#if value.checked && value.count > 0}
+                <span class="text-xs">{value.count}</span>
+              {/if}
+            </Switch.Thumb>
+          </Switch.Control>
+          <Switch.HiddenInput />
+          <Switch.Label>
+            {value.value}
+            {#if value.data}
+              <span class="text-xs text-nowrap">{value.data.startDate}</span>
             {/if}
-          {/snippet}
+          </Switch.Label>
         </Switch>
       </div>
     {/each}

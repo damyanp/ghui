@@ -242,8 +242,9 @@
       onclick={() => (openDropdown = null)}
     ></button>
   {/if}
-  <AppBar padding="px-4 py-1">
-    {#snippet lead()}
+  <AppBar class="px-4 py-1">
+    <AppBar.Toolbar class="flex items-center justify-between">
+      <AppBar.Lead class="flex items-center">
       <div
         class="content-center h-full pe-1"
       >
@@ -425,18 +426,19 @@
         ]}
       />
 
-    {/snippet}
+      </AppBar.Lead>
 
-    {#snippet trail()}
-      <AppBarButton
-        icon={ArrowDownToLine}
-        iconClass={updateIconClass}
-        text={updateButtonText}
-        disabled={updateButtonDisabled}
-        onclick={() => { void onUpdateClicked(); }}
-      />
-      <Pat />
-    {/snippet}
+      <AppBar.Trail>
+        <AppBarButton
+          icon={ArrowDownToLine}
+          iconClass={updateIconClass}
+          text={updateButtonText}
+          disabled={updateButtonDisabled}
+          onclick={() => { void onUpdateClicked(); }}
+        />
+        <Pat />
+      </AppBar.Trail>
+    </AppBar.Toolbar>
   </AppBar>
 
   {#if recipeBarOpen}

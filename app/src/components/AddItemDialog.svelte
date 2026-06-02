@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Modal } from "@skeletonlabs/skeleton-svelte";
+  import Modal from "./Modal.svelte";
   import { readText } from "@tauri-apps/plugin-clipboard-manager";
   import { getWorkItemContext, recordTelemetry } from "$lib/WorkItemContext.svelte";
   import type { Change } from "$lib/bindings/Change";
