@@ -1142,14 +1142,19 @@ total=6 unique_ids=6
     #[test]
     fn test_recipe_builder_pivot_iteration_groups_items_with_iteration_set() {
         let mut data = TestData::default();
-        // X (iteration S2, excluded by the iteration filter) -> child C (S1).
-        // X is only included because C matches, but it must still appear under
-        // its own iteration group (S2), not at the top level / `(none)`.
+        // X (iteration S2) -> child C (iteration S1). `Filters` are *exclusion*
+        // filters (`should_include` returns false when the item's value is in
+        // the list), so excluding S2 hides X on its own. X is nevertheless
+        // pulled into view as an ancestor because its child C (S1) matches, and
+        // it must still appear under its own iteration group (S2), not at the
+        // top level / `(none)`.
         let c = data.build().iteration("S1").issue().add();
         let x = data.build().iteration("S2").issue().sub_issues(&[&c]).add();
         set_title(&mut data, &c, "C");
         set_title(&mut data, &x, "X");
 
+        // Exclude S2 (X's own iteration) to prove X is still grouped under S2
+        // rather than dropping to `(none)` just because it was filtered.
         let mut filters = Filters::default();
         filters.iteration = vec![data.fields.iteration.option_id(Some("S2")).cloned()];
 
