@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@floating-ui/dom": "^1.7.0",
+    "@floating-ui/dom": "^1.7.6",
     "@lucide/svelte": "1.x",
     "@monaco-editor/loader": "^1.7.0",
     "@primer/octicons": "^19.15.2",
