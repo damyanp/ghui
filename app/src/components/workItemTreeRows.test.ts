@@ -3,6 +3,7 @@ import type { Node } from "$lib/bindings/Node";
 import {
   computeGroupChildCounts,
   computeGroupSiblingCounts,
+  computeRootGroupIds,
   computeVisibleRows,
 } from "./workItemTreeRows";
 
@@ -83,6 +84,26 @@ describe("computeGroupSiblingCounts", () => {
   });
 });
 
+describe("computeRootGroupIds", () => {
+  it("identifies only top-level groups", () => {
+    const nodes = [
+      group("g1", 0),
+      group("gA", 1),
+      item("a", 2),
+      group("g2", 0),
+      item("b", 1),
+    ];
+    const roots = computeRootGroupIds(nodes);
+    expect([...roots].sort()).toEqual(["g1", "g2"]);
+  });
+
+  it("treats a group under a work item as non-root", () => {
+    const nodes = [item("parent", 0), group("bucket", 1), item("child", 2)];
+    const roots = computeRootGroupIds(nodes);
+    expect([...roots]).toEqual([]);
+  });
+});
+
 describe("computeVisibleRows", () => {
   const nodes = [group("only", 0), item("a", 1), item("b", 1)];
 
@@ -92,14 +113,15 @@ describe("computeVisibleRows", () => {
     expect(rows.map((r) => r.level)).toEqual([0, 1, 1]);
   });
 
-  it("collapses a single-distinct-value bucket and promotes its items", () => {
+  it("never collapses a root single-distinct-value bucket", () => {
     const rows = computeVisibleRows(nodes, true);
-    expect(rows.map((r) => r.id)).toEqual(["a", "b"]);
-    // The lone bucket is removed, so its items rise to the bucket's level.
-    expect(rows.map((r) => r.level)).toEqual([0, 0]);
+    // The lone bucket is a root group, so it is kept even though it is the
+    // only distinct value at the top level.
+    expect(rows.map((r) => r.id)).toEqual(["only", "a", "b"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1, 1]);
   });
 
-  it("still collapses single-item buckets", () => {
+  it("never collapses a root single-item bucket", () => {
     const single = [
       group("g1", 0),
       item("a", 1),
@@ -108,10 +130,25 @@ describe("computeVisibleRows", () => {
       item("c", 1),
     ];
     const rows = computeVisibleRows(single, true);
-    // g1 has one item -> collapsed; g2 has two items but is one of two
-    // sibling buckets -> kept.
-    expect(rows.map((r) => r.id)).toEqual(["a", "g2", "b", "c"]);
-    expect(rows.map((r) => r.level)).toEqual([0, 0, 1, 1]);
+    // g1 has one item and g2 is one of two siblings, but both are root groups,
+    // so neither is collapsed.
+    expect(rows.map((r) => r.id)).toEqual(["g1", "a", "g2", "b", "c"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1, 0, 1, 1]);
+  });
+
+  it("still collapses a non-root single-item bucket", () => {
+    // A top-level bucket (kept) whose single child bucket holds one item — the
+    // nested bucket is non-root and single-item, so it collapses.
+    const tree = [
+      group("root", 0),
+      group("nested", 1),
+      item("a", 2),
+      group("nested2", 1),
+      item("b", 2),
+    ];
+    const rows = computeVisibleRows(tree, true);
+    expect(rows.map((r) => r.id)).toEqual(["root", "a", "b"]);
+    expect(rows.map((r) => r.level)).toEqual([0, 1, 1]);
   });
 
   it("promotes a collapsed bucket's items under their work-item parent", () => {

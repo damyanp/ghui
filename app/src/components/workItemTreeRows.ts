@@ -69,14 +69,39 @@ export function computeGroupSiblingCounts(nodes: Node[]): Map<string, number> {
 }
 
 /**
+ * The set of group node ids that are "root" groups — top-level buckets whose
+ * nearest enclosing parent is the root (they have no group or work-item
+ * ancestor). Root groups are never collapsed by `collapseSingleValue`.
+ */
+export function computeRootGroupIds(nodes: Node[]): Set<string> {
+  const roots = new Set<string>();
+  const ancestors: number[] = [];
+
+  for (const node of nodes) {
+    while (ancestors.length > 0 && ancestors[ancestors.length - 1] >= node.level) {
+      ancestors.pop();
+    }
+    if (node.data.type === "group" && ancestors.length === 0) {
+      roots.add(node.id);
+    }
+    ancestors.push(node.level);
+  }
+
+  return roots;
+}
+
+/**
  * Compute the visible rows for the work item tree, applying the
  * `collapseSingleValue` toggle.
  *
- * When `collapseSingleValue` is on, a group (bucket) header row is hidden when
- * either:
+ * When `collapseSingleValue` is on, a non-root group (bucket) header row is
+ * hidden when either:
  *  - the bucket contains exactly one work item (a single-item bucket), or
  *  - the bucket is the only bucket among its siblings (a single-distinct-value
  *    bucket — every item under the parent shares the same field value).
+ *
+ * Root (top-level) groups are never collapsed, even when they contain a single
+ * issue or are the only bucket at the top level.
  *
  * Hiding a group header would leave its descendants indented one level too deep
  * (the row array is rendered as a tree by `level`, so a gap makes `TreeTable`
@@ -94,9 +119,11 @@ export function computeVisibleRows(
 
   const childCounts = computeGroupChildCounts(nodes);
   const siblingCounts = computeGroupSiblingCounts(nodes);
+  const rootGroups = computeRootGroupIds(nodes);
 
   const shouldCollapse = (node: Node): boolean =>
     node.data.type === "group" &&
+    !rootGroups.has(node.id) &&
     (childCounts.get(node.id) === 1 || siblingCounts.get(node.id) === 1);
 
   const rows: TreeRow[] = [];
