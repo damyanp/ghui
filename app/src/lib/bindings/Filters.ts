@@ -11,6 +11,17 @@ export type Filters = {
   estimate: Array<FieldOptionId | null>;
   priority: Array<FieldOptionId | null>;
   /**
+   * Exclusion list of assignee login names. Unlike the other fields above,
+   * assignees are free-form GitHub logins (a work item may have several)
+   * rather than project single-select option ids, so this is a list of
+   * `String` logins. `None` represents items with no assignees. An item is
+   * hidden when any of its assignees (or its unassigned state) appears here.
+   *
+   * `#[serde(default)]` keeps existing cached `view_config.ghui.json` files
+   * (which predate this field) deserializable.
+   */
+  assignee: Array<string | null>;
+  /**
    * When true, items whose underlying GitHub state is closed (issues in
    * `CLOSED` state, pull requests in `CLOSED` or `MERGED` state) are
    * filtered out before bucketing. Items whose state hasn't loaded yet are

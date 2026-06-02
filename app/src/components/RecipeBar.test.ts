@@ -31,6 +31,7 @@ function makeFilters(overrides: Partial<Filters> = {}): Filters {
     workstream: [],
     estimate: [],
     priority: [],
+    assignee: [],
     hideClosed: false,
     ...overrides,
   };

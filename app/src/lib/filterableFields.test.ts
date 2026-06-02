@@ -5,6 +5,8 @@ import type { Iteration } from "./bindings/Iteration";
 import type { SingleSelect } from "./bindings/SingleSelect";
 import type { WorkItem } from "./bindings/WorkItem";
 import {
+  getAllAssignees,
+  getAssignees,
   getFilterableFieldOptionIds,
   getFilterableFieldValue,
   getFilterableFields,
@@ -55,6 +57,7 @@ function makeData(): Data {
       workstream: [],
       estimate: [],
       priority: [],
+      assignee: [],
       hideClosed: false,
     },
   } as unknown as Data;
@@ -120,10 +123,47 @@ describe("filterable field metadata", () => {
     // `hideClosed` lives on Filters but is a render-only boolean toggle, not
     // a per-field option-id list — it must NOT be reported as filterable.
     expect(isFilterableField(data, "hideClosed")).toBe(false);
+    // `assignee` is a free-form login list, not an option-id field, so it is
+    // handled by a dedicated menu and must NOT be reported as filterable.
+    expect(isFilterableField(data, "assignee")).toBe(false);
   });
 
   it("getFilterableFields excludes non-field filter keys like hideClosed", () => {
     expect(getFilterableFields(makeData())).not.toContain("hideClosed");
+    expect(getFilterableFields(makeData())).not.toContain("assignee");
+  });
+});
+
+describe("getAssignees / getAllAssignees", () => {
+  function workItemWithData(data: unknown): WorkItem {
+    return { data } as unknown as WorkItem;
+  }
+
+  it("getAssignees returns assignees for issues and pull requests", () => {
+    expect(
+      getAssignees(workItemWithData({ type: "issue", assignees: ["alice"] }))
+    ).toEqual(["alice"]);
+    expect(
+      getAssignees(
+        workItemWithData({ type: "pullRequest", assignees: ["bob", "carol"] })
+      )
+    ).toEqual(["bob", "carol"]);
+  });
+
+  it("getAssignees returns [] for draft issues", () => {
+    expect(getAssignees(workItemWithData({ type: "draftIssue" }))).toEqual([]);
+  });
+
+  it("getAllAssignees returns the sorted, de-duplicated set across items", () => {
+    const data = {
+      ...makeData(),
+      workItems: {
+        a: workItemWithData({ type: "issue", assignees: ["bob", "alice"] }),
+        b: workItemWithData({ type: "pullRequest", assignees: ["alice"] }),
+        c: workItemWithData({ type: "draftIssue" }),
+      },
+    } as unknown as Data;
+    expect(getAllAssignees(data)).toEqual(["alice", "bob"]);
   });
 });
 
