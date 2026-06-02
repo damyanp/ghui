@@ -88,7 +88,20 @@ impl<'a> RecipeNodeBuilder<'a> {
 
         match &recipe[0] {
             Axis::Pivot(field) | Axis::Group(field) => {
-                for bucket in self.bucket_by_field(items, field) {
+                // Only bucket items that genuinely match the filters. An item
+                // that is in scope merely because a descendant matched (an
+                // "ancestor pull-in") must not be filed under its own field
+                // value as a real bucket member — otherwise it surfaces inside
+                // a group the user explicitly excluded (e.g. an excluded
+                // iteration), or that `hide_closed` should have hidden. Such
+                // ancestors are re-introduced as *ghost* anchors by the
+                // per-bucket hierarchy pass (`render_hierarchy`) when ghost
+                // ancestors are enabled. See issue #119.
+                let matches: Vec<WorkItemId> = items
+                    .into_iter()
+                    .filter(|id| self.is_genuine_match(id))
+                    .collect();
+                for bucket in self.bucket_by_field(matches, field) {
                     let group_id = self.group_node_id(path, field, &bucket.key);
                     self.nodes.push(Node {
                         level,
@@ -738,6 +751,17 @@ impl<'a> RecipeNodeBuilder<'a> {
             false
         }
     }
+
+    /// Whether the item itself passes the active filters, ignoring the
+    /// ancestor pull-in that [`Self::should_include`] applies. Used by the
+    /// `Pivot`/`Group` axes to decide which items are bucketed as real
+    /// members: an item that only survives `should_include` because a
+    /// descendant matched is *not* a genuine match and must not be filed
+    /// under its own (possibly excluded) field value.
+    fn is_genuine_match(&self, work_item_id: &WorkItemId) -> bool {
+        self.item(work_item_id)
+            .is_some_and(|work_item| self.filters.should_include(work_item))
+    }
 }
 
 #[cfg(test)]
@@ -1133,52 +1157,6 @@ total=6 unique_ids=6
         );
     }
 
-    /// Regression coverage for issue #119 ("Pivot(Iteration) has entries not
-    /// under an iteration"). An item whose own iteration is set must be
-    /// bucketed under that iteration's group — even when the item is only
-    /// visible because a descendant matched the filter, and even when the
-    /// item's iteration is itself one of the excluded filter values. Only
-    /// items whose iteration is genuinely unset belong in the `(none)` group.
-    #[test]
-    fn test_recipe_builder_pivot_iteration_groups_items_with_iteration_set() {
-        let mut data = TestData::default();
-        // X (iteration S2) -> child C (iteration S1). `Filters` are *exclusion*
-        // filters (`should_include` returns false when the item's value is in
-        // the list), so excluding S2 hides X on its own. X is nevertheless
-        // pulled into view as an ancestor because its child C (S1) matches, and
-        // it must still appear under its own iteration group (S2), not at the
-        // top level / `(none)`.
-        let c = data.build().iteration("S1").issue().add();
-        let x = data.build().iteration("S2").issue().sub_issues(&[&c]).add();
-        set_title(&mut data, &c, "C");
-        set_title(&mut data, &x, "X");
-
-        // Exclude S2 (X's own iteration) to prove X is still grouped under S2
-        // rather than dropping to `(none)` just because it was filtered.
-        let mut filters = Filters::default();
-        filters.iteration = vec![data.fields.iteration.option_id(Some("S2")).cloned()];
-
-        let config = PivotConfig {
-            recipe: vec![Axis::Pivot(PivotField::Iteration), Axis::Hierarchy],
-            multi_value_strategy: MultiValueStrategy::Combined,
-            show_ghost_ancestors: true,
-        };
-
-        let original = HashMap::new();
-        let nodes =
-            RecipeNodeBuilder::new(&data.fields, &data.work_items, &filters, &original, &config)
-                .build();
-
-        assert_eq!(
-            format_nodes_string(&nodes),
-            r#"0 group path/iteration=id(S1) S1
-1 item 2 ghost=true children=true
-2 item 1 ghost=false children=false
-0 group path/iteration=id(S2) S2
-1 item 2 ghost=false children=false"#
-        );
-    }
-
     #[test]
     fn test_recipe_builder_without_ghost_ancestors_flattens_buckets() {
         let mut data = TestData::default();
@@ -1256,6 +1234,143 @@ total=6 unique_ids=6
             r#"0 group path/epic=id(EpicA) EpicA
 1 item 1 ghost=false children=false
 1 item 2 ghost=false children=false"#
+        );
+    }
+
+    /// Regression test for issue #119 ("Pivot(Iteration) has entries not under
+    /// an iteration").
+    ///
+    /// A parent `P` has iteration `S2`; its child `C` has no iteration. The
+    /// user *excludes* `S2` via the (exclusion-style) iteration filter. `P` is
+    /// therefore filtered out and is only in scope as the ancestor of the
+    /// matching `C`.
+    ///
+    /// Under `Pivot(Iteration) → Hierarchy`, `P` must NOT be filed as a real
+    /// member of the `S2` group — `S2` was explicitly excluded, so that group
+    /// must not even exist. Instead `P` appears solely as a *ghost* ancestor
+    /// anchoring `C` inside the `(none)` group. Before the fix, `P` was
+    /// bucketed under its own (excluded) iteration as a real, childless leaf,
+    /// producing entries inside an excluded iteration group.
+    #[test]
+    fn test_recipe_builder_pivot_excludes_filtered_ancestor_from_its_own_group() {
+        let mut data = TestData::default();
+        let c = data.build().issue().add();
+        let p = data.build().iteration("S2").issue().sub_issues(&[&c]).add();
+        set_title(&mut data, &c, "C");
+        set_title(&mut data, &p, "P");
+
+        // Exclusion filter: hide everything whose iteration is S2 (which is P).
+        let filters = Filters {
+            iteration: vec![data.fields.iteration.option_id(Some("S2")).cloned()],
+            ..Filters::default()
+        };
+        let original_work_items = HashMap::new();
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Iteration), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        let nodes = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        )
+        .build();
+
+        // No `S2` group; P is only a ghost ancestor of C under `(none)`.
+        assert_eq!(
+            format_nodes_string(&nodes),
+            r#"0 group path/iteration=(none) (none)
+1 item 2 ghost=true children=true
+2 item 1 ghost=false children=false"#
+        );
+    }
+
+    /// Companion to the issue #119 regression test with ghost ancestors
+    /// disabled: the filtered-out parent `P` (iteration `S2`, excluded) must
+    /// not appear at all, and its no-iteration child `C` flattens to a root of
+    /// the `(none)` group. The excluded `S2` group must not be emitted.
+    #[test]
+    fn test_recipe_builder_pivot_excluded_ancestor_absent_without_ghosts() {
+        let mut data = TestData::default();
+        let c = data.build().issue().add();
+        let p = data.build().iteration("S2").issue().sub_issues(&[&c]).add();
+        set_title(&mut data, &c, "C");
+        set_title(&mut data, &p, "P");
+
+        let filters = Filters {
+            iteration: vec![data.fields.iteration.option_id(Some("S2")).cloned()],
+            ..Filters::default()
+        };
+        let original_work_items = HashMap::new();
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Iteration), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: false,
+        };
+
+        let nodes = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        )
+        .build();
+
+        assert_eq!(
+            format_nodes_string(&nodes),
+            r#"0 group path/iteration=(none) (none)
+1 item 1 ghost=false children=false"#
+        );
+    }
+
+    /// Guard against over-correction: an ancestor whose *own* field value
+    /// still matches the filters must keep its real bucket membership. Here
+    /// `P` (iteration `S1`, NOT excluded) parents `C` (no iteration). Only
+    /// `S2` is excluded, so `P` is a genuine match and must appear as a real
+    /// item under `S1`; `C` appears under `(none)` with `P` as a ghost anchor.
+    #[test]
+    fn test_recipe_builder_pivot_keeps_unfiltered_ancestor_in_its_group() {
+        let mut data = TestData::default();
+        let c = data.build().issue().add();
+        let p = data.build().iteration("S1").issue().sub_issues(&[&c]).add();
+        set_title(&mut data, &c, "C");
+        set_title(&mut data, &p, "P");
+
+        let filters = Filters {
+            iteration: vec![data.fields.iteration.option_id(Some("S2")).cloned()],
+            ..Filters::default()
+        };
+        let original_work_items = HashMap::new();
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Iteration), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        let nodes = RecipeNodeBuilder::new(
+            &data.fields,
+            &data.work_items,
+            &filters,
+            &original_work_items,
+            &config,
+        )
+        .build();
+
+        assert_eq!(
+            format_nodes_string(&nodes),
+            r#"0 group path/iteration=id(S1) S1
+1 item 2 ghost=false children=false
+0 group path/iteration=(none) (none)
+1 item 2 ghost=true children=true
+2 item 1 ghost=false children=false"#
         );
     }
 

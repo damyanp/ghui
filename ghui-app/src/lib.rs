@@ -545,28 +545,25 @@ impl AppState {
     pub fn capture_view(&self) -> Result<PathBuf> {
         use time::OffsetDateTime;
 
-        let (nodes, captured_work_items) =
-            if let (Some(fields), Some(work_items)) = (&self.fields, &self.work_items) {
-                let mut work_items = work_items.clone();
-                let original_work_items = if self.preview_changes {
-                    self.apply_changes(&mut work_items)
-                } else {
-                    HashMap::default()
-                };
-
-                let nodes = RecipeNodeBuilder::new(
-                    fields,
-                    &work_items,
-                    &self.filters,
-                    &original_work_items,
-                    &self.pivot_config,
-                )
-                .build();
-
-                (nodes, Some(work_items))
+        let nodes = if let (Some(fields), Some(work_items)) = (&self.fields, &self.work_items) {
+            let mut work_items = work_items.clone();
+            let original_work_items = if self.preview_changes {
+                self.apply_changes(&mut work_items)
             } else {
-                (Vec::new(), None)
+                HashMap::default()
             };
+
+            RecipeNodeBuilder::new(
+                fields,
+                &work_items,
+                &self.filters,
+                &original_work_items,
+                &self.pivot_config,
+            )
+            .build()
+        } else {
+            Vec::new()
+        };
 
         let now = OffsetDateTime::now_utc();
         let timestamp = format!(
@@ -584,8 +581,6 @@ impl AppState {
             captured_at: timestamp.clone(),
             filters: self.filters.clone(),
             pivot_config: self.pivot_config.clone(),
-            fields: self.fields.clone(),
-            work_items: captured_work_items,
             nodes,
         };
 
@@ -799,25 +794,14 @@ const WORK_ITEMS_EXTRA_DATA: &str = "work_items_extra_data";
 const VIEW_CONFIG_FILENAME: &str = "view_config";
 
 /// Snapshot written to disk by [`AppState::capture_view`].  Includes the
-/// active filter settings, the pivot configuration, the field definitions, the
-/// loaded work items, and the rendered node tree so that a developer can fully
-/// reproduce the view from the file alone.
-///
-/// `fields` and `work_items` are what the node tree was actually built from
-/// (with preview changes already applied when `preview_changes` was enabled at
-/// capture time), so re-running [`RecipeNodeBuilder`] over them reproduces
-/// `nodes` exactly for that same `preview_changes` setting. Capturing them is
-/// essential for diagnosing pivot/grouping issues, where the rendered nodes
-/// can only be explained by the underlying field values of each work item
-/// (e.g. whether an item actually has an iteration set).
+/// active filter settings, the pivot configuration, and the rendered node tree
+/// so that a developer can fully reproduce the view from the file alone.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ViewCapture {
     captured_at: String,
     filters: Filters,
     pivot_config: PivotConfig,
-    fields: Option<Fields>,
-    work_items: Option<WorkItems>,
     nodes: Vec<Node>,
 }
 
@@ -911,12 +895,6 @@ mod tests {
     use github_graphql::pivot::{Axis, MultiValueStrategy, PivotField};
     use std::sync::{Arc, Mutex};
     use tempfile::NamedTempFile;
-
-    /// Serializes the tests that exercise [`AppState::capture_view`]. The
-    /// capture file name is derived from a millisecond timestamp written to the
-    /// home directory, so two captures taken in the same millisecond would
-    /// otherwise collide and one test could read the file written by another.
-    static CAPTURE_VIEW_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_get_project_ids_to_update_returns_ids_when_force_is_true() {
@@ -1170,8 +1148,6 @@ mod tests {
             }
         }
 
-        let _guard = CAPTURE_VIEW_TEST_LOCK.lock().unwrap();
-
         let mut data = TestData::default();
         let parent = data.build().issue().add();
         let child = data.build().issue().add();
@@ -1207,72 +1183,6 @@ mod tests {
                 .iter()
                 .any(|node| node["isModified"] == serde_json::Value::Bool(true)),
             "preview changes should mark at least one captured node as modified",
-        );
-
-        // The capture must include the field definitions and the (preview-
-        // applied) work items it was built from, so the view can be fully
-        // reproduced and pivot/grouping issues diagnosed from the file alone.
-        assert_eq!(
-            capture.get("fields").unwrap(),
-            &serde_json::to_value(&state.fields).unwrap()
-        );
-        let captured_work_items = capture.get("workItems").unwrap();
-        assert!(!captured_work_items.is_null());
-        let mut expected_work_items = state.work_items.clone().unwrap();
-        state.apply_changes(&mut expected_work_items);
-        assert_eq!(
-            captured_work_items,
-            &serde_json::to_value(&expected_work_items).unwrap(),
-            "captured work items should reflect the preview-applied state used to build the nodes",
-        );
-    }
-
-    #[test]
-    fn test_capture_view_without_preview_captures_original_work_items() {
-        struct CaptureCleanup(PathBuf);
-        impl Drop for CaptureCleanup {
-            fn drop(&mut self) {
-                let _ = fs::remove_file(&self.0);
-            }
-        }
-
-        let _guard = CAPTURE_VIEW_TEST_LOCK.lock().unwrap();
-
-        let mut data = TestData::default();
-        let parent = data.build().issue().add();
-        let child = data.build().issue().add();
-
-        let mut state = AppState::new();
-        state.fields = Some(data.fields);
-        state.work_items = Some(data.work_items);
-        state.preview_changes = false;
-
-        // A pending change exists but must NOT be applied to the captured work
-        // items because preview is off; the capture reflects the unmodified
-        // state the nodes were built from.
-        state.changes.add(Change {
-            work_item_id: child,
-            data: ChangeData::SetParent(parent),
-        });
-
-        let path = state.capture_view().unwrap();
-        let _cleanup = CaptureCleanup(path.clone());
-        let contents = fs::read_to_string(&path).unwrap();
-        let capture: serde_json::Value = serde_json::from_str(&contents).unwrap();
-
-        let captured_work_items = capture.get("workItems").unwrap();
-        assert_eq!(
-            captured_work_items,
-            &serde_json::to_value(state.work_items.as_ref().unwrap()).unwrap(),
-            "without preview, captured work items should match the original unmodified state",
-        );
-
-        let nodes = capture.get("nodes").unwrap().as_array().unwrap();
-        assert!(
-            nodes
-                .iter()
-                .all(|node| node["isModified"] != serde_json::Value::Bool(true)),
-            "without preview, no captured node should be marked as modified",
         );
     }
 
