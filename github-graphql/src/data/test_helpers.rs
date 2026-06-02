@@ -137,7 +137,7 @@ impl TestDataWorkItemBuilder<'_> {
 
     pub fn iteration(mut self, name: &str) -> Self {
         let id = self.data.fields.iteration.option_id(Some(name)).cloned();
-        assert!(id.is_some());
+        assert!(id.is_some(), "iteration {name:?} not found in test data");
         self.item.project_item.iteration = id.into();
         self
     }
