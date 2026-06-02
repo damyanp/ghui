@@ -1133,6 +1133,47 @@ total=6 unique_ids=6
         );
     }
 
+    /// Regression coverage for issue #119 ("Pivot(Iteration) has entries not
+    /// under an iteration"). An item whose own iteration is set must be
+    /// bucketed under that iteration's group — even when the item is only
+    /// visible because a descendant matched the filter, and even when the
+    /// item's iteration is itself one of the excluded filter values. Only
+    /// items whose iteration is genuinely unset belong in the `(none)` group.
+    #[test]
+    fn test_recipe_builder_pivot_iteration_groups_items_with_iteration_set() {
+        let mut data = TestData::default();
+        // X (iteration S2, excluded by the iteration filter) -> child C (S1).
+        // X is only included because C matches, but it must still appear under
+        // its own iteration group (S2), not at the top level / `(none)`.
+        let c = data.build().iteration("S1").issue().add();
+        let x = data.build().iteration("S2").issue().sub_issues(&[&c]).add();
+        set_title(&mut data, &c, "C");
+        set_title(&mut data, &x, "X");
+
+        let mut filters = Filters::default();
+        filters.iteration = vec![data.fields.iteration.option_id(Some("S2")).cloned()];
+
+        let config = PivotConfig {
+            recipe: vec![Axis::Pivot(PivotField::Iteration), Axis::Hierarchy],
+            multi_value_strategy: MultiValueStrategy::Combined,
+            show_ghost_ancestors: true,
+        };
+
+        let original = HashMap::new();
+        let nodes =
+            RecipeNodeBuilder::new(&data.fields, &data.work_items, &filters, &original, &config)
+                .build();
+
+        assert_eq!(
+            format_nodes_string(&nodes),
+            r#"0 group path/iteration=id(S1) S1
+1 item 2 ghost=true children=true
+2 item 1 ghost=false children=false
+0 group path/iteration=id(S2) S2
+1 item 2 ghost=false children=false"#
+        );
+    }
+
     #[test]
     fn test_recipe_builder_without_ghost_ancestors_flattens_buckets() {
         let mut data = TestData::default();
