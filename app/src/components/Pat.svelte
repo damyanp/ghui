@@ -81,7 +81,7 @@
   -->
   {#key avatar_uri}
     <Avatar class="size-12">
-      <Avatar.Image src={avatar_uri} alt="unknown" />
+      <Avatar.Image src={avatar_uri} alt={patState.type === "set" ? patState.login : "unknown"} />
       <Avatar.Fallback class="bg-error-500">
         <div class="w-full h-full flex items-center justify-center">
           {#if patState.type === "checking"}

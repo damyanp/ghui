@@ -116,7 +116,7 @@
     {#each values as value}
       <div>
         <Switch
-          class="py-1 text-s text-nowrap"
+          class="py-1 text-sm text-nowrap"
           checked={value.checked}
           onCheckedChange={({ checked }) => onCheckedChange(value.id, checked)}
         >
