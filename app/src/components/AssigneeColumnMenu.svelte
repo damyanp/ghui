@@ -76,10 +76,17 @@
     {#each values as value}
       <div>
         <Switch
+          class="py-1 text-sm text-nowrap"
           checked={value.checked}
           onCheckedChange={({ checked }) => onCheckedChange(value.id, checked)}
         >
-          {value.value}
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+          <Switch.HiddenInput />
+          <Switch.Label>
+            {value.value}
+          </Switch.Label>
         </Switch>
       </div>
     {/each}

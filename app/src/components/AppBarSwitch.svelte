@@ -12,7 +12,12 @@
 
 <div class="btn flex flex-col p-0.5 mx-1">
   <div class="h-[24px]">
-    <Switch {...props} {onCheckedChange} />
+    <Switch checked={checked} {onCheckedChange}>
+      <Switch.Control>
+        <Switch.Thumb />
+      </Switch.Control>
+      <Switch.HiddenInput />
+    </Switch>
   </div>
   <span class="text-xs">{props.label}</span>
 </div>
