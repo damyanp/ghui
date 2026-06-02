@@ -135,6 +135,13 @@ impl TestDataWorkItemBuilder<'_> {
         self
     }
 
+    pub fn iteration(mut self, name: &str) -> Self {
+        let id = self.data.fields.iteration.option_id(Some(name)).cloned();
+        assert!(id.is_some(), "unknown iteration option {name:?}");
+        self.item.project_item.iteration = id.into();
+        self
+    }
+
     pub fn assignees(mut self, names: &[&str]) -> Self {
         self.get_issue().assignees = names.iter().map(|s| s.to_string()).collect();
         self
