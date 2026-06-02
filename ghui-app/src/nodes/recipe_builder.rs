@@ -542,11 +542,7 @@ impl<'a> RecipeNodeBuilder<'a> {
     }
 
     fn assignee_field_values(&self, item: &WorkItem) -> Vec<FieldValue> {
-        let assignees = match &item.data {
-            WorkItemData::Issue(Issue { assignees, .. }) => assignees.as_slice(),
-            WorkItemData::PullRequest(PullRequest { assignees, .. }) => assignees.as_slice(),
-            WorkItemData::DraftIssue => &[],
-        };
+        let assignees = item.assignees();
 
         if assignees.is_empty() {
             return Vec::new();
