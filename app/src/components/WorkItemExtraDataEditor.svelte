@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Modal } from "@skeletonlabs/skeleton-svelte";
+  import Modal from "./Modal.svelte";
   import JsonEditor from "./JsonEditor.svelte";
   import type { Snippet } from "svelte";
 
@@ -64,8 +64,7 @@
   positionerJustify="justify-start"
   positionerAlign=""
   positionerPadding=""
-  transitionsPositionerIn={{ x: -480, duration: 200 }}
-  transitionsPositionerOut={{ x: -480, duration: 200 }}
+  backdrop={false}
   closeOnEscape={false}
   closeOnInteractOutside={false}
   modal={false}

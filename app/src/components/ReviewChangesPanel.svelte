@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Modal } from "@skeletonlabs/skeleton-svelte";
+  import Modal from "./Modal.svelte";
   import {
     getWorkItemContext,
     linkTitle,

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { LoaderCircle, TriangleAlert } from "@lucide/svelte";
-  import { Avatar, Modal } from "@skeletonlabs/skeleton-svelte";
+  import { Avatar } from "@skeletonlabs/skeleton-svelte";
+  import Modal from "./Modal.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
@@ -79,19 +80,17 @@
   shouldn't be necessary.
   -->
   {#key avatar_uri}
-    <Avatar
-      src={avatar_uri}
-      name="unknown"
-      size="size-12"
-      fallbackBase="bg-error-500"
-    >
-      <div class="w-full h-full flex items-center justify-center">
-        {#if patState.type === "checking"}
-          <LoaderCircle class="animate-spin" size={32} />
-        {:else}
-          <TriangleAlert class="text-error-500" size={32} />
-        {/if}
-      </div>
+    <Avatar class="size-12">
+      <Avatar.Image src={avatar_uri} alt={patState.type === "set" ? patState.login : "unknown"} />
+      <Avatar.Fallback class="bg-error-500">
+        <div class="w-full h-full flex items-center justify-center">
+          {#if patState.type === "checking"}
+            <LoaderCircle class="animate-spin" size={32} />
+          {:else}
+            <TriangleAlert class="text-error-500" size={32} />
+          {/if}
+        </div>
+      </Avatar.Fallback>
     </Avatar>
   {/key}
 </button>

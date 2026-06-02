@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@floating-ui/dom": "^1.7.0",
+    "@floating-ui/dom": "^1.7.6",
     "@lucide/svelte": "1.x",
     "@monaco-editor/loader": "^1.7.0",
     "@primer/octicons": "^19.15.2",
@@ -31,21 +31,23 @@
   },
   "devDependencies": {
     "@skeletonlabs/skeleton": "^3.1.2",
-    "@skeletonlabs/skeleton-svelte": "^1.2.1",
+    "@skeletonlabs/skeleton-svelte": "^4.15.2",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.61.1",
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@tailwindcss/forms": "^0.5.11",
-    "@tailwindcss/vite": "^4.0.0",
+    "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2",
     "@types/primer__octicons": "^19.11.0",
     "svelte": "^5.55.10",
-    "svelte-check": "^4.4.8",
+    "svelte-check": "^4.5.0",
     "tailwindcss": "^4.3.0",
-    "typescript": "5.x",
-    "vite": "6.x",
-    "vite-plugin-devtools-json": "^0.2.0",
+    "typescript": "6.x",
+    "vite": "8.x",
     "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   },
   "overrides": {
     "cookie": "^0.7.0"
