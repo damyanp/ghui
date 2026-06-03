@@ -19,7 +19,15 @@ const sources = import.meta.glob("../**/*.svelte", {
 function stripComments(source: string): string {
   // Drop HTML/Svelte comments so commented-out markup can't create false
   // matches in either direction.
-  return source.replace(/<!--[\s\S]*?-->/g, "");
+  // Apply repeatedly to avoid incomplete multi-character sanitization where
+  // comment delimiters can reappear after a single replacement pass.
+  let current = source;
+  let previous: string;
+  do {
+    previous = current;
+    current = current.replace(/<!--[\s\S]*?-->/g, "");
+  } while (current !== previous);
+  return current;
 }
 
 function countMatches(source: string, re: RegExp): number {
