@@ -50,6 +50,7 @@ export class WorkItemContext {
       workstream: [],
       estimate: [],
       priority: [],
+      assignee: [],
       hideClosed: false,
     },
     pivotConfig: {
@@ -278,6 +279,30 @@ export class WorkItemContext {
    */
   public setHideClosed(hide: boolean): void {
     this.data.filters.hideClosed = hide;
+    invoke("set_filters", { filters: this.data.filters });
+  }
+
+  /** Sorted, de-duplicated set of assignee logins across all loaded work
+   * items. Populates the assignee filter menu, which has no fixed option list
+   * to draw from. */
+  public get allAssignees(): Array<string> {
+    return filterableFields.getAllAssignees(this.data);
+  }
+
+  /** Current assignee exclusion filter. `null` entries represent unassigned
+   * items. */
+  public getAssigneeFilter(): Array<string | null> {
+    return this.data.filters.assignee;
+  }
+
+  /**
+   * Set the assignee exclusion filter. Mirrors `setFilter`: mutates the local
+   * filters bag (so reactive UI updates immediately) and fires the
+   * `set_filters` command so the backend re-runs `should_include`, rebuilds
+   * the node tree, and persists the new value to the view config cache.
+   */
+  public setAssigneeFilter(filter: Array<string | null>): void {
+    this.data.filters.assignee = filter;
     invoke("set_filters", { filters: this.data.filters });
   }
 

@@ -7,16 +7,22 @@ import type { Filters } from "./bindings/Filters";
 import type { WorkItem } from "./bindings/WorkItem";
 
 /** The subset of `Filters` keys that represent option-id-based field filters
- *  (i.e. the per-field exclusion lists). `Filters` also carries boolean
- *  toggles such as `hideClosed`; those are not "filterable fields" in the
+ *  (i.e. the per-field exclusion lists). `Filters` also carries entries that
+ *  are not option-id lists — the `hideClosed` boolean toggle and the
+ *  free-form `assignee` login list; those are not "filterable fields" in the
  *  column-menu sense and are excluded from `FilterableField`. */
-export type FilterableField = Exclude<keyof Filters, "hideClosed">;
+export type FilterableField = Exclude<keyof Filters, "hideClosed" | "assignee">;
 
 /** Keys of `Filters` that are NOT per-field option lists. Keep this in sync
- *  with the boolean fields on the Rust `Filters` struct (`ghui-app/src/lib.rs`).
- *  When this drifts, `getFilterableFields` will start returning a key that
- *  callers expect to have `options`, which will explode at runtime. */
-const NON_FIELD_FILTER_KEYS: ReadonlySet<string> = new Set(["hideClosed"]);
+ *  with the non-option-id fields on the Rust `Filters` struct
+ *  (`ghui-app/src/lib.rs`): the `hideClosed` boolean and the free-form
+ *  `assignee` login list. When this drifts, `getFilterableFields` will start
+ *  returning a key that callers expect to have `options`, which will explode
+ *  at runtime. */
+const NON_FIELD_FILTER_KEYS: ReadonlySet<string> = new Set([
+  "hideClosed",
+  "assignee",
+]);
 
 /** Names of all fields that support filtering, derived from the `Filters`
  * struct minus the non-field boolean toggles. Single source of truth used
@@ -60,4 +66,31 @@ export function getFilterableFieldOptionIds(
   fieldName: FilterableField
 ): Array<FieldOptionId | null> {
   return [null, ...data.fields[fieldName].options.map((o) => o.id)];
+}
+
+/** Returns the GitHub login names assigned to a work item. Draft issues carry
+ * no assignees, so an empty array is returned for them. Mirrors the Rust
+ * `WorkItem::assignees` accessor. */
+export function getAssignees(workItem: WorkItem): Array<string> {
+  const data = workItem.data;
+  if (data.type === "issue" || data.type === "pullRequest") {
+    return data.assignees;
+  }
+  return [];
+}
+
+/** Returns the sorted, de-duplicated set of assignee logins across all work
+ * items. Used to populate the assignee filter menu, which (unlike single-select
+ * fields) has no fixed option list to draw from. */
+export function getAllAssignees(data: Data): Array<string> {
+  const seen = new Set<string>();
+  for (const id of Object.keys(data.workItems)) {
+    const item = data.workItems[id as keyof typeof data.workItems];
+    if (item) {
+      for (const assignee of getAssignees(item)) {
+        seen.add(assignee);
+      }
+    }
+  }
+  return Array.from(seen).sort((a, b) => a.localeCompare(b));
 }

@@ -244,6 +244,7 @@
       workstream: [],
       estimate: [],
       priority: [],
+      assignee: [],
       hideClosed: false,
     },
     pivotConfig: {
