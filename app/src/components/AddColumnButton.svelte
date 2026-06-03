@@ -22,11 +22,6 @@
       <Popover.Content
         class="card bg-surface-100-900 p-4 space-y-4 max-w-[320px]"
       >
-        <Popover.Arrow
-          class="[--arrow-size:8px] [--arrow-background:var(--color-surface-100)] dark:[--arrow-background:var(--color-surface-900)]"
-        >
-          <Popover.ArrowTip />
-        </Popover.Arrow>
         <div class="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto">
           {#each columns as column}
             <button

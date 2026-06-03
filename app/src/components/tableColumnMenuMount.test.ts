@@ -34,4 +34,12 @@ describe("TableColumnMenu only mounts its menu body while open", () => {
     // inside the `{#if open}` gate so it mounts/unmounts with the popover.
     expect(gateIndex).toBeLessThan(renderIndex);
   });
+
+  it("does not render a Popover.Arrow (it rendered as a stray dark diamond)", () => {
+    // The skeleton-svelte v4 migration placed Popover.Arrow/ArrowTip inside
+    // Popover.Content, which rendered as a detached black diamond near the
+    // column header. The arrow is purely decorative and was removed.
+    expect(source).not.toMatch(/<Popover\.Arrow[\s>]/);
+    expect(source).not.toMatch(/<Popover\.ArrowTip[\s/>]/);
+  });
 });

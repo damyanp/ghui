@@ -30,11 +30,6 @@
   <Portal>
     <Popover.Positioner>
       <Popover.Content class="card bg-surface-100-900 p-4 space-y-4">
-        <Popover.Arrow
-          class="[--arrow-size:8px] [--arrow-background:var(--color-surface-100)] dark:[--arrow-background:var(--color-surface-900)]"
-        >
-          <Popover.ArrowTip />
-        </Popover.Arrow>
         <!-- Render the menu body only while open. skeleton-svelte v4's
              Popover.Content mounts its children eagerly and keeps them mounted,
              so gating on `open` ensures the menu (e.g. the filter list) mounts
