@@ -44,6 +44,16 @@ impl WorkItem {
         }
     }
 
+    /// Returns the GitHub login names assigned to this work item. Draft issues
+    /// have no assignees, so an empty slice is returned for them.
+    pub fn assignees(&self) -> &[String] {
+        match &self.data {
+            WorkItemData::DraftIssue => &[],
+            WorkItemData::Issue(issue) => &issue.assignees,
+            WorkItemData::PullRequest(pull_request) => &pull_request.assignees,
+        }
+    }
+
     pub fn is_closed(&self) -> DelayLoad<bool> {
         match &self.data {
             WorkItemData::DraftIssue => false.into(),

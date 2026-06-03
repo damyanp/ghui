@@ -64,6 +64,17 @@ pub struct Filters {
     estimate: Vec<Option<FieldOptionId>>,
     priority: Vec<Option<FieldOptionId>>,
 
+    /// Exclusion list of assignee login names. Unlike the other fields above,
+    /// assignees are free-form GitHub logins (a work item may have several)
+    /// rather than project single-select option ids, so this is a list of
+    /// `String` logins. `None` represents items with no assignees. An item is
+    /// hidden when any of its assignees (or its unassigned state) appears here.
+    ///
+    /// `#[serde(default)]` keeps existing cached `view_config.ghui.json` files
+    /// (which predate this field) deserializable.
+    #[serde(default)]
+    assignee: Vec<Option<String>>,
+
     /// When true, items whose underlying GitHub state is closed (issues in
     /// `CLOSED` state, pull requests in `CLOSED` or `MERGED` state) are
     /// filtered out before bucketing. Items whose state hasn't loaded yet are
@@ -92,7 +103,26 @@ impl Filters {
             || self.kind.contains(p.kind.flatten())
             || self.workstream.contains(p.workstream.flatten())
             || self.estimate.contains(&p.estimate)
-            || self.priority.contains(&p.priority))
+            || self.priority.contains(&p.priority)
+            || self.assignee_excluded(work_item))
+    }
+
+    /// Returns true when `work_item` should be hidden by the assignee filter.
+    /// An unassigned item is excluded when the filter contains `None`; an
+    /// assigned item is excluded when any of its assignees is listed.
+    fn assignee_excluded(&self, work_item: &WorkItem) -> bool {
+        if self.assignee.is_empty() {
+            return false;
+        }
+
+        let assignees = work_item.assignees();
+        if assignees.is_empty() {
+            self.assignee.contains(&None)
+        } else {
+            assignees
+                .iter()
+                .any(|a| self.assignee.iter().any(|f| f.as_deref() == Some(a)))
+        }
     }
 
     /// Returns the total number of individual filter values that are active
@@ -107,6 +137,7 @@ impl Filters {
             + self.workstream.len()
             + self.estimate.len()
             + self.priority.len()
+            + self.assignee.len()
             + usize::from(self.hide_closed)
     }
 }
@@ -1278,5 +1309,58 @@ mod tests {
             state: state.into(),
             assignees: Vec::new(),
         });
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_excludes_matching_assignee() {
+        let mut data = TestData::default();
+        let alice_id = data.build().issue().assignees(&["alice"]).add();
+        let bob_id = data.build().issue().assignees(&["bob"]).add();
+
+        let filters = Filters {
+            assignee: vec![Some("alice".to_string())],
+            ..Default::default()
+        };
+
+        assert!(!filters.should_include(data.work_items.get(&alice_id).unwrap()));
+        assert!(filters.should_include(data.work_items.get(&bob_id).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_excludes_item_with_any_matching_assignee() {
+        let mut data = TestData::default();
+        let id = data.build().issue().assignees(&["alice", "bob"]).add();
+
+        let filters = Filters {
+            assignee: vec![Some("bob".to_string())],
+            ..Default::default()
+        };
+
+        assert!(!filters.should_include(data.work_items.get(&id).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_none_excludes_unassigned() {
+        let mut data = TestData::default();
+        let unassigned_id = data.build().issue().add();
+        let assigned_id = data.build().issue().assignees(&["alice"]).add();
+
+        let filters = Filters {
+            assignee: vec![None],
+            ..Default::default()
+        };
+
+        assert!(!filters.should_include(data.work_items.get(&unassigned_id).unwrap()));
+        assert!(filters.should_include(data.work_items.get(&assigned_id).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_active_filter_count_includes_assignee() {
+        let mut filters = Filters::default();
+        assert_eq!(filters.active_filter_count(), 0);
+
+        filters.assignee.push(Some("alice".to_string()));
+        filters.assignee.push(None);
+        assert_eq!(filters.active_filter_count(), 2);
     }
 }
