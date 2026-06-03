@@ -3,7 +3,7 @@
 
   type Props = { label: string; checked: boolean };
 
-  let { checked = $bindable(), ...props }: Props = $props();
+  let { checked = $bindable(), label }: Props = $props();
 
   function onCheckedChange(details: { checked: boolean }) {
     checked = details.checked;
@@ -12,7 +12,12 @@
 
 <div class="btn flex flex-col p-0.5 mx-1">
   <div class="h-[24px]">
-    <Switch {...props} {onCheckedChange} />
+    <Switch {checked} {onCheckedChange}>
+      <Switch.Control>
+        <Switch.Thumb />
+      </Switch.Control>
+      <Switch.HiddenInput />
+    </Switch>
   </div>
-  <span class="text-xs">{props.label}</span>
+  <span class="text-xs">{label}</span>
 </div>
