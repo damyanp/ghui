@@ -10,13 +10,20 @@ import type { WorkItem } from "./bindings/WorkItem";
  *  (i.e. the per-field exclusion lists). `Filters` also carries boolean
  *  toggles such as `hideClosed`; those are not "filterable fields" in the
  *  column-menu sense and are excluded from `FilterableField`. */
-export type FilterableField = Exclude<keyof Filters, "hideClosed">;
+export type FilterableField = Exclude<keyof Filters, "hideClosed" | "assignee">;
 
 /** Keys of `Filters` that are NOT per-field option lists. Keep this in sync
  *  with the boolean fields on the Rust `Filters` struct (`ghui-app/src/lib.rs`).
  *  When this drifts, `getFilterableFields` will start returning a key that
- *  callers expect to have `options`, which will explode at runtime. */
-const NON_FIELD_FILTER_KEYS: ReadonlySet<string> = new Set(["hideClosed"]);
+ *  callers expect to have `options`, which will explode at runtime.
+ *
+ *  `assignee` is excluded because it is a free-form list of logins, not a
+ *  single-select field with a fixed `options` list; it has its own dedicated
+ *  filter UI (see `AssigneeColumnMenu`). */
+const NON_FIELD_FILTER_KEYS: ReadonlySet<string> = new Set([
+  "hideClosed",
+  "assignee",
+]);
 
 /** Names of all fields that support filtering, derived from the `Filters`
  * struct minus the non-field boolean toggles. Single source of truth used
@@ -60,4 +67,21 @@ export function getFilterableFieldOptionIds(
   fieldName: FilterableField
 ): Array<FieldOptionId | null> {
   return [null, ...data.fields[fieldName].options.map((o) => o.id)];
+}
+
+/** Returns the sorted, de-duplicated set of assignee logins across all work
+ * items in `data`. Used to populate the assignee filter menu. Draft issues
+ * have no assignees and are skipped. */
+export function getAllAssignees(data: Data): Array<string> {
+  const logins = new Set<string>();
+  for (const workItem of Object.values(data.workItems)) {
+    if (!workItem) continue;
+    const wd = workItem.data;
+    if (wd.type === "issue" || wd.type === "pullRequest") {
+      for (const login of wd.assignees) logins.add(login);
+    }
+  }
+  return Array.from(logins).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
 }

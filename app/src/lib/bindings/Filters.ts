@@ -11,6 +11,15 @@ export type Filters = {
   estimate: Array<FieldOptionId | null>;
   priority: Array<FieldOptionId | null>;
   /**
+   * Logins of assignees to filter out. `None` represents unassigned items.
+   * An item is excluded when any of its assignees appears in this list, or
+   * when it has no assignees and `None` is present.
+   *
+   * `#[serde(default)]` keeps existing cached `view_config.ghui.json` files
+   * (which predate this field) deserializable.
+   */
+  assignee: Array<string | null>;
+  /**
    * When true, items whose underlying GitHub state is closed (issues in
    * `CLOSED` state, pull requests in `CLOSED` or `MERGED` state) are
    * filtered out before bucketing. Items whose state hasn't loaded yet are
