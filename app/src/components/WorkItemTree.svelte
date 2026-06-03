@@ -34,6 +34,7 @@
   import * as octicons from "@primer/octicons";
   import SingleSelectColumnMenu from "./SingleSelectColumnMenu.svelte";
   import IterationColumnMenu from "./IterationColumnMenu.svelte";
+  import AssigneeColumnMenu from "./AssigneeColumnMenu.svelte";
   import AddItemDialog from "./AddItemDialog.svelte";
   import { ghostContextMenuItems } from "$lib/ghostRouting";
 
@@ -284,6 +285,8 @@
     {
       name: "Assigned",
       width: "1fr",
+      getMenuIconSVG: getAssigneeColumnMenuSVG,
+      renderMenuContent: renderAssigneeFieldMenuContent,
       render: renderTextCell((i) => {
         if (i.data.type === "issue" || i.data.type === "pullRequest") {
           return i.data.assignees && i.data.assignees.length > 0
@@ -398,6 +401,12 @@
   function getCustomFieldColumnMenuSVG(column: Column<WorkItem>) {
     const fieldName = column.name as keyof Fields;
     if (context.getFilter(fieldName).length > 0)
+      return octicons["filter"].toSVG();
+    return undefined;
+  }
+
+  function getAssigneeColumnMenuSVG(_column: Column<WorkItem>) {
+    if (context.getAssigneeFilter().length > 0)
       return octicons["filter"].toSVG();
     return undefined;
   }
@@ -528,6 +537,14 @@
 
 {#snippet renderIterationFieldMenuContent(column: Column<WorkItem>)}
   <IterationColumnMenu fieldName={column.name as keyof Fields} />
+{/snippet}
+
+{#snippet renderAssigneeFieldMenuContent(_column: Column<WorkItem>)}
+  <AssigneeColumnMenu
+    assignees={context.getAllAssignees()}
+    filter={context.getAssigneeFilter()}
+    onFilterChange={(filter) => context.setAssigneeFilter(filter)}
+  />
 {/snippet}
 
 {#snippet renderGroup(group: { name: string; count: number } | undefined)}

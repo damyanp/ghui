@@ -5,6 +5,7 @@ import type { Iteration } from "./bindings/Iteration";
 import type { SingleSelect } from "./bindings/SingleSelect";
 import type { WorkItem } from "./bindings/WorkItem";
 import {
+  getAllAssignees,
   getFilterableFieldOptionIds,
   getFilterableFieldValue,
   getFilterableFields,
@@ -55,6 +56,7 @@ function makeData(): Data {
       workstream: [],
       estimate: [],
       priority: [],
+      assignee: [],
       hideClosed: false,
     },
   } as unknown as Data;
@@ -120,10 +122,32 @@ describe("filterable field metadata", () => {
     // `hideClosed` lives on Filters but is a render-only boolean toggle, not
     // a per-field option-id list — it must NOT be reported as filterable.
     expect(isFilterableField(data, "hideClosed")).toBe(false);
+    // `assignee` is a free-form login list with its own filter UI, not an
+    // option-id field, so it must NOT be reported as filterable either.
+    expect(isFilterableField(data, "assignee")).toBe(false);
   });
 
   it("getFilterableFields excludes non-field filter keys like hideClosed", () => {
     expect(getFilterableFields(makeData())).not.toContain("hideClosed");
+    expect(getFilterableFields(makeData())).not.toContain("assignee");
+  });
+});
+
+describe("getAllAssignees", () => {
+  it("returns sorted, de-duplicated logins across issues and pull requests", () => {
+    const data = makeData();
+    data.workItems = {
+      a: { data: { type: "issue", assignees: ["bob", "alice"] } },
+      b: { data: { type: "pullRequest", assignees: ["alice", "carol"] } },
+      c: { data: { type: "issue", assignees: [] } },
+      d: { data: { type: "draftIssue" } },
+    } as unknown as Data["workItems"];
+
+    expect(getAllAssignees(data)).toEqual(["alice", "bob", "carol"]);
+  });
+
+  it("returns an empty array when there are no assignees", () => {
+    expect(getAllAssignees(makeData())).toEqual([]);
   });
 });
 

@@ -50,6 +50,7 @@ export class WorkItemContext {
       workstream: [],
       estimate: [],
       priority: [],
+      assignee: [],
       hideClosed: false,
     },
     pivotConfig: {
@@ -267,6 +268,27 @@ export class WorkItemContext {
     filter: Array<FieldOptionId | null>
   ): void {
     this.data.filters[fieldName as FilterableField] = filter;
+    invoke("set_filters", { filters: this.data.filters });
+  }
+
+  /**
+   * The set of assignee logins (and `null` for unassigned) currently being
+   * filtered out. Assignees are free-form logins rather than a fixed
+   * single-select field, so they have their own getter/setter separate from
+   * `getFilter`/`setFilter`.
+   */
+  public getAssigneeFilter(): Array<string | null> {
+    return this.data.filters.assignee;
+  }
+
+  /** Returns the sorted, de-duplicated set of assignee logins across all work
+   * items, used to populate the assignee filter menu. */
+  public getAllAssignees(): Array<string> {
+    return filterableFields.getAllAssignees(this.data);
+  }
+
+  public setAssigneeFilter(filter: Array<string | null>): void {
+    this.data.filters.assignee = filter;
     invoke("set_filters", { filters: this.data.filters });
   }
 

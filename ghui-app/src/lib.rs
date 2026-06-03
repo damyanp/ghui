@@ -64,6 +64,15 @@ pub struct Filters {
     estimate: Vec<Option<FieldOptionId>>,
     priority: Vec<Option<FieldOptionId>>,
 
+    /// Logins of assignees to filter out. `None` represents unassigned items.
+    /// An item is excluded when any of its assignees appears in this list, or
+    /// when it has no assignees and `None` is present.
+    ///
+    /// `#[serde(default)]` keeps existing cached `view_config.ghui.json` files
+    /// (which predate this field) deserializable.
+    #[serde(default)]
+    assignee: Vec<Option<String>>,
+
     /// When true, items whose underlying GitHub state is closed (issues in
     /// `CLOSED` state, pull requests in `CLOSED` or `MERGED` state) are
     /// filtered out before bucketing. Items whose state hasn't loaded yet are
@@ -92,7 +101,29 @@ impl Filters {
             || self.kind.contains(p.kind.flatten())
             || self.workstream.contains(p.workstream.flatten())
             || self.estimate.contains(&p.estimate)
-            || self.priority.contains(&p.priority))
+            || self.priority.contains(&p.priority)
+            || self.assignee_excluded(work_item))
+    }
+
+    /// Returns true when `work_item` should be hidden because of the assignee
+    /// filter. Items with no assignees are matched by a `None` entry in the
+    /// filter list; otherwise an item is hidden when any of its assignees is
+    /// listed.
+    fn assignee_excluded(&self, work_item: &WorkItem) -> bool {
+        if self.assignee.is_empty() {
+            return false;
+        }
+
+        let assignees = work_item.assignees();
+        if assignees.is_empty() {
+            self.assignee.iter().any(Option::is_none)
+        } else {
+            assignees.iter().any(|login| {
+                self.assignee
+                    .iter()
+                    .any(|filtered| filtered.as_deref() == Some(login.as_str()))
+            })
+        }
     }
 
     /// Returns the total number of individual filter values that are active
@@ -107,6 +138,7 @@ impl Filters {
             + self.workstream.len()
             + self.estimate.len()
             + self.priority.len()
+            + self.assignee.len()
             + usize::from(self.hide_closed)
     }
 }
@@ -1271,6 +1303,64 @@ mod tests {
             .status
             .push(Some(FieldOptionId("status-a".to_string())));
         assert_eq!(filters.active_filter_count(), 2);
+
+        filters.assignee.push(Some("alice".to_string()));
+        assert_eq!(filters.active_filter_count(), 3);
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_excludes_matching_login() {
+        let mut data = TestData::default();
+        let alice_id = data.build().assignees(&["alice"]).add();
+        let bob_id = data.build().assignees(&["bob"]).add();
+
+        let filters = Filters {
+            assignee: vec![Some("alice".to_string())],
+            ..Default::default()
+        };
+
+        assert!(!filters.should_include(data.work_items.get(&alice_id).unwrap()));
+        assert!(filters.should_include(data.work_items.get(&bob_id).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_excludes_when_any_assignee_matches() {
+        let mut data = TestData::default();
+        let id = data.build().assignees(&["alice", "bob"]).add();
+
+        let filters = Filters {
+            assignee: vec![Some("bob".to_string())],
+            ..Default::default()
+        };
+
+        assert!(!filters.should_include(data.work_items.get(&id).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_none_excludes_unassigned() {
+        let mut data = TestData::default();
+        let unassigned_id = data.build().add();
+        let assigned_id = data.build().assignees(&["alice"]).add();
+
+        let filters = Filters {
+            assignee: vec![None],
+            ..Default::default()
+        };
+
+        assert!(!filters.should_include(data.work_items.get(&unassigned_id).unwrap()));
+        assert!(filters.should_include(data.work_items.get(&assigned_id).unwrap()));
+    }
+
+    #[test]
+    fn test_filters_should_include_assignee_empty_filter_keeps_everything() {
+        let mut data = TestData::default();
+        let unassigned_id = data.build().add();
+        let assigned_id = data.build().assignees(&["alice"]).add();
+
+        let filters = Filters::default();
+
+        assert!(filters.should_include(data.work_items.get(&unassigned_id).unwrap()));
+        assert!(filters.should_include(data.work_items.get(&assigned_id).unwrap()));
     }
 
     fn set_pull_request(data: &mut TestData, id: &WorkItemId, state: PullRequestState) {

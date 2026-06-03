@@ -44,6 +44,16 @@ impl WorkItem {
         }
     }
 
+    /// Returns the assignee logins for this work item. Draft issues have no
+    /// assignees so an empty slice is returned for them.
+    pub fn assignees(&self) -> &[String] {
+        match &self.data {
+            WorkItemData::Issue(Issue { assignees, .. }) => assignees,
+            WorkItemData::PullRequest(PullRequest { assignees, .. }) => assignees,
+            WorkItemData::DraftIssue => &[],
+        }
+    }
+
     pub fn is_closed(&self) -> DelayLoad<bool> {
         match &self.data {
             WorkItemData::DraftIssue => false.into(),
