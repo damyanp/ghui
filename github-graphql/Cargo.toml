@@ -4,7 +4,7 @@ version = "0.10.0"
 edition = "2021"
 
 [dependencies]
-graphql_client = { version = "0.14.0" }
+graphql_client = { version = "0.16.0" }
 anyhow = "1.0"
 serde = "1.0.219"
 serde_json = "*"
