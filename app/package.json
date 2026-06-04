@@ -26,7 +26,7 @@
     "@zag-js/select": "^1.41.1",
     "@zag-js/svelte": "^1.41.1",
     "bits-ui": "^2.18.1",
-    "dayjs": "^1.11.13",
+    "dayjs": "^1.11.21",
     "monaco-editor": "^0.55.1"
   },
   "devDependencies": {
