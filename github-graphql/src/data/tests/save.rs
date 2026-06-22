@@ -16,7 +16,15 @@ use crate::{
 /// mutation type and returns the corresponding pre-configured response.
 #[derive(Clone)]
 struct MockClient {
-    responses: Arc<Mutex<HashMap<String, VecDeque<serde_json::Value>>>>,
+    responses: Arc<Mutex<HashMap<String, VecDeque<MockResponse>>>>,
+}
+
+/// A queued response for a mutation keyword.
+enum MockResponse {
+    /// A successful JSON response body.
+    Json(serde_json::Value),
+    /// Simulates the network being unreachable (a reqwest connect error).
+    ConnectivityError,
 }
 
 impl MockClient {
@@ -32,7 +40,18 @@ impl MockClient {
             .unwrap()
             .entry(keyword.to_string())
             .or_default()
-            .push_back(response);
+            .push_back(MockResponse::Json(response));
+        self
+    }
+
+    /// Queues a connectivity (network-down) failure for the given mutation.
+    fn on_mutation_connectivity_error(self, keyword: &str) -> Self {
+        self.responses
+            .lock()
+            .unwrap()
+            .entry(keyword.to_string())
+            .or_default()
+            .push_back(MockResponse::ConnectivityError);
         self
     }
 
@@ -50,6 +69,19 @@ impl MockClient {
     }
 }
 
+/// Builds a genuine reqwest connect error by hitting a closed loopback port.
+async fn connectivity_error() -> crate::Error {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    drop(listener);
+    let err = reqwest::Client::new()
+        .get(format!("http://{addr}/"))
+        .send()
+        .await
+        .expect_err("request to closed port should fail");
+    crate::Error::ReqwestError(err)
+}
+
 impl Client for MockClient {
     async fn request<Q, R>(&self, request: &Q) -> crate::Result<R>
     where
@@ -59,20 +91,25 @@ impl Client for MockClient {
         let request_json = serde_json::to_value(request).unwrap();
         let query = request_json["query"].as_str().unwrap_or("");
 
-        let mut responses = self.responses.lock().unwrap();
-        let response = responses
-            .iter_mut()
-            .find_map(|(keyword, queue)| {
-                if query.contains(keyword.as_str()) {
-                    queue.pop_front()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_else(|| panic!("MockClient: no response for query containing: {query}"));
+        let response = {
+            let mut responses = self.responses.lock().unwrap();
+            responses
+                .iter_mut()
+                .find_map(|(keyword, queue)| {
+                    if query.contains(keyword.as_str()) {
+                        queue.pop_front()
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| panic!("MockClient: no response for query containing: {query}"))
+        };
 
-        serde_json::from_value(response)
-            .map_err(|e| crate::Error::GraphQlResponseUnexpected(e.to_string()))
+        match response {
+            MockResponse::Json(value) => serde_json::from_value(value)
+                .map_err(|e| crate::Error::GraphQlResponseUnexpected(e.to_string())),
+            MockResponse::ConnectivityError => Err(connectivity_error().await),
+        }
     }
 }
 
@@ -368,4 +405,87 @@ async fn test_save_field_change_for_existing_item_still_works() {
         .unwrap();
 
     assert!(result.contains(&project_item_id));
+}
+
+/// A connectivity error (network down) while saving should abort the remaining
+/// changes rather than attempting each one and hitting the same timeout. All
+/// changes — the failed one and the not-yet-attempted ones — stay queued so the
+/// user can retry once connectivity is restored.
+#[tokio::test]
+async fn test_save_aborts_remaining_changes_on_connectivity_error() {
+    let mut data = TestData::default();
+    let id1 = data.build().status("Active").add();
+    let id2 = data.build().status("Active").add();
+    let id3 = data.build().status("Active").add();
+
+    let mut changes = Changes::default();
+    for id in [id1, id2, id3] {
+        changes.add(Change {
+            work_item_id: id,
+            data: ChangeData::Status(Some(FieldOptionId("id(Closed)".into()))),
+        });
+    }
+
+    // Only one response is queued: the first attempted change fails with a
+    // connectivity error, and no further requests should be made.
+    let client = MockClient::new().on_mutation_connectivity_error("updateProjectV2ItemFieldValue");
+
+    let result = changes
+        .save(
+            &client,
+            &data.fields,
+            &data.work_items,
+            SaveMode::Commit,
+            &noop_progress,
+        )
+        .await
+        .unwrap();
+
+    // Nothing was saved successfully.
+    assert!(result.is_empty());
+    // All three changes remain queued for retry.
+    assert_eq!(changes.len(), 3);
+    // The loop stopped after the first failure (only one request was made).
+    client.assert_all_consumed();
+}
+
+/// A non-connectivity error (e.g. an unexpected GraphQL response) should only
+/// skip that one change and continue saving the rest.
+#[tokio::test]
+async fn test_save_continues_after_non_connectivity_error() {
+    let mut data = TestData::default();
+    let id1 = data.build().status("Active").add();
+    let id2 = data.build().status("Active").add();
+
+    let mut changes = Changes::default();
+    for id in [id1, id2] {
+        changes.add(Change {
+            work_item_id: id,
+            data: ChangeData::Status(Some(FieldOptionId("id(Closed)".into()))),
+        });
+    }
+
+    // First field mutation gets a malformed response (deserialize error =>
+    // GraphQlResponseUnexpected); the second succeeds.
+    let client = MockClient::new()
+        .on_mutation(
+            "updateProjectV2ItemFieldValue",
+            serde_json::json!("garbage"),
+        )
+        .on_mutation("updateProjectV2ItemFieldValue", field_mutation_response());
+
+    changes
+        .save(
+            &client,
+            &data.fields,
+            &data.work_items,
+            SaveMode::Commit,
+            &noop_progress,
+        )
+        .await
+        .unwrap();
+
+    // Only the failed change remains queued; the loop did not abort early.
+    assert_eq!(changes.len(), 1);
+    client.assert_all_consumed();
 }

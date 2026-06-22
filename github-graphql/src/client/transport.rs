@@ -33,6 +33,8 @@ impl GithubClient {
             client: reqwest::Client::builder()
                 .user_agent(APP_USER_AGENT)
                 .default_headers(headers)
+                .connect_timeout(std::time::Duration::from_secs(15))
+                .timeout(std::time::Duration::from_secs(60))
                 .build()?,
         })
     }
