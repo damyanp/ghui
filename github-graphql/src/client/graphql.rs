@@ -1,7 +1,7 @@
 #[macro_export]
 #[rustfmt::skip]
 macro_rules! gql {
-    ($name:ident, $query_file:expr) => {
+    ($name:ident, $query_file:tt) => {
         #[derive(GraphQLQuery)]
         #[graphql(schema_path = "src/schema.docs.graphql",                    
                   query_path = $query_file,
