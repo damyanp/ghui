@@ -249,7 +249,8 @@ impl Changes {
         // pass so that subsequent field saves for those items can find the id.
         let mut new_project_items: HashMap<WorkItemId, ProjectItemId> = HashMap::new();
 
-        for (change_number, (key, change)) in sorted.into_iter().enumerate() {
+        let mut changes = sorted.into_iter().enumerate();
+        while let Some((change_number, (key, change))) = changes.next() {
             let result = if let SaveMode::Commit = mode {
                 let result = change
                     .save(
@@ -277,9 +278,26 @@ impl Changes {
 
             report_progress(&change, change_number, change_count);
 
-            if result.is_err() {
-                warn!("save for {:?} failed {result:?}", change.key());
+            if let Err(e) = result {
+                warn!("save for {:?} failed {e:?}", change.key());
                 self.data.insert(key, change);
+
+                // If the network is down, every remaining change will hit the
+                // same connection timeout. Stop early and re-queue the rest so
+                // the user can retry once connectivity is restored, instead of
+                // grinding through hundreds of timeouts with the UI stuck.
+                if is_connectivity_error(&e) {
+                    let remaining = changes.len();
+                    if remaining > 0 {
+                        warn!(
+                            "aborting save: network unavailable, {remaining} change(s) not attempted"
+                        );
+                    }
+                    for (_, (key, change)) in changes {
+                        self.data.insert(key, change);
+                    }
+                    break;
+                }
             } else {
                 changed_work_items.insert(change.work_item_id);
             }
@@ -304,6 +322,12 @@ impl Changes {
 pub enum SaveMode {
     DryRun,
     Commit,
+}
+
+/// Returns true for errors that indicate the network/GitHub is unreachable, so
+/// retrying the remaining changes in this save pass would be pointless.
+fn is_connectivity_error(error: &Error) -> bool {
+    matches!(error, Error::ReqwestError(e) if e.is_connect() || e.is_timeout())
 }
 
 impl Change {
