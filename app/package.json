@@ -39,7 +39,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2",
     "@types/primer__octicons": "^19.21.0",
-    "svelte": "^5.55.10",
+    "svelte": "^5.56.3",
     "svelte-check": "^4.6.0",
     "tailwindcss": "^4.3.0",
     "typescript": "6.x",
