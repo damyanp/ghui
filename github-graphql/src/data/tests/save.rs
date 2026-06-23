@@ -74,7 +74,11 @@ async fn connectivity_error() -> crate::Error {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
     drop(listener);
-    let err = reqwest::Client::new()
+    let err = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .unwrap()
         .get(format!("http://{addr}/"))
         .send()
         .await
