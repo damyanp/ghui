@@ -40,7 +40,7 @@
     "@tauri-apps/cli": "^2",
     "@types/primer__octicons": "^19.21.0",
     "svelte": "^5.55.10",
-    "svelte-check": "^4.5.0",
+    "svelte-check": "^4.6.0",
     "tailwindcss": "^4.3.0",
     "typescript": "6.x",
     "vite": "8.x",
