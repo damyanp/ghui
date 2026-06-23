@@ -23,7 +23,7 @@
     "@tauri-apps/plugin-clipboard-manager": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-window-state": "^2",
-    "@zag-js/select": "^1.41.1",
+    "@zag-js/select": "^1.41.2",
     "@zag-js/svelte": "^1.41.2",
     "bits-ui": "^2.18.1",
     "dayjs": "^1.11.21",
