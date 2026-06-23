@@ -44,7 +44,7 @@
     "tailwindcss": "^4.3.0",
     "typescript": "6.x",
     "vite": "8.x",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
