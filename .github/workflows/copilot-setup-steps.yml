@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Tauri's webview shell (`app/src-tauri`) links against GTK/WebKit/glib
       # via system pkg-config. Without these `-dev` packages, any workspace
