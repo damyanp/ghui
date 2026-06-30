@@ -23,7 +23,7 @@ struct MockClient {
 enum MockResponse {
     /// A successful JSON response body.
     Json(serde_json::Value),
-    /// Simulates the network being unreachable (a reqwest connect error).
+    /// Simulates the network being unreachable.
     ConnectivityError,
 }
 
@@ -69,21 +69,10 @@ impl MockClient {
     }
 }
 
-/// Builds a genuine reqwest connect error by hitting a closed loopback port.
-async fn connectivity_error() -> crate::Error {
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
-    drop(listener);
-    let err = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_secs(5))
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .unwrap()
-        .get(format!("http://{addr}/"))
-        .send()
-        .await
-        .expect_err("request to closed port should fail");
-    crate::Error::ReqwestError(err)
+/// Builds a connectivity error equivalent to gh failing because GitHub is
+/// unreachable.
+fn connectivity_error() -> crate::Error {
+    crate::Error::Connectivity("dial tcp: no such host".into())
 }
 
 impl Client for MockClient {
@@ -112,7 +101,7 @@ impl Client for MockClient {
         match response {
             MockResponse::Json(value) => serde_json::from_value(value)
                 .map_err(|e| crate::Error::GraphQlResponseUnexpected(e.to_string())),
-            MockResponse::ConnectivityError => Err(connectivity_error().await),
+            MockResponse::ConnectivityError => Err(connectivity_error()),
         }
     }
 }

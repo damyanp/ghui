@@ -5,18 +5,11 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.36", features = ["derive"] }
-dotenv = "0.15.0"
 github-graphql = { path = "../github-graphql" }
 regex = "1.11.1"
 serde = "1.0.219"
 serde_json = "*"
 tokio = { version = "1", features = ["full"] }
-keyring = { version = "3", features = [
-    "apple-native",
-    "windows-native",
-    "linux-native-sync-persistent",
-    "crypto-rust",
-] }
 thiserror = "2.0.12"
 anyhow = "1.0.102"
 tokio-stream = "0.1.17"

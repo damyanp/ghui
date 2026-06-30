@@ -1,7 +1,7 @@
 use github_graphql::{
     client::{
         graphql::{custom_fields_query::get_fields, get_all_items},
-        transport::GithubClient,
+        transport::GhCliClient,
     },
     data::{self, Change, SaveMode},
 };
@@ -27,14 +27,14 @@ pub async fn run(options: Options) -> Result {
     run_hygiene(&client, options.mode).await
 }
 
-async fn get_items(client: &GithubClient) -> Result<data::WorkItems> {
+async fn get_items(client: &GhCliClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
     Ok(data::WorkItems::from_iter(
         get_all_items(client, &report_progress).await?,
     ))
 }
 
-pub async fn run_hygiene(client: &GithubClient, mode: RunHygieneMode) -> Result {
+pub async fn run_hygiene(client: &GhCliClient, mode: RunHygieneMode) -> Result {
     let items = match mode {
         RunHygieneMode::TestData => {
             let mut file = std::fs::File::open("all_items.json")?;

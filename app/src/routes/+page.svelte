@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick } from "svelte";
   import { AppBar } from "@skeletonlabs/skeleton-svelte";
-  import Pat from "../components/Pat.svelte";
+  import Auth from "../components/Auth.svelte";
   import WorkItemTree from "../components/WorkItemTree.svelte";
   import RefreshButton from "../components/RefreshButton.svelte";
   import {
@@ -436,7 +436,7 @@
           disabled={updateButtonDisabled}
           onclick={() => { void onUpdateClicked(); }}
         />
-        <Pat />
+        <Auth />
       </AppBar.Trail>
     </AppBar.Toolbar>
   </AppBar>

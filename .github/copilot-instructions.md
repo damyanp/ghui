@@ -10,7 +10,7 @@ ghui is a **GitHub project management desktop app** built with **Tauri 2 (Rust b
 ghui/
 ├── github-graphql/     # Pure Rust library: GraphQL client, data models, change tracking
 ├── ghui-app/           # Core app logic: AppState, Tauri command implementations
-├── app/src-tauri/      # Tauri shell: IPC bridge, window management, PAT storage
+├── app/src-tauri/      # Tauri shell: IPC bridge, window management, gh auth status
 ├── app/src/            # Svelte 5 frontend: components, routes, styling
 └── ghui-util/          # Standalone CLI tool for maintenance tasks
 ```
@@ -304,7 +304,7 @@ Screenshots posted to PRs must actually render for the reviewer. Past PRs (e.g. 
 
 ### Environment Notes
 
-- A GitHub PAT with "project" scope is required for runtime. See `.env-example`.
+- The `gh` CLI must be installed, on `PATH`, and authenticated (`gh auth login`) for runtime. All GitHub API calls go through `gh api graphql` via `GhCliClient`.
 - The `graphql.config.yml` points to the GraphQL schema and query documents for IDE support.
 - VS Code extensions: `svelte.svelte-vscode`, `tauri-apps.tauri-vscode`, `rust-lang.rust-analyzer`.
 - Rust Analyzer uses a separate target dir (`target/analyzer`) to avoid conflicts with cargo builds.

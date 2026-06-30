@@ -18,8 +18,14 @@ pub enum Error {
     #[error("Unknown error: {0}")]
     Unknown(String),
 
-    #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
+    /// GitHub was unreachable (network down / DNS / timeout) when running gh.
+    #[error("Connectivity error: {0}")]
+    Connectivity(String),
+
+    /// The `gh` CLI failed for a non-connectivity reason (not installed, not
+    /// authenticated, or an unexpected error).
+    #[error("gh CLI error: {0}")]
+    GhCli(String),
 
     #[error(transparent)]
     JoinError(#[from] tokio::task::JoinError),

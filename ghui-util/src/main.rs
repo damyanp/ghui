@@ -1,10 +1,8 @@
 use clap::{Parser, Subcommand};
-use dotenv::dotenv;
 use github_graphql::client::{
     graphql::{get_all_items, get_viewer_info},
-    transport::GithubClient,
+    transport::GhCliClient,
 };
-use std::env;
 use std::fs::File;
 use std::io::Write;
 
@@ -28,7 +26,6 @@ type Result<T = ()> = core::result::Result<T, anyhow::Error>;
 #[tokio::main]
 async fn main() -> Result {
     env_logger::init();
-    dotenv().ok();
 
     let arg = Args::parse();
 
@@ -67,18 +64,6 @@ async fn run_get_viewer() -> Result {
 mod add_items;
 mod hygiene;
 
-pub fn client() -> GithubClient {
-    GithubClient::new(&pat()).expect("create client")
-}
-
-fn pat() -> String {
-    if let Ok(pat) = env::var("GITHUB_PAT") {
-        return pat;
-    }
-
-    let pat_entry = keyring::Entry::new("ghui", "PAT").expect("No PAT in GITHUB_PAT or keyring");
-
-    pat_entry
-        .get_password()
-        .expect("keyring failed to get password")
+pub fn client() -> GhCliClient {
+    GhCliClient::default()
 }

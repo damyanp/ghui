@@ -27,6 +27,9 @@ pub use mutators::{
 pub mod custom_fields_query;
 pub use custom_fields_query::get_custom_fields;
 
+pub mod check_scopes;
+pub use check_scopes::{check_project_access, ProjectAccess};
+
 pub mod get_issue_types;
 
 pub mod get_all_items;
