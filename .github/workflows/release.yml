@@ -30,9 +30,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v7
-      with:
-        # Need a PAT to push back to main (bypasses rulesets)
-        token: ${{ secrets.RELEASE_PAT }}
+      # Uses the default GITHUB_TOKEN; the GitHub Actions app is a ruleset
+      # bypass actor so the version-bump commit can be pushed to main.
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
