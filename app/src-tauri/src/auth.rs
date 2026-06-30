@@ -22,6 +22,7 @@ pub enum AuthStatus {
     NeedsProjectScope(ViewerInfo),
     NotAuthenticated,
     GhMissing,
+    Offline,
 }
 
 fn notify_auth_status(app: &AppHandle, status: AuthStatus) {
@@ -45,6 +46,7 @@ async fn resolve_auth_status() -> AuthStatus {
         },
         // `failed to run gh` is the spawn-failure path: gh isn't installed/on PATH.
         Err(Error::GhCli(msg)) if msg.contains("failed to run gh") => AuthStatus::GhMissing,
+        Err(Error::Connectivity(_)) => AuthStatus::Offline,
         Err(e) => {
             warn!("gh auth status check failed: {e}");
             AuthStatus::NotAuthenticated

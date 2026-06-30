@@ -24,7 +24,8 @@ pub async fn check_project_access(client: &impl Client) -> Result<ProjectAccess>
 
     if let Some(errors) = &response.errors {
         let missing_scope = errors.iter().any(|e| {
-            e.message.contains("read:project") || e.message.contains("INSUFFICIENT_SCOPES")
+            let msg = e.message.to_lowercase();
+            msg.contains("read:project") || msg.contains("insufficient_scopes")
         });
         if missing_scope {
             return Ok(ProjectAccess::MissingScope);

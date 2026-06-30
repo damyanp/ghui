@@ -9,7 +9,7 @@
   type AuthStatus =
     | { type: "authenticated"; login: string; avatarUri: string }
     | { type: "needsProjectScope"; login: string; avatarUri: string }
-    | { type: "checking" | "notAuthenticated" | "ghMissing" };
+    | { type: "checking" | "notAuthenticated" | "ghMissing" | "offline" };
 
   let authState = $state<AuthStatus>({ type: "checking" });
 
@@ -57,6 +57,8 @@
         return "gh Not Found";
       case "needsProjectScope":
         return "Missing Project Access";
+      case "offline":
+        return "Offline";
       case "checking":
         return "";
       default:
@@ -93,7 +95,7 @@
           {#if authState.type === "checking"}
             <LoaderCircle class="animate-spin" size={32} />
           {:else}
-            <TriangleAlert class="text-error-500" size={32} />
+            <TriangleAlert class="text-white" size={32} />
           {/if}
         </div>
       </Avatar.Fallback>
@@ -139,6 +141,11 @@
         <p class="m-4">
           Run <code>gh auth refresh -s project</code> in a terminal to grant it,
           then re-check below.
+        </p>
+      {:else if authState.type === "offline"}
+        <p class="m-4">
+          GitHub couldn't be reached. Check your internet connection and
+          re-check below.
         </p>
       {:else}
         <p class="m-4">
