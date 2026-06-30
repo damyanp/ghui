@@ -327,7 +327,7 @@ pub enum SaveMode {
 /// Returns true for errors that indicate the network/GitHub is unreachable, so
 /// retrying the remaining changes in this save pass would be pointless.
 fn is_connectivity_error(error: &Error) -> bool {
-    matches!(error, Error::ReqwestError(e) if e.is_connect() || e.is_timeout())
+    matches!(error, Error::Connectivity(_))
 }
 
 impl Change {

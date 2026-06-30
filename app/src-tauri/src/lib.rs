@@ -2,8 +2,8 @@ use ghui_app::DataState;
 use tauri::Manager;
 
 mod actions;
+mod auth;
 mod data;
-mod pat;
 mod update;
 
 pub type TauriCommandResult<T> = core::result::Result<T, TauriCommandError>;
@@ -46,8 +46,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            pat::check_pat_status,
-            pat::set_pat,
+            auth::check_auth_status,
             data::watch_data,
             data::force_refresh_data,
             data::update_items,

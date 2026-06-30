@@ -1,8 +1,11 @@
 use anyhow::Result;
 use dirs::home_dir;
 use github_graphql::{
-    client::graphql::{
-        custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
+    client::{
+        graphql::{
+            custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
+        },
+        transport::GhCliClient,
     },
     data::{
         Change, ChangeData, Changes, DelayLoad, FieldOptionId, Fields, ProjectItemId,
@@ -32,9 +35,6 @@ pub mod updater;
 
 mod nodes;
 use nodes::*;
-
-mod pat;
-pub use pat::PATState;
 
 /// The result of resolving a GitHub URL to a work item identifier.
 ///
@@ -235,7 +235,6 @@ impl Deref for DataState {
 }
 
 pub struct AppState {
-    pub pat: PATState,
     watcher: Arc<SendDataUpdate>,
     fields: Option<Fields>,
     work_items: Option<WorkItems>,
@@ -274,7 +273,6 @@ impl AppState {
             .unwrap_or_default();
 
         Self {
-            pat: PATState::default(),
             watcher: Arc::new(Box::new(|_| {
                 warn!("No watcher set!");
             })),
@@ -371,7 +369,7 @@ impl AppState {
             }
         }
 
-        let client = self.pat.new_github_client()?;
+        let client = GhCliClient::default();
         let fields = get_fields(&client).await?;
         let save_result = save_fields_to_appdata(&fields);
         if let Err(error) = save_result {
@@ -403,7 +401,7 @@ impl AppState {
         }
 
         // Try retrieving from github
-        let client = self.pat.new_github_client()?;
+        let client = GhCliClient::default();
 
         let report_progress = |done, total| {
             (self.watcher)(DataUpdate::Progress { done, total });
@@ -518,7 +516,7 @@ impl AppState {
         &mut self,
         report_progress: &impl Fn(usize, usize),
     ) -> Result<(Vec<ProjectItemId>, usize)> {
-        let client = self.pat.new_github_client()?;
+        let client = GhCliClient::default();
 
         let fields = self.refresh_fields(false).await?;
 
@@ -556,7 +554,7 @@ impl AppState {
     /// `work_items` map to determine whether the item is already in the project
     /// and to inspect its current state (e.g., existing parent).
     pub async fn resolve_url(&self, url: String) -> Result<ResolvedUrl> {
-        let client = self.pat.new_github_client()?;
+        let client = GhCliClient::default();
         let (id_str, title) = get_resource_id(&client, &url).await?;
         Ok(ResolvedUrl {
             id: WorkItemId(id_str),
@@ -641,15 +639,7 @@ impl DataState {
             let started = std::time::Instant::now();
             debug!("request_update_items: starting batch of {batch_size} item(s)");
 
-            let state = app_state.lock().await;
-            let client = match state.pat.new_github_client() {
-                Ok(client) => client,
-                Err(e) => {
-                    error!("Failed to create GitHub client: {e}");
-                    return;
-                }
-            };
-            drop(state);
+            let client = GhCliClient::default();
 
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
