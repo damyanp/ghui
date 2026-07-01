@@ -17,6 +17,7 @@ import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
 import type { PivotConfig } from "./bindings/PivotConfig";
+import { upsertWorkItem } from "./workItems";
 import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
 
@@ -127,7 +128,7 @@ export class WorkItemContext {
   }
 
   onDataUpdateWorkItem(workItem: WorkItem) {
-    this.data.workItems[workItem.id] = workItem;
+    this.data.workItems = upsertWorkItem(this.data.workItems, workItem);
   }
 
   onDataUpdateProgress({ done, total }: { done: number; total: number }) {
