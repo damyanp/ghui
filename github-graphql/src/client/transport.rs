@@ -103,12 +103,21 @@ impl GhRunner for RealGhRunner {
             use tokio::io::AsyncWriteExt;
             use tokio::process::Command;
 
-            let mut child = Command::new("gh")
+            let mut command = Command::new("gh");
+            command
                 .args(["api", "graphql", "--input", "-"])
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .spawn()?;
+                .stderr(std::process::Stdio::piped());
+
+            // Don't flash a console window for each gh call on Windows.
+            #[cfg(windows)]
+            {
+                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+                command.creation_flags(CREATE_NO_WINDOW);
+            }
+
+            let mut child = command.spawn()?;
 
             if let Some(mut stdin) = child.stdin.take() {
                 stdin.write_all(&input).await?;
