@@ -57,9 +57,24 @@ npm run check
 # Run frontend unit tests (vitest)
 npm test
 
+# Production build — the ONLY check that compiles the Tailwind/Skeleton CSS
+# bundle. Always run this after dependency bumps (see note below).
+npm run build
+
 # Dev server
 npm run dev
 ```
+
+**Verifying dependency updates (esp. major bumps).** `npm run check` and
+`npm test` do not compile the production CSS bundle, so a broken Tailwind or
+Skeleton `@import`/`@utility` will pass both yet fail `npm run build`. This is
+exactly how a dependabot Skeleton 3→4 major bump shipped a broken installer
+build. Whenever you touch `app/package.json` / `package-lock.json` — or review
+a dependabot PR — run a clean `npm ci` (so you get the locked versions, not
+stale `node_modules`) followed by `npm run build`, and check the dependency's
+migration guide for major bumps. In Skeleton v4 the `./optional/*` export
+(e.g. `@skeletonlabs/skeleton/optional/presets`) was removed; presets are now
+bundled into the main `@import '@skeletonlabs/skeleton'`.
 
 Frontend tests live next to the code they cover as `*.test.ts` files (e.g.
 `app/src/lib/filterableFields.test.ts`). Tests use **vitest** and should be
@@ -82,7 +97,7 @@ npx tauri build   # Release build (produces MSI + NSIS installers)
 
 ### CI
 
-- **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, `npm run check`, and `npm test` (vitest) on `windows-latest` for push/PR to main.
+- **rust.yml**: Runs `cargo fmt --check`, `cargo clippy`, `cargo test`, `npm run check`, `npm test` (vitest), and `npm run build` (production frontend build) on `windows-latest` for push/PR to main.
 - **build-installer.yml**: Builds Windows installer on push to main.
 
 The CI runs on Windows. The Copilot cloud agent environment is Linux, and `.github/workflows/copilot-setup-steps.yml` preinstalls the GTK/WebKit/glib `-dev` packages that `app/src-tauri` links against, so `cargo clippy --all -- -D warnings` should work end-to-end. If you ever find those packages missing (for example, in a fresh local Linux environment), install them with:
@@ -268,14 +283,15 @@ let { columns = $bindable() } = $props();   // Two-way bindable props
 - **Reuse existing patterns** — look at how similar things are done elsewhere in the codebase before introducing new approaches.
 - **Keep `Changes` and `UndoHistory` separate** — this was a deliberate architectural decision.
 - **Add comments for non-obvious behavior** (e.g., why the window starts invisible).
-- **Run the full validation suite before every commit that changes Rust or frontend code.** All five checks must be run together as a set — never pick and choose. Running clippy without fmt (or vice versa) is the most common cause of CI failures on this repo (see PR #44):
+- **Run the full validation suite before every commit that changes Rust or frontend code.** All six checks must be run together as a set — never pick and choose. Running clippy without fmt (or vice versa) is the most common cause of CI failures on this repo (see PR #44):
   1. `cargo fmt --all -- --check`
   2. `cargo clippy --all -- -D warnings`
   3. `cargo test -p github-graphql` (or `cargo test --all` if ts-rs bindings may need regeneration)
   4. `cd app && npm run check`
   5. `cd app && npm test`
+  6. `cd app && npm run build`
 
-  After making code changes, run all five. If any fail, fix and re-run the full set — don't assume the others still pass.
+  After making code changes, run all six. If any fail, fix and re-run the full set — don't assume the others still pass. Note that `npm run check` (svelte-check) and `npm test` (vitest) do **not** compile the production CSS bundle, so only `npm run build` catches Tailwind/Skeleton `@import`/`@utility` errors (this is what let the Skeleton 3→4 bump ship a broken installer build — see below).
 - **Explicitly report validation results in PR comments.** Whenever you reply to the user or call `report_progress` after code changes, list each of the five commands above with a pass/fail indicator (e.g. ✅/❌). The reviewer should never have to ask "is this clippy clean?" or "will this pass CI?" — that information should already be in your last comment.
 - **Think independently** about suggestions — evaluate whether a proposed change actually makes sense before implementing it.
 - **Remove unnecessary code/config** — don't add things "just in case" (e.g., don't add `center: true` if the window starts hidden).
