@@ -48,3 +48,6 @@ jobs:
     - name: Run tests
       working-directory: app
       run: npm test
+    - name: Production build
+      working-directory: app
+      run: npm run build
