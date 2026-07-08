@@ -33,18 +33,18 @@
     "@skeletonlabs/skeleton": "^4.15.2",
     "@skeletonlabs/skeleton-svelte": "^4.15.2",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.68.0",
-    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@sveltejs/kit": "^2.69.2",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/vite": "^4.3.2",
     "@tauri-apps/cli": "^2",
     "@types/primer__octicons": "^19.21.0",
     "svelte": "^5.56.4",
-    "svelte-check": "^4.7.1",
+    "svelte-check": "^4.7.2",
     "tailwindcss": "^4.3.1",
     "typescript": "6.x",
     "vite": "8.x",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
