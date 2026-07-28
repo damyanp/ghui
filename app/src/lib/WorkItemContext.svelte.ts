@@ -81,6 +81,18 @@ export class WorkItemContext {
   logs = $state<LogEntry[]>([]);
   unreadErrorCount = $state<number>(0);
 
+  /**
+   * Set when GitHub reports an inconsistent `totalCount` across the pages of a
+   * paginated fetch (see `DataUpdate::InconsistentPagination`). Surfaced as a
+   * dismissible banner so the inconsistency can be monitored; `null` when there
+   * is nothing to show. Holds the most recent occurrence.
+   */
+  paginationWarning = $state<{
+    expected: number;
+    actual: number;
+    page: number;
+  } | null>(null);
+
   loadProgress = $state<number>(0);
 
   updates_channel = new Channel<DataUpdate>();
@@ -120,7 +132,14 @@ export class WorkItemContext {
       case "log":
         this.onDataUpdateLog(dataUpdate.value);
         break;
+      case "inconsistentPagination":
+        this.paginationWarning = dataUpdate.value;
+        break;
     }
+  }
+
+  dismissPaginationWarning() {
+    this.paginationWarning = null;
   }
 
   onDataUpdateData(data: Data) {
@@ -151,6 +170,7 @@ export class WorkItemContext {
   }
 
   public async refresh(): Promise<RefreshSummary> {
+    this.paginationWarning = null;
     return await invoke<RefreshSummary>("force_refresh_data");
   }
 

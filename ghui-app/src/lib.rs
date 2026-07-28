@@ -3,7 +3,8 @@ use dirs::home_dir;
 use github_graphql::{
     client::{
         graphql::{
-            custom_fields_query::get_fields, get_all_items, get_items::get_items, get_resource_id,
+            TotalCountInconsistency, custom_fields_query::get_fields, get_all_items,
+            get_items::get_items, get_resource_id,
         },
         transport::GhCliClient,
     },
@@ -199,10 +200,21 @@ pub struct LogEntry {
 #[serde(rename_all = "camelCase", tag = "type", content = "value")]
 #[ts(export)]
 pub enum DataUpdate {
-    Progress { done: usize, total: usize },
+    Progress {
+        done: usize,
+        total: usize,
+    },
     WorkItem(Box<WorkItem>),
     Data(Box<Data>),
     Log(LogEntry),
+    /// GitHub reported a different `totalCount` on a later page of a paginated
+    /// query than on the first page, so the fetched items may be inconsistent.
+    /// Surfaced in the UI for monitoring; no recovery is attempted.
+    InconsistentPagination {
+        expected: usize,
+        actual: usize,
+        page: usize,
+    },
 }
 
 #[derive(Deserialize, Serialize, TS, Debug)]
@@ -407,9 +419,19 @@ impl AppState {
             (self.watcher)(DataUpdate::Progress { done, total });
         };
 
+        let report_inconsistency = |info: TotalCountInconsistency| {
+            (self.watcher)(DataUpdate::InconsistentPagination {
+                expected: info.expected,
+                actual: info.actual,
+                page: info.page,
+            });
+        };
+
         report_progress(0, 1);
 
-        let work_items = WorkItems::from_iter(get_all_items(&client, &report_progress).await?);
+        let work_items = WorkItems::from_iter(
+            get_all_items(&client, &report_progress, &report_inconsistency).await?,
+        );
 
         let save_result = save_workitems_to_appdata(&work_items);
         if let Err(error) = save_result {

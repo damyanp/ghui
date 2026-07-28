@@ -30,6 +30,8 @@
     Trash2,
     Undo2,
     ArrowDownToLine,
+    TriangleAlert,
+    X,
   } from "@lucide/svelte";
   import AppBarButton from "../components/AppBarButton.svelte";
   import DropdownMenu from "../components/DropdownMenu.svelte";
@@ -440,6 +442,31 @@
       </AppBar.Trail>
     </AppBar.Toolbar>
   </AppBar>
+
+  {#if context.paginationWarning}
+    <div
+      class="flex items-start gap-2 px-4 py-2 bg-warning-100-900 text-warning-900-100 border-b border-warning-500"
+      role="alert"
+    >
+      <TriangleAlert class="size-5 shrink-0 mt-0.5 text-warning-500" />
+      <div class="flex-1 text-sm">
+        <span class="font-bold">Inconsistent data from GitHub.</span>
+        The project's total item count changed while loading (was
+        {context.paginationWarning.expected}, later reported
+        {context.paginationWarning.actual} at page
+        {context.paginationWarning.page}). The loaded items may be inconsistent —
+        refresh to try again.
+      </div>
+      <button
+        type="button"
+        class="btn p-1 shrink-0"
+        title="Dismiss"
+        onclick={() => context.dismissPaginationWarning()}
+      >
+        <X class="size-4" />
+      </button>
+    </div>
+  {/if}
 
   {#if recipeBarOpen}
     <div class="border-b border-surface-300-700 px-4 py-2">

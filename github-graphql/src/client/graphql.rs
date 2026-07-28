@@ -34,7 +34,7 @@ pub mod get_issue_types;
 
 pub mod get_all_items;
 pub mod get_items;
-pub use get_all_items::get_all_items;
+pub use get_all_items::{get_all_items, TotalCountInconsistency};
 
 mod viewer_info;
 pub use viewer_info::{get_viewer_info, ViewerInfo};

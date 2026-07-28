@@ -40,8 +40,14 @@ async fn main() -> Result {
 async fn run_get_all_items() -> Result {
     let client = client();
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
+    let report_inconsistency = |info: github_graphql::client::graphql::TotalCountInconsistency| {
+        eprintln!(
+            "WARNING: inconsistent pagination: totalCount changed from {} to {} at page {}",
+            info.expected, info.actual, info.page
+        );
+    };
 
-    let all_items = get_all_items(&client, &report_progress).await?;
+    let all_items = get_all_items(&client, &report_progress, &report_inconsistency).await?;
     let json_data = serde_json::to_string_pretty(&all_items)?;
     let mut file = File::create("all_items.json")?;
     file.write_all(json_data.as_bytes())?;

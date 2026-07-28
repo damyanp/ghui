@@ -29,8 +29,14 @@ pub async fn run(options: Options) -> Result {
 
 async fn get_items(client: &GhCliClient) -> Result<data::WorkItems> {
     let report_progress = |c, t| println!("Retrieved {c} of {t} items");
+    let report_inconsistency = |info: github_graphql::client::graphql::TotalCountInconsistency| {
+        eprintln!(
+            "WARNING: inconsistent pagination: totalCount changed from {} to {} at page {}",
+            info.expected, info.actual, info.page
+        );
+    };
     Ok(data::WorkItems::from_iter(
-        get_all_items(client, &report_progress).await?,
+        get_all_items(client, &report_progress, &report_inconsistency).await?,
     ))
 }
 

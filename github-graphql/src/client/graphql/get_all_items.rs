@@ -10,9 +10,35 @@ use tokio::{
 };
 use tokio_stream::StreamExt;
 
+/// Details of a GraphQL `totalCount` that changed between the pages of a single
+/// paginated query. GitHub does not guarantee `totalCount` is stable across
+/// pages, so if items are added/removed on the server mid-query the stitched
+/// results can be inconsistent. See the note in [`get_all_items_inner`].
+#[derive(Debug, Clone, Copy)]
+pub struct TotalCountInconsistency {
+    /// The `totalCount` reported by the first page (what we expected to hold).
+    pub expected: usize,
+    /// The differing `totalCount` reported by a later page.
+    pub actual: usize,
+    /// Zero-based index of the page that reported the differing count.
+    pub page: usize,
+}
+
+/// Events sent over the internal channel while loading items. Kept as a single
+/// enum so progress updates and inconsistency notifications share one ordered
+/// channel back to the caller's thread (where the callbacks live).
+enum LoadEvent {
+    Progress {
+        items_loaded: usize,
+        total_items: usize,
+    },
+    Inconsistency(TotalCountInconsistency),
+}
+
 pub async fn get_all_items(
     client: &impl Client,
     report_progress: &impl Fn(usize, usize),
+    report_inconsistency: &impl Fn(TotalCountInconsistency),
 ) -> Result<Vec<WorkItem>> {
     // Care is taken here to ensure that report_progress is called as the actual
     // items are retrieved. Get this wrong and we end up waiting for everything
@@ -36,11 +62,19 @@ pub async fn get_all_items(
 
     // Listen for all the progress messages as the items are fetched.
     let mut total_items_loaded = 0;
-    while let Some((items_loaded, total_items)) = rx.recv().await {
-        // The task sends the number of items it loaded and we add them up here
-        // because we don't know what order the tasks will finish in.
-        total_items_loaded += items_loaded;
-        report_progress(total_items_loaded, total_items);
+    while let Some(event) = rx.recv().await {
+        match event {
+            // The task sends the number of items it loaded and we add them up
+            // here because we don't know what order the tasks will finish in.
+            LoadEvent::Progress {
+                items_loaded,
+                total_items,
+            } => {
+                total_items_loaded += items_loaded;
+                report_progress(total_items_loaded, total_items);
+            }
+            LoadEvent::Inconsistency(info) => report_inconsistency(info),
+        }
     }
 
     // Now we can fetch the vector of JoinHandles for the tasks for fetching
@@ -58,7 +92,7 @@ pub async fn get_all_items(
 type Tasks = Vec<JoinHandle<Result<Vec<WorkItem>>>>;
 async fn get_all_items_inner(
     client: impl Client,
-    progress_channel: Sender<(usize, usize)>,
+    progress_channel: Sender<LoadEvent>,
 ) -> Result<Tasks> {
     let mut stream = get_project_item_ids(&client);
 
@@ -66,8 +100,45 @@ async fn get_all_items_inner(
     // start immediately, and so a simple future isn't enough.  Instead we use
     // spawn() and pass the JoinHandle back.
     let mut tasks = Vec::new();
+
+    // GitHub's GraphQL API does not guarantee a stable `totalCount` across the
+    // pages of a single paginated query: if items are added/removed on the
+    // server while we page through, the reported total can change from one page
+    // to the next, meaning the pages we stitched together are inconsistent with
+    // each other. We don't try to recover here; we just independently monitor
+    // for it, emit a clear warning to the logs, and forward a notification so
+    // the UI can surface it.
+    let mut expected_total: Option<usize> = None;
+    let mut page_index = 0usize;
+
     while let Some(v) = stream.next().await {
         let v = v?;
+
+        match expected_total {
+            None => expected_total = Some(v.total_items),
+            Some(expected) if expected != v.total_items => {
+                log::warn!(
+                    "Inconsistent GraphQL pagination: totalCount changed from {expected} to {} \
+                     at page {page_index} while fetching project item IDs. The paginated results \
+                     may be inconsistent (items added/removed on the server mid-query).",
+                    v.total_items
+                );
+                // Ignore send errors: if the receiver is gone the whole load is
+                // being torn down and there's nothing to notify.
+                let _ = progress_channel
+                    .send(LoadEvent::Inconsistency(TotalCountInconsistency {
+                        expected,
+                        actual: v.total_items,
+                        page: page_index,
+                    }))
+                    .await;
+                // Track the latest reported total so we only warn on each new
+                // change rather than on every subsequent page.
+                expected_total = Some(v.total_items);
+            }
+            Some(_) => {}
+        }
+        page_index += 1;
 
         let client = client.clone();
         let progress_channel = progress_channel.clone();
@@ -75,7 +146,10 @@ async fn get_all_items_inner(
             let result = get_items(&client, v.ids).await;
             if let Ok(items) = &result {
                 progress_channel
-                    .send((items.len(), v.total_items))
+                    .send(LoadEvent::Progress {
+                        items_loaded: items.len(),
+                        total_items: v.total_items,
+                    })
                     .await
                     .unwrap();
             }

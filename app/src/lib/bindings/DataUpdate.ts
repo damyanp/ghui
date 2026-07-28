@@ -7,4 +7,8 @@ export type DataUpdate =
   | { "type": "progress"; "value": { done: number; total: number } }
   | { "type": "workItem"; "value": WorkItem }
   | { "type": "data"; "value": Data }
-  | { "type": "log"; "value": LogEntry };
+  | { "type": "log"; "value": LogEntry }
+  | {
+    "type": "inconsistentPagination";
+    "value": { expected: number; actual: number; page: number };
+  };
