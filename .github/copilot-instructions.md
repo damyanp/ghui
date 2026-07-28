@@ -223,6 +223,28 @@ The `sanitize()` method in `work_items.rs` returns a `Changes` struct (rules are
 - **Never log full API response bodies at `error!` or `warn!` level** — they can be large and may contain sensitive project/issue data. Log only error metadata (status code, byte count, error message) at higher levels. Raw response content should only appear at `debug!` level, truncated to 1024 chars total.
 - When writing to log files or any file where immediate persistence matters, use direct `File` writes (not `BufWriter`) or ensure explicit flushing. `BufWriter` without `flush()` will buffer indefinitely.
 
+### Making a release (do NOT hand-bump + tag)
+
+**Releases are produced exclusively by the `Release` workflow (`.github/workflows/release.yml`), which is `workflow_dispatch`-only.** When asked to "do a release" / "cut a point release" / "bump the version and release", trigger that workflow — do **not** manually edit version numbers, commit a "Bump version" commit, or create/push a `vX.Y.Z` tag yourself. The workflow does *all* of that for you:
+
+1. Computes the new version from `app/src-tauri/tauri.conf.json` (choose `bump: patch|minor|major`, or pass an explicit `version`).
+2. Bumps all four crate `Cargo.toml`s + `tauri.conf.json`, refreshes `Cargo.lock`, and commits "Bump version to X" back to `main` (via `RELEASE_PAT`).
+3. Runs `npx tauri build` and publishes a **GitHub Release** with the NSIS installer attached (`gh release create vX`), which also creates the tag.
+
+Trigger it with:
+
+```bash
+gh workflow run release.yml -r main -f bump=patch          # normal point release
+gh workflow run release.yml -r main -f bump=patch -f version=0.10.6   # explicit version override
+gh run watch <run-id> --exit-status                        # follow it to completion
+```
+
+Key facts that make manual bumping a mistake:
+
+- **`build-installer.yml`** runs on every push to `main` but only uploads installer **artifacts** to the Actions run — it does **not** publish a GitHub Release. Seeing "Build Windows Installer" in progress does NOT mean a release is happening.
+- A pushed `vX.Y.Z` tag does **not** trigger `release.yml` (it's dispatch-only), so hand-tagging produces a dangling tag + orphan "Bump version" commit with no published release, and pre-consumes the version number the workflow would have used next.
+- If someone has already hand-bumped the manifests to the target version, dispatch `release.yml` with an explicit `version=` equal to that version: its bump step becomes a no-op commit (skipped) and it still builds + publishes the release for that version.
+
 ### Workspace version bumps and `Cargo.lock`
 
 When any workspace crate's `Cargo.toml` `[package]` version changes, `Cargo.lock` **must** be regenerated and committed in the same change. The lockfile records the resolved versions of every workspace crate, and a manifest bump without a lockfile bump leaves the repo in an inconsistent state — CI builds that touch those crates will then produce a "spurious" `Cargo.lock` diff on every subsequent PR until someone fixes it (this is what caused PRs #42 and #44).
