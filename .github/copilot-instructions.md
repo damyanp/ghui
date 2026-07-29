@@ -360,3 +360,11 @@ Screenshots posted to PRs must actually render for the reviewer. Past PRs (e.g. 
 - The `graphql.config.yml` points to the GraphQL schema and query documents for IDE support.
 - VS Code extensions: `svelte.svelte-vscode`, `tauri-apps.tauri-vscode`, `rust-lang.rust-analyzer`.
 - Rust Analyzer uses a separate target dir (`target/analyzer`) to avoid conflicts with cargo builds.
+
+## End of Line
+
+When the user says **"end of line"**, run the protocol in `.github/end-of-line.md`.
+Read that file in full first.
+
+You are ALLOWED to edit this instructions file as part of that protocol,
+and only as part of that protocol. Show the user the diff before saving.
