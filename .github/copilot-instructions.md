@@ -76,6 +76,20 @@ migration guide for major bumps. In Skeleton v4 the `./optional/*` export
 (e.g. `@skeletonlabs/skeleton/optional/presets`) was removed; presets are now
 bundled into the main `@import '@skeletonlabs/skeleton'`.
 
+**Local install must succeed through the corporate proxy.** The dev/agent
+environment installs npm packages through a corporate proxy
+(`https://packagefeedproxy.microsoft.io/npm/`), and the public npm registry
+(`registry.npmjs.org`) is firewalled/unreachable. A package version can only be
+installed (and therefore its build validated) if that exact version's **tarball**
+is available through the proxy — the proxy sometimes lacks brand-new versions and
+returns `404 Cannot find the file ... in feed 'npm-public'` (including for
+*transitive* deps). Never work around a proxy 404 by pointing npm at the public
+registry, using `--force` / `--legacy-peer-deps`, or hand-editing the lockfile in
+a way you can't confirm with a real `npm ci` + `npm run build`; a bump that only
+installs on CI is **not** validated. For dependabot PRs specifically, if a
+package can't be installed locally you must skip that upgrade — see the
+`dependabot-pr-completion` skill for the rollback/skip decision.
+
 Frontend tests live next to the code they cover as `*.test.ts` files (e.g.
 `app/src/lib/filterableFields.test.ts`). Tests use **vitest** and should be
 plain TypeScript — keep them dependency-free of Svelte/Tauri runtime so they

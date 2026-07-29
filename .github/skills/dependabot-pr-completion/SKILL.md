@@ -85,10 +85,34 @@ npm run build
 
 If install fails due to peer conflicts introduced by the bump, apply a minimal compatibility fix (for example, pin a specific version range in `app/package.json`), update lockfile, and re-run the same checks.
 
+**Local install must succeed through the corporate proxy — otherwise skip the upgrade.**
+This environment installs npm packages through a corporate proxy
+(`https://packagefeedproxy.microsoft.io/npm/`); the public npm registry
+(`registry.npmjs.org`) is firewalled and unreachable. A version can only be
+accepted if that exact version's **tarball** is available through the proxy. The
+proxy sometimes lacks brand-new versions and returns
+`404 Cannot find the file ... in feed 'npm-public'` (this can be a *transitive*
+dep, e.g. a new `@sveltejs/load-config` pulled in by a `svelte-check` bump).
+
+If `npm ci` / `npm install` fails because a package is not available on the
+proxy, you **cannot** validate `npm run build` locally, so **do not accept that
+upgrade**:
+- Grouped PR: roll the offending package (and only that package) back to the
+  last proxy-available version, keep the rest of the group, regenerate the
+  lockfile, and re-run the full local validation. Merge the reduced update.
+- If the whole PR hinges on an unavailable package: leave the PR open and report
+  it as blocked (a later re-run, once the proxy mirrors the version, can finish it).
+
+Never work around a proxy 404 by pointing npm at the public registry, using
+`--force` / `--legacy-peer-deps` to mask it, or hand-editing the lockfile in a
+way you can't confirm with a real local `npm ci` + `npm run build`. A bump that
+only installs on CI (which uses the public registry) is **not** validated.
+
 ### 4. Minimal fix policy
 
 Allowed:
 - Version range pin/rollback for directly bumped dependency causing install/check breakage.
+- Version pin/rollback (or skipping) a package whose exact version is unavailable on the corporate proxy (see the proxy note under "npm PR" above).
 - Lockfile updates corresponding to the minimal manifest change.
 - Small config edits directly required by dependency migration.
 
@@ -144,6 +168,7 @@ Report:
 
 Stop and report instead of guessing when:
 - A fix requires architecture-level decisions.
+- A required package version is unavailable on the corporate proxy and cannot be rolled back to a proxy-available version without abandoning the whole PR (report the PR as blocked pending proxy availability).
 - Required checks repeatedly fail with non-local/infra causes.
 - Merge is blocked by policy requiring human review/approval.
 - Command output suggests credential/auth problems (`gh auth` issues).
