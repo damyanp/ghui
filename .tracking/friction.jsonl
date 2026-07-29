@@ -1,0 +1,1 @@
+{"ts":"2026-07-29T23:20:00Z","category":"repeated-request","correction":"user restated: findings/data must be stored in the repo, no local ignored files","rule":"when setup offers shared-vs-personal, state explicitly where each artifact lands (in-repo vs ignored) in the confirmation"}
