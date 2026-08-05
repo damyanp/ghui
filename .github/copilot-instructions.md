@@ -361,6 +361,54 @@ Screenshots posted to PRs must actually render for the reviewer. Past PRs (e.g. 
 - VS Code extensions: `svelte.svelte-vscode`, `tauri-apps.tauri-vscode`, `rust-lang.rust-analyzer`.
 - Rust Analyzer uses a separate target dir (`target/analyzer`) to avoid conflicts with cargo builds.
 
+## Verified recipes
+
+Concrete, verified procedures for traps that have cost repeated tool round-trips.
+
+### Bumping a single transitive npm dep via `overrides` (e.g. a Dependabot fix)
+
+Running a plain `npm install` on this repo's toolchain (node 24 / npm 11) rewrites
+huge swaths of `app/package-lock.json` — it re-flags packages `dev`→`devOptional`,
+adds `peer` markers, and **drops the bundled `@emnapi/*` optional entries**, which
+then makes `npm ci` fail with `Missing: @emnapi/core ... from lock file`. Do **not**
+commit that churn. For a targeted override bump (transitive dep pinned via the
+`overrides` block in `app/package.json`):
+
+1. Edit only the `overrides` version in `app/package.json`.
+2. `git checkout -- app/package-lock.json` to discard the churn, then edit the dep's
+   lockfile block by hand: `version`, `resolved`, and `integrity` (three lines).
+3. Get the `sha512` integrity — **the corporate proxy does NOT expose it.**
+   `npm view <pkg>@<ver> dist` returns only `shasum` (sha1) + `tarball`, and
+   `dist.integrity` comes back empty. Compute it from the tarball instead:
+   ```powershell
+   Invoke-WebRequest -Uri <dist.tarball> -OutFile p.tgz
+   (Get-FileHash p.tgz -Algorithm SHA1).Hash   # must equal the proxy shasum
+   $b = [System.Security.Cryptography.SHA512]::Create().ComputeHash([IO.File]::ReadAllBytes("$PWD\p.tgz"))
+   "sha512-" + [Convert]::ToBase64String($b)    # goes in the lockfile integrity field
+   ```
+   Keep the `resolved` URL in the `registry.npmjs.org` form used elsewhere in the lockfile.
+4. Verify with `npm ci` (must succeed → lockfile in sync) then `npm run build`.
+
+### Dismissing a Dependabot alert via the API
+
+`dismissed_comment` is capped at **280 characters** — longer bodies 422 with
+`Only 280 characters are allowed`. `dismissed_reason` must be one of
+`fix_started | inaccurate | no_bandwidth | not_used | tolerable_risk`.
+```powershell
+$body = @{ state='dismissed'; dismissed_reason='tolerable_risk'; dismissed_comment='<=280 chars' } | ConvertTo-Json -Compress
+$body | gh api -X PATCH repos/damyanp/ghui/dependabot/alerts/<N> --input -
+```
+List open alerts read-only with:
+`gh api "repos/damyanp/ghui/dependabot/alerts?state=open&per_page=100"`.
+
+### Plan mode blocks read-only `gh`/`npm`/`cargo`
+
+In **plan mode**, `gh api ...`, `npm view ...`, and `cargo search ...` are blocked as
+"would modify files outside the session folder" even though they are read-only (they
+touch caches). For read-only dependency/registry checks during planning, use
+`web_fetch` against `https://crates.io/api/v1/crates/<name>` or the npm registry, or
+defer the command until after the plan is approved.
+
 ## End of Line
 
 When the user says **"end of line"**, run the protocol in `.github/end-of-line.md`.
