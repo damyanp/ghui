@@ -1,4 +1,5 @@
 use crate::TauriCommandResult;
+use anyhow::{bail, Context};
 use github_graphql::{
     client::{
         graphql::{check_project_access, get_viewer_info, ProjectAccess, ViewerInfo},
@@ -8,6 +9,7 @@ use github_graphql::{
 };
 use log::warn;
 use serde::Serialize;
+use std::process::Command;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Clone, Serialize)]
@@ -59,4 +61,81 @@ pub async fn check_auth_status(app: AppHandle) -> TauriCommandResult<()> {
     notify_auth_status(&app, AuthStatus::Checking);
     notify_auth_status(&app, resolve_auth_status().await);
     Ok(())
+}
+
+fn run_gh_auth_switch() -> anyhow::Result<()> {
+    let mut command = Command::new("gh");
+    command.args(["auth", "switch"]);
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = command.output().context("failed to run gh auth switch")?;
+    validate_switch_output(
+        output.status.success(),
+        output.status.code(),
+        &output.stderr,
+    )
+}
+
+fn validate_switch_output(success: bool, status: Option<i32>, stderr: &[u8]) -> anyhow::Result<()> {
+    if success {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(stderr);
+    let message = stderr.trim();
+    if message.is_empty() {
+        bail!("gh auth switch failed with exit status {status:?}");
+    }
+
+    bail!("gh auth switch failed: {message}");
+}
+
+#[tauri::command]
+pub async fn switch_auth_account() -> TauriCommandResult<()> {
+    tauri::async_runtime::spawn_blocking(run_gh_auth_switch)
+        .await
+        .map_err(anyhow::Error::from)??;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_switch_output_accepts_success() {
+        assert!(validate_switch_output(true, Some(0), b"").is_ok());
+    }
+
+    #[test]
+    fn test_validate_switch_output_surfaces_stderr() {
+        let error = validate_switch_output(
+            false,
+            Some(1),
+            b"cannot prompt because terminal prompts are disabled",
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "gh auth switch failed: cannot prompt because terminal prompts are disabled"
+        );
+    }
+
+    #[test]
+    fn test_validate_switch_output_reports_empty_failure() {
+        let error = validate_switch_output(false, Some(1), b"").unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "gh auth switch failed with exit status Some(1)"
+        );
+    }
 }

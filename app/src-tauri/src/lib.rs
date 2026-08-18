@@ -47,6 +47,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             auth::check_auth_status,
+            auth::switch_auth_account,
             data::watch_data,
             data::force_refresh_data,
             data::update_items,
