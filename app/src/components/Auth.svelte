@@ -2,8 +2,10 @@
   import { LoaderCircle, TriangleAlert } from "@lucide/svelte";
   import { Avatar } from "@skeletonlabs/skeleton-svelte";
   import Modal from "./Modal.svelte";
+  import { isDirectAuthSwitch } from "./authInteractions";
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
 
   type AuthStatus =
@@ -12,8 +14,9 @@
     | { type: "checking" | "notAuthenticated" | "ghMissing" | "offline" };
 
   let authState = $state<AuthStatus>({ type: "checking" });
-
   let isOpen = $state(false);
+  let switching = $state(false);
+  let switchError = $state<string | null>(null);
 
   function update_auth_status(status: AuthStatus) {
     authState = status;
@@ -23,21 +26,61 @@
   }
 
   onMount(() => {
-    let unregister: UnlistenFn | null = null;
+    let disposed = false;
+    const unregister: UnlistenFn[] = [];
 
-    listen<AuthStatus>("auth-status", (e) => {
-      update_auth_status(e.payload);
-    }).then((u) => (unregister = u));
-    invoke("check_auth_status");
+    function track(unlisten: UnlistenFn): void {
+      if (disposed) unlisten();
+      else unregister.push(unlisten);
+    }
+
+    void (async () => {
+      track(
+        await listen<AuthStatus>("auth-status", (e) => {
+          update_auth_status(e.payload);
+        }),
+      );
+      track(
+        await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+          if (focused) void recheck();
+        }),
+      );
+      if (!disposed) await recheck();
+    })();
 
     return () => {
-      if (unregister) unregister();
+      disposed = true;
+      for (const unlisten of unregister) unlisten();
     };
   });
 
   async function recheck() {
     authState = { type: "checking" };
     await invoke("check_auth_status");
+  }
+
+  async function switchAccount(): Promise<void> {
+    if (switching) return;
+
+    isOpen = true;
+    switching = true;
+    switchError = null;
+    try {
+      await invoke("switch_auth_account");
+      await recheck();
+    } catch (error) {
+      switchError = error instanceof Error ? error.message : String(error);
+    } finally {
+      switching = false;
+    }
+  }
+
+  function onBadgeClick(event: MouseEvent): void {
+    if (isDirectAuthSwitch(event)) {
+      void switchAccount();
+    } else {
+      isOpen = true;
+    }
   }
 
   let avatar_uri = $derived.by(() => {
@@ -61,8 +104,8 @@
         return "Offline";
       case "checking":
         return "";
-      default:
-        return authState.type;
+      case "authenticated":
+        return "Signed In";
     }
   });
 
@@ -73,7 +116,11 @@
   );
 </script>
 
-<button onclick={() => (isOpen = true)}>
+<button
+  onclick={onBadgeClick}
+  title="Click for GitHub account details. Ctrl+click to switch accounts."
+  aria-label="GitHub account. Click for details; Control-click to switch accounts."
+>
   <!--
   For some reason the avatar doesn't get set correctly when sign-in changes.
   Inspecting avatar_uri shows that it does get set to 'undefined', but the
@@ -114,8 +161,7 @@
   {#snippet content()}
     <header>
       <p class="font-bold text-xl text-center">
-        GitHub Sign-In
-        {displayMode}
+        GitHub Sign-In{displayMode ? `: ${displayMode}` : ""}
       </p>
     </header>
     <article>
@@ -147,7 +193,12 @@
           GitHub couldn't be reached. Check your internet connection and
           re-check below.
         </p>
-      {:else}
+      {:else if authState.type === "authenticated"}
+        <p class="m-4">
+          Signed in through <code>gh</code> as
+          <strong>{authState.login}</strong>.
+        </p>
+      {:else if authState.type === "notAuthenticated"}
         <p class="m-4">
           This app uses the <code>gh</code> CLI to access GitHub on your behalf.
           Sign in once with the CLI to get started.
@@ -158,8 +209,24 @@
         </p>
       {/if}
 
+      {#if switchError}
+        <p class="m-4 text-error-700-300" role="alert">{switchError}</p>
+      {/if}
+
       <div class="w-full flex justify-end gap-2">
-        <button class="btn preset-filled-primary-500" onclick={recheck}
+        {#if authState.type !== "checking" && authState.type !== "ghMissing"}
+          <button
+            class="btn preset-tonal"
+            disabled={switching}
+            onclick={() => void switchAccount()}
+          >
+            {switching ? "Switching..." : "Switch Account"}
+          </button>
+        {/if}
+        <button
+          class="btn preset-filled-primary-500"
+          disabled={switching}
+          onclick={recheck}
           >Re-check</button
         >
       </div>
