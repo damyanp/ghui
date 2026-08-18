@@ -15,8 +15,8 @@ create the tracking scaffolding.
   findings/data must live in the repo with no locally-ignored files.
 - Verified nothing was added to `.git/info/exclude` and `.gitignore` does not reference
   `.tracking` (`git check-ignore` confirmed the log is tracked).
-- The repo already had many unrelated staged deletions and edits (`.squad/`, `.copilot/`,
-  `.gitignore`, etc.) predating this work; these were deliberately left untouched.
+- The repo already had many unrelated staged deletions and edits predating this work;
+  these were deliberately left untouched.
 
 ## Decisions made, and what was rejected
 - **Shared, not Personal** — protocol files are committed so the whole team gets them.
