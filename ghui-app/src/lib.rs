@@ -391,12 +391,13 @@ impl AppState {
         identity: &GitHubIdentity,
         generation: u64,
         token: Option<GhToken>,
-    ) -> bool {
+    ) -> Option<u64> {
         if !self.matches_account_context(generation, identity) {
-            return false;
+            return None;
         }
+        self.account_generation = self.account_generation.wrapping_add(1);
         self.client = token.map(|token| GhCliClient::for_token(identity.host.clone(), token));
-        true
+        Some(self.account_generation)
     }
 
     async fn replace_account(&mut self, identity: GitHubIdentity, token: GhToken) -> Result<()> {
@@ -851,7 +852,7 @@ impl DataState {
         identity: &GitHubIdentity,
         generation: u64,
         token: Option<GhToken>,
-    ) -> bool {
+    ) -> Option<u64> {
         self.lock()
             .await
             .apply_resolved_client(identity, generation, token)
@@ -950,6 +951,28 @@ impl DataState {
         }
 
         let guard = self.begin_operation()?;
+        self.request_update_items_with_guard(project_item_ids, guard)
+            .await
+    }
+
+    pub async fn request_work_item_updates(
+        &self,
+        items: &[ItemToUpdate],
+    ) -> Result<JoinHandle<()>> {
+        let guard = self.begin_operation()?;
+        let project_item_ids = self.lock().await.get_project_ids_to_update(items);
+        if project_item_ids.is_empty() {
+            return Ok(tokio::spawn(async {}));
+        }
+        self.request_update_items_with_guard(project_item_ids, guard)
+            .await
+    }
+
+    async fn request_update_items_with_guard(
+        &self,
+        project_item_ids: Vec<ProjectItemId>,
+        guard: BusyGuard,
+    ) -> Result<JoinHandle<()>> {
         let app_state = Arc::clone(&self.state);
         let state = self.state.lock().await;
         let client = state.client()?;
@@ -1425,7 +1448,7 @@ mod tests {
         state.account_generation = 7;
         state.install_account(second.clone(), GhToken::new("second-token".to_owned()));
 
-        assert!(!state.apply_resolved_client(&first, 7, None));
+        assert_eq!(state.apply_resolved_client(&first, 7, None), None);
         assert_eq!(state.selected_identity(), Some(&second));
         assert!(state.has_client());
     }
@@ -1439,7 +1462,25 @@ mod tests {
         state.install_account(identity.clone(), GhToken::new("token".to_owned()));
         let generation = state.account_generation();
 
-        assert!(state.apply_resolved_client(&identity, generation, None));
+        assert_eq!(
+            state.apply_resolved_client(&identity, generation, None),
+            Some(generation + 1)
+        );
+        assert!(!state.has_client());
+    }
+
+    #[test]
+    fn test_older_token_resolution_cannot_restore_invalidated_client() {
+        let identity = GitHubIdentity::github_dot_com("octocat");
+        let mut state = AppState::new();
+        state.selected_identity = Some(identity.clone());
+        state.account_generation = 4;
+
+        assert_eq!(state.apply_resolved_client(&identity, 4, None), Some(5));
+        assert_eq!(
+            state.apply_resolved_client(&identity, 4, Some(GhToken::new("stale-token".to_owned()))),
+            None
+        );
         assert!(!state.has_client());
     }
 

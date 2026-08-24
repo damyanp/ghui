@@ -18,23 +18,17 @@ import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
 import type { PivotConfig } from "./bindings/PivotConfig";
+import type { GitHubIdentity } from "./bindings/GitHubIdentity";
+import type { WorkItemsExtraData } from "./bindings/WorkItemsExtraData";
 import { upsertWorkItem } from "./workItems";
 import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
 import { commandErrorLogEntry } from "./commandErrors";
 import { RequestSerial } from "./requestSerial";
+import { RequestScopedEdits } from "./requestScopedEdits";
+import { mergePendingExtraData } from "./workItemExtraData";
 
 const key = Symbol("WorkItemContext");
-
-type GitHubIdentity = {
-  host: string;
-  login: string;
-};
-
-type WorkItemsExtraData = {
-  identity: GitHubIdentity;
-  data: string;
-};
 
 export function setWorkItemContext(wic: WorkItemContext) {
   setContext(key, wic);
@@ -111,6 +105,11 @@ export class WorkItemContext {
   updates_channel = new Channel<DataUpdate>();
   workItemExtraDataIdentity = $state<GitHubIdentity | null>(null);
   private workItemExtraDataReloads = new RequestSerial();
+  private activeWorkItemExtraDataReload: number | null = null;
+  private pendingWorkItemExtraDataEdits = new RequestScopedEdits<
+    WorkItemId,
+    any
+  >();
 
   constructor() {
     this.updates_channel.onmessage = (data_update) =>
@@ -163,6 +162,8 @@ export class WorkItemContext {
 
   private async reloadWorkItemExtraData(): Promise<void> {
     const request = this.workItemExtraDataReloads.start();
+    this.activeWorkItemExtraDataReload = request;
+    this.pendingWorkItemExtraDataEdits.begin(request);
     this.workItemExtraDataIdentity = null;
     this.workItemExtraData = {};
     try {
@@ -170,12 +171,19 @@ export class WorkItemContext {
         "get_work_items_extra_data"
       );
       if (!this.workItemExtraDataReloads.isCurrent(request)) return;
-      this.workItemExtraData = JSON.parse(snapshot.data);
+      const loaded = JSON.parse(snapshot.data);
+      this.workItemExtraData = mergePendingExtraData(
+        loaded,
+        this.pendingWorkItemExtraDataEdits.take(request)
+      );
+      this.activeWorkItemExtraDataReload = null;
       this.workItemExtraDataIdentity = snapshot.identity;
     } catch {
       if (!this.workItemExtraDataReloads.isCurrent(request)) return;
       this.workItemExtraDataIdentity = null;
       this.workItemExtraData = {};
+      this.activeWorkItemExtraDataReload = null;
+      this.pendingWorkItemExtraDataEdits.cancel(request);
     }
   }
 
@@ -473,6 +481,10 @@ export class WorkItemContext {
   }
 
   public setWorkItemExtraData(id: WorkItemId, data: any) {
+    const request = this.activeWorkItemExtraDataReload;
+    if (request !== null) {
+      this.pendingWorkItemExtraDataEdits.set(request, id, data);
+    }
     this.workItemExtraData[id] = data;
   }
 }

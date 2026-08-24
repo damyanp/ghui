@@ -8,9 +8,11 @@ use ghui_app::{
 use github_graphql::pivot::{Axis, PivotConfig};
 use serde::Serialize;
 use tauri::{ipc::Channel, State};
+use ts_rs::TS;
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct WorkItemsExtraData {
     identity: ghui_app::github_account::GitHubIdentity,
     data: String,
@@ -44,8 +46,7 @@ pub async fn update_items(
     data_state: State<'_, DataState>,
     items: Vec<ItemToUpdate>,
 ) -> TauriCommandResult<()> {
-    let project_item_ids = data_state.lock().await.get_project_ids_to_update(&items);
-    data_state.request_update_items(project_item_ids).await?;
+    data_state.request_work_item_updates(&items).await?;
     Ok(())
 }
 

@@ -33,15 +33,15 @@ pub async fn get_account_state(
         Err(GhAuthError::Timeout) => (None, SelectedAccountState::Timeout),
         Err(GhAuthError::Command(_)) => (None, SelectedAccountState::TokenMissing),
     };
-    if !data_state
+    let Some(applied_generation) = data_state
         .apply_resolved_client(&identity, generation, token)
         .await
-    {
+    else {
         return Ok(data_state.account_state().await);
-    }
+    };
 
     let Some(mut state) = data_state
-        .account_state_for_context(&identity, generation)
+        .account_state_for_context(&identity, applied_generation)
         .await
     else {
         return Ok(data_state.account_state().await);
@@ -62,7 +62,7 @@ pub async fn list_accounts(data_state: State<'_, DataState>) -> TauriCommandResu
         };
     if let Some((identity, generation)) = selected_context {
         let token = resolve_token(&identity).await.ok();
-        data_state
+        let _ = data_state
             .apply_resolved_client(&identity, generation, token)
             .await;
     }
