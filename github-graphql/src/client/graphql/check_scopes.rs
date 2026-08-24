@@ -43,7 +43,16 @@ pub async fn check_project_access(client: &impl Client) -> Result<ProjectAccess>
         return Err(Error::GraphQlResponseErrors(errors.clone()));
     }
 
-    Ok(ProjectAccess::Granted)
+    let has_project = response
+        .data
+        .and_then(|data| data.organization)
+        .and_then(|organization| organization.project_v2)
+        .is_some();
+    Ok(if has_project {
+        ProjectAccess::Granted
+    } else {
+        ProjectAccess::Denied
+    })
 }
 
 #[cfg(test)]
@@ -86,6 +95,28 @@ mod tests {
         let body =
             r#"{"errors":[{"message":"Could not resolve to a ProjectV2 with the number of 1."}]}"#;
         let client = GhCliClient::canned(Some(1), body, "");
+        assert_eq!(
+            check_project_access(&client).await.unwrap(),
+            ProjectAccess::Denied
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_project_access_null_organization_is_denied() {
+        let client = GhCliClient::canned(Some(0), r#"{"data":{"organization":null}}"#, "");
+        assert_eq!(
+            check_project_access(&client).await.unwrap(),
+            ProjectAccess::Denied
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_project_access_null_project_is_denied() {
+        let client = GhCliClient::canned(
+            Some(0),
+            r#"{"data":{"organization":{"projectV2":null}}}"#,
+            "",
+        );
         assert_eq!(
             check_project_access(&client).await.unwrap(),
             ProjectAccess::Denied

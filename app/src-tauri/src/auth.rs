@@ -12,27 +12,40 @@ use tauri::{AppHandle, Emitter, State};
 pub async fn get_account_state(
     data_state: State<'_, DataState>,
 ) -> TauriCommandResult<AccountState> {
-    let identity = data_state.lock().await.selected_identity().cloned();
-    let Some(identity) = identity else {
+    let account_context = {
+        let state = data_state.lock().await;
+        state
+            .selected_account_context()
+            .map(|(identity, generation)| (identity, generation, state.has_client()))
+    };
+    let Some((identity, generation, has_client)) = account_context else {
         return Ok(data_state.account_state().await);
     };
 
-    if data_state.lock().await.has_client() {
+    if has_client {
         return Ok(data_state.account_state().await);
     }
 
     let token_result = resolve_token(&identity).await;
-    let selected_state = match token_result {
-        Ok(token) => {
-            data_state.restore_client(&identity, token).await;
-            SelectedAccountState::Unverified
-        }
-        Err(GhAuthError::GhMissing) => SelectedAccountState::GhMissing,
-        Err(GhAuthError::Timeout) => SelectedAccountState::Timeout,
-        Err(GhAuthError::Command(_)) => SelectedAccountState::TokenMissing,
+    let (token, selected_state) = match token_result {
+        Ok(token) => (Some(token), SelectedAccountState::Unverified),
+        Err(GhAuthError::GhMissing) => (None, SelectedAccountState::GhMissing),
+        Err(GhAuthError::Timeout) => (None, SelectedAccountState::Timeout),
+        Err(GhAuthError::Command(_)) => (None, SelectedAccountState::TokenMissing),
     };
+    if !data_state
+        .apply_resolved_client(&identity, generation, token)
+        .await
+    {
+        return Ok(data_state.account_state().await);
+    }
 
-    let mut state = data_state.account_state().await;
+    let Some(mut state) = data_state
+        .account_state_for_context(&identity, generation)
+        .await
+    else {
+        return Ok(data_state.account_state().await);
+    };
     if let Some(selected) = &mut state.selected {
         selected.state = selected_state;
     }
@@ -41,11 +54,18 @@ pub async fn get_account_state(
 
 #[tauri::command]
 pub async fn list_accounts(data_state: State<'_, DataState>) -> TauriCommandResult<AccountList> {
-    let selected = data_state.lock().await.selected_identity().cloned();
-    let result = match enumerate_accounts(selected.as_ref()).await {
-        Ok(accounts) => accounts,
-        Err(error) => account_list_for_error(error),
-    };
+    let selected_context = data_state.lock().await.selected_account_context();
+    let result =
+        match enumerate_accounts(selected_context.as_ref().map(|(identity, _)| identity)).await {
+            Ok(accounts) => accounts,
+            Err(error) => account_list_for_error(error),
+        };
+    if let Some((identity, generation)) = selected_context {
+        let token = resolve_token(&identity).await.ok();
+        data_state
+            .apply_resolved_client(&identity, generation, token)
+            .await;
+    }
     Ok(result)
 }
 

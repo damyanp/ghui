@@ -380,11 +380,22 @@ impl AppState {
             .ok_or_else(|| AccountError::CredentialUnavailable.into())
     }
 
-    pub fn restore_client(&mut self, identity: &GitHubIdentity, token: GhToken) -> bool {
-        if self.selected_identity.as_ref() != Some(identity) {
+    pub fn selected_account_context(&self) -> Option<(GitHubIdentity, u64)> {
+        self.selected_identity
+            .clone()
+            .map(|identity| (identity, self.account_generation))
+    }
+
+    pub fn apply_resolved_client(
+        &mut self,
+        identity: &GitHubIdentity,
+        generation: u64,
+        token: Option<GhToken>,
+    ) -> bool {
+        if !self.matches_account_context(generation, identity) {
             return false;
         }
-        self.client = Some(GhCliClient::for_token(identity.host.clone(), token));
+        self.client = token.map(|token| GhCliClient::for_token(identity.host.clone(), token));
         true
     }
 
@@ -397,8 +408,9 @@ impl AppState {
     }
 
     fn install_account(&mut self, identity: GitHubIdentity, token: GhToken) {
-        if self.selected_identity.as_ref() != Some(&identity) {
-            self.account_generation = self.account_generation.wrapping_add(1);
+        let changing_identity = self.selected_identity.as_ref() != Some(&identity);
+        self.account_generation = self.account_generation.wrapping_add(1);
+        if changing_identity {
             self.fields = None;
             self.work_items = None;
             self.epic_conflicts.clear();
@@ -834,8 +846,15 @@ impl DataState {
         self.busy_operations.load(Ordering::Acquire) != 0
     }
 
-    pub async fn restore_client(&self, identity: &GitHubIdentity, token: GhToken) -> bool {
-        self.lock().await.restore_client(identity, token)
+    pub async fn apply_resolved_client(
+        &self,
+        identity: &GitHubIdentity,
+        generation: u64,
+        token: Option<GhToken>,
+    ) -> bool {
+        self.lock()
+            .await
+            .apply_resolved_client(identity, generation, token)
     }
 
     pub async fn select_account(
@@ -878,6 +897,17 @@ impl DataState {
     pub async fn account_state(&self) -> github_account::AccountState {
         let state = self.lock().await;
         self.account_state_from_locked(&state)
+    }
+
+    pub async fn account_state_for_context(
+        &self,
+        identity: &GitHubIdentity,
+        generation: u64,
+    ) -> Option<github_account::AccountState> {
+        let state = self.lock().await;
+        state
+            .matches_account_context(generation, identity)
+            .then(|| self.account_state_from_locked(&state))
     }
 
     fn account_state_from_locked(&self, state: &AppState) -> github_account::AccountState {
@@ -1370,15 +1400,42 @@ mod tests {
     }
 
     #[test]
-    fn test_reselecting_same_account_replaces_client_without_generation_change() {
+    fn test_reselecting_same_account_replaces_client_and_invalidates_old_tasks() {
         let identity = GitHubIdentity::github_dot_com("octocat");
         let mut state = AppState::new();
         state.selected_identity = Some(identity.clone());
         state.account_generation = 3;
         state.install_account(identity, GhToken::new("replacement".to_owned()));
 
-        assert_eq!(state.account_generation, 3);
+        assert_eq!(state.account_generation, 4);
         assert!(state.has_client());
+    }
+
+    #[test]
+    fn test_stale_token_resolution_does_not_change_replacement_account() {
+        let first = GitHubIdentity::github_dot_com("first");
+        let second = GitHubIdentity::github_dot_com("second");
+        let mut state = AppState::new();
+        state.selected_identity = Some(first.clone());
+        state.account_generation = 7;
+        state.install_account(second.clone(), GhToken::new("second-token".to_owned()));
+
+        assert!(!state.apply_resolved_client(&first, 7, None));
+        assert_eq!(state.selected_identity(), Some(&second));
+        assert!(state.has_client());
+    }
+
+    #[test]
+    fn test_current_missing_token_invalidates_client() {
+        let identity = GitHubIdentity::github_dot_com("octocat");
+        let mut state = AppState::new();
+        state.selected_identity = Some(identity.clone());
+        state.account_generation = 3;
+        state.install_account(identity.clone(), GhToken::new("token".to_owned()));
+        let generation = state.account_generation();
+
+        assert!(state.apply_resolved_client(&identity, generation, None));
+        assert!(!state.has_client());
     }
 
     #[test]

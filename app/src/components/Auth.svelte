@@ -73,6 +73,8 @@
     try {
       const next = await invoke<AccountList>("list_accounts");
       if (request !== requestSerial) return;
+      accountState = await invoke<AccountState>("get_account_state");
+      if (request !== requestSerial) return;
       accounts = next;
       focusedIndex = next.accounts.findIndex((account) => account.selected);
       if (focusedIndex < 0) {
@@ -88,6 +90,7 @@
   async function selectAccount(account: GitHubAccount): Promise<void> {
     if (!canSelectAccount(account, selectionDisabled) || selectingLogin) return;
 
+    requestSerial++;
     selectingLogin = account.identity.login;
     selectionError = null;
     try {

@@ -1,7 +1,7 @@
-import { getContext, setContext, tick } from "svelte";
+import { getContext, onDestroy, setContext, tick } from "svelte";
 import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { WorkItemId } from "./bindings/WorkItemId";
 import type { Change } from "./bindings/Change";
 import type { Fields } from "./bindings/Fields";
@@ -22,6 +22,7 @@ import { upsertWorkItem } from "./workItems";
 import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
 import { commandErrorLogEntry } from "./commandErrors";
+import { RequestSerial } from "./requestSerial";
 
 const key = Symbol("WorkItemContext");
 
@@ -109,6 +110,7 @@ export class WorkItemContext {
 
   updates_channel = new Channel<DataUpdate>();
   workItemExtraDataIdentity = $state<GitHubIdentity | null>(null);
+  private workItemExtraDataReloads = new RequestSerial();
 
   constructor() {
     this.updates_channel.onmessage = (data_update) =>
@@ -116,8 +118,29 @@ export class WorkItemContext {
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
 
     void this.reloadWorkItemExtraData();
+    let disposed = false;
+    let unlistenAccountSelected: UnlistenFn | null = null;
     void listen("github-account-selected", () => {
       void this.reloadWorkItemExtraData();
+    })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenAccountSelected = unlisten;
+      })
+      .catch((error) => {
+        if (!disposed) {
+          this.onDataUpdateLog(
+            commandErrorLogEntry(
+              "Failed to listen for GitHub account changes",
+              error
+            )
+          );
+        }
+      });
+    onDestroy(() => {
+      disposed = true;
+      this.workItemExtraDataReloads.invalidate();
+      unlistenAccountSelected?.();
     });
 
     $effect(() => {
@@ -139,13 +162,18 @@ export class WorkItemContext {
   }
 
   private async reloadWorkItemExtraData(): Promise<void> {
+    const request = this.workItemExtraDataReloads.start();
+    this.workItemExtraDataIdentity = null;
+    this.workItemExtraData = {};
     try {
       const snapshot = await invoke<WorkItemsExtraData>(
         "get_work_items_extra_data"
       );
-      this.workItemExtraDataIdentity = snapshot.identity;
+      if (!this.workItemExtraDataReloads.isCurrent(request)) return;
       this.workItemExtraData = JSON.parse(snapshot.data);
+      this.workItemExtraDataIdentity = snapshot.identity;
     } catch {
+      if (!this.workItemExtraDataReloads.isCurrent(request)) return;
       this.workItemExtraDataIdentity = null;
       this.workItemExtraData = {};
     }
