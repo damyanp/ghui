@@ -112,6 +112,6 @@ pub async fn resolve_url(
     data_state: State<'_, DataState>,
     url: String,
 ) -> TauriCommandResult<ResolvedUrl> {
-    let resolved = data_state.lock().await.resolve_url(url).await?;
+    let resolved = data_state.resolve_url(url).await?;
     Ok(resolved)
 }

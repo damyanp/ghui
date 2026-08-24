@@ -71,5 +71,5 @@ mod add_items;
 mod hygiene;
 
 pub fn client() -> GhCliClient {
-    GhCliClient::default()
+    GhCliClient::using_gh_active_account()
 }

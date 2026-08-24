@@ -1,11 +1,20 @@
 use crate::TauriCommandResult;
 use ghui_app::{
+    github_account::AccountError,
     load_work_items_extra_data, save_work_items_extra_data,
     telemetry::{self, TelemetryEvent},
     DataState, DataUpdate, Filters, ItemToUpdate, RefreshSummary,
 };
 use github_graphql::pivot::{Axis, PivotConfig};
+use serde::Serialize;
 use tauri::{ipc::Channel, State};
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkItemsExtraData {
+    identity: ghui_app::github_account::GitHubIdentity,
+    data: String,
+}
 
 #[tauri::command]
 pub async fn watch_data(
@@ -27,7 +36,6 @@ pub async fn force_refresh_data(
     data_state: State<'_, DataState>,
 ) -> TauriCommandResult<RefreshSummary> {
     telemetry::record(TelemetryEvent::Refresh);
-    let mut data_state = data_state.lock().await;
     Ok(data_state.force_refresh().await?)
 }
 
@@ -37,7 +45,7 @@ pub async fn update_items(
     items: Vec<ItemToUpdate>,
 ) -> TauriCommandResult<()> {
     let project_item_ids = data_state.lock().await.get_project_ids_to_update(&items);
-    data_state.request_update_items(project_item_ids);
+    data_state.request_update_items(project_item_ids).await?;
     Ok(())
 }
 
@@ -80,7 +88,7 @@ pub async fn save_changes(
     let start = std::time::Instant::now();
 
     let report_progress = |c, t| {
-        progress.send((c, t)).unwrap();
+        let _ = progress.send((c, t));
     };
 
     let result = data_state.save_changes(&report_progress).await;
@@ -122,13 +130,39 @@ pub async fn set_pivot_config(
 }
 
 #[tauri::command]
-pub async fn set_work_items_extra_data(extra_data: String) -> TauriCommandResult<()> {
-    Ok(save_work_items_extra_data(extra_data.as_str())?)
+pub async fn set_work_items_extra_data(
+    data_state: State<'_, DataState>,
+    identity: ghui_app::github_account::GitHubIdentity,
+    extra_data: String,
+) -> TauriCommandResult<()> {
+    let selected_identity = data_state
+        .lock()
+        .await
+        .selected_identity()
+        .cloned()
+        .ok_or(AccountError::NoAccountSelected)
+        .map_err(anyhow::Error::from)?;
+    if selected_identity != identity {
+        return Err(anyhow::anyhow!("selected GitHub account changed").into());
+    }
+    Ok(save_work_items_extra_data(&identity, extra_data.as_str())?)
 }
 
 #[tauri::command]
-pub async fn get_work_items_extra_data() -> TauriCommandResult<String> {
-    Ok(load_work_items_extra_data()?)
+pub async fn get_work_items_extra_data(
+    data_state: State<'_, DataState>,
+) -> TauriCommandResult<WorkItemsExtraData> {
+    let identity = data_state
+        .lock()
+        .await
+        .selected_identity()
+        .cloned()
+        .ok_or(AccountError::NoAccountSelected)
+        .map_err(anyhow::Error::from)?;
+    Ok(WorkItemsExtraData {
+        data: load_work_items_extra_data(&identity)?,
+        identity,
+    })
 }
 
 #[tauri::command]

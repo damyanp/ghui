@@ -2,8 +2,10 @@ use crate::{Error, Result};
 use log::{debug, error};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 pub trait Client: Clone + Send + Sync + 'static {
@@ -20,7 +22,7 @@ pub struct GhOutput {
     pub stderr: Vec<u8>,
 }
 
-type GhFuture = Pin<Box<dyn Future<Output = std::io::Result<GhOutput>> + Send>>;
+pub type GhFuture = Pin<Box<dyn Future<Output = std::io::Result<GhOutput>> + Send>>;
 
 /// Runs `gh api graphql --input -`, writing `input` to stdin. Abstracted so
 /// tests can inject canned output instead of spawning the real CLI.
@@ -28,24 +30,63 @@ pub trait GhRunner: Send + Sync + 'static {
     fn run(&self, input: Vec<u8>) -> GhFuture;
 }
 
-/// A [`Client`] that issues GraphQL requests through the `gh` CLI, relying on
-/// the user's existing `gh auth login` session instead of a stored token.
+/// A token resolved from `gh` for one explicitly selected account.
+///
+/// The inner value is intentionally private, non-serializable, and redacted
+/// from debug output.
+#[derive(Clone)]
+pub struct GhToken(Arc<str>);
+
+impl GhToken {
+    pub fn new(value: String) -> Self {
+        Self(Arc::from(value))
+    }
+
+    fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for GhToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("GhToken([REDACTED])")
+    }
+}
+
+#[derive(Clone)]
+enum Authentication {
+    ExplicitToken { host: Arc<str>, token: GhToken },
+    GhActiveAccount,
+}
+
+/// A [`Client`] that issues GraphQL requests through the `gh` CLI.
+///
+/// Desktop callers must use [`GhCliClient::for_token`]. The global-active
+/// account constructor is deliberately named and reserved for command-line
+/// tools whose documented behavior is to follow `gh`'s active account.
 #[derive(Clone)]
 pub struct GhCliClient {
     runner: Arc<dyn GhRunner>,
 }
 
-impl Default for GhCliClient {
-    fn default() -> Self {
+impl GhCliClient {
+    pub fn for_token(host: impl Into<Arc<str>>, token: GhToken) -> Self {
         Self {
-            runner: Arc::new(RealGhRunner),
+            runner: Arc::new(RealGhRunner {
+                authentication: Authentication::ExplicitToken {
+                    host: host.into(),
+                    token,
+                },
+            }),
         }
     }
-}
 
-impl GhCliClient {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn using_gh_active_account() -> Self {
+        Self {
+            runner: Arc::new(RealGhRunner {
+                authentication: Authentication::GhActiveAccount,
+            }),
+        }
     }
 
     /// Builds a client backed by a custom runner (used by tests).
@@ -95,27 +136,19 @@ impl Client for GhCliClient {
     }
 }
 
-struct RealGhRunner;
+struct RealGhRunner {
+    authentication: Authentication,
+}
 
 impl GhRunner for RealGhRunner {
     fn run(&self, input: Vec<u8>) -> GhFuture {
+        let authentication = self.authentication.clone();
         Box::pin(async move {
             use tokio::io::AsyncWriteExt;
-            use tokio::process::Command;
 
-            let mut command = Command::new("gh");
-            command
-                .args(["api", "graphql", "--input", "-"])
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped());
-
-            // Don't flash a console window for each gh call on Windows.
-            #[cfg(windows)]
-            {
-                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-                command.creation_flags(CREATE_NO_WINDOW);
-            }
+            let command = build_api_command(&authentication);
+            let mut command = tokio::process::Command::from(command);
+            command.kill_on_drop(true);
 
             let mut child = command.spawn()?;
 
@@ -132,6 +165,40 @@ impl GhRunner for RealGhRunner {
             })
         })
     }
+}
+
+fn build_api_command(authentication: &Authentication) -> Command {
+    let mut command = Command::new("gh");
+    command.args(["api"]);
+    if let Authentication::ExplicitToken { host, .. } = authentication {
+        command.args(["--hostname", host, "graphql", "--input", "-"]);
+    } else {
+        command.args(["graphql", "--input", "-"]);
+    }
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    if let Authentication::ExplicitToken { token, .. } = authentication {
+        command
+            .env_remove("GH_HOST")
+            .env_remove("GITHUB_TOKEN")
+            .env_remove("GH_ENTERPRISE_TOKEN")
+            .env_remove("GITHUB_ENTERPRISE_TOKEN");
+        command.env("GH_TOKEN", token.expose());
+    }
+
+    // Don't flash a console window for each gh call on Windows.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    command
 }
 
 /// Turns a failed `gh` invocation into an [`Error`], flagging unreachable-network
@@ -196,6 +263,7 @@ impl GhCliClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
 
     fn client(status: Option<i32>, stdout: &str, stderr: &str) -> GhCliClient {
         GhCliClient::canned(status, stdout, stderr)
@@ -235,5 +303,43 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, Error::Connectivity(_)));
+    }
+
+    #[test]
+    fn test_token_debug_output_is_redacted() {
+        let token = GhToken::new("secret-token".to_owned());
+        assert_eq!(format!("{token:?}"), "GhToken([REDACTED])");
+        assert!(!format!("{token:?}").contains("secret-token"));
+    }
+
+    #[test]
+    fn test_explicit_token_is_only_passed_through_environment() {
+        let authentication = Authentication::ExplicitToken {
+            host: Arc::from("github.com"),
+            token: GhToken::new("secret-token".to_owned()),
+        };
+        let command = build_api_command(&authentication);
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(
+            args,
+            ["api", "--hostname", "github.com", "graphql", "--input", "-"].map(OsStr::new)
+        );
+        assert!(!args.iter().any(|arg| arg == &OsStr::new("secret-token")));
+
+        let env: std::collections::HashMap<_, _> = command.get_envs().collect();
+        assert_eq!(
+            env.get(OsStr::new("GH_TOKEN")).copied().flatten(),
+            Some(OsStr::new("secret-token"))
+        );
+        assert_eq!(env.get(OsStr::new("GITHUB_TOKEN")), Some(&None));
+        assert_eq!(env.get(OsStr::new("GH_HOST")), Some(&None));
+        assert_eq!(env.get(OsStr::new("GH_ENTERPRISE_TOKEN")), Some(&None));
+        assert_eq!(env.get(OsStr::new("GITHUB_ENTERPRISE_TOKEN")), Some(&None));
+    }
+
+    #[test]
+    fn test_active_account_constructor_does_not_override_auth_environment() {
+        let command = build_api_command(&Authentication::GhActiveAccount);
+        assert_eq!(command.get_envs().count(), 0);
     }
 }

@@ -6,7 +6,7 @@ use github_graphql::{
             TotalCountInconsistency, custom_fields_query::get_fields, get_all_items,
             get_items::get_items, get_resource_id,
         },
-        transport::GhCliClient,
+        transport::{GhCliClient, GhToken},
     },
     data::{
         Change, ChangeData, Changes, DelayLoad, FieldOptionId, Fields, ProjectItemId,
@@ -22,7 +22,10 @@ use std::{
     io::{BufReader, BufWriter, Read, Write},
     ops::Deref,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
 };
 use tokio::{
     sync::Mutex,
@@ -30,9 +33,15 @@ use tokio::{
 };
 use ts_rs::TS;
 
+pub mod github_account;
 pub mod logger;
 pub mod telemetry;
 pub mod updater;
+
+use github_account::{
+    AccountError, GitHubIdentity, SelectAccountResult, avatar_uri, load_persisted_identity,
+    save_persisted_identity,
+};
 
 mod nodes;
 use nodes::*;
@@ -235,19 +244,50 @@ pub struct RefreshSummary {
 
 type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
-#[derive(Default)]
-pub struct DataState(pub Arc<Mutex<AppState>>);
+const ACCOUNT_SELECTION_BUSY: usize = usize::MAX;
+
+pub struct DataState {
+    state: Arc<Mutex<AppState>>,
+    busy_operations: Arc<AtomicUsize>,
+}
+
+impl Default for DataState {
+    fn default() -> Self {
+        Self {
+            state: Arc::new(Mutex::new(AppState::new())),
+            busy_operations: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+}
+
+struct BusyGuard {
+    busy_operations: Arc<AtomicUsize>,
+    exclusive: bool,
+}
+
+impl Drop for BusyGuard {
+    fn drop(&mut self) {
+        if self.exclusive {
+            self.busy_operations.store(0, Ordering::Release);
+        } else {
+            self.busy_operations.fetch_sub(1, Ordering::AcqRel);
+        }
+    }
+}
 
 impl Deref for DataState {
     type Target = Mutex<AppState>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.state
     }
 }
 
 pub struct AppState {
     watcher: Arc<SendDataUpdate>,
+    selected_identity: Option<GitHubIdentity>,
+    client: Option<GhCliClient>,
+    account_generation: u64,
     fields: Option<Fields>,
     work_items: Option<WorkItems>,
     filters: Filters,
@@ -283,11 +323,21 @@ impl AppState {
             .as_ref()
             .map(|cache| cache.pivot_config.clone())
             .unwrap_or_default();
+        let selected_identity = selected_identity_path()
+            .and_then(|path| load_persisted_identity(&path))
+            .map_err(|error| {
+                debug!("failed to load selected GitHub account during initialization: {error}");
+                error
+            })
+            .ok();
 
         Self {
             watcher: Arc::new(Box::new(|_| {
                 warn!("No watcher set!");
             })),
+            selected_identity,
+            client: None,
+            account_generation: 0,
             fields: None,
             work_items: None,
             filters,
@@ -306,12 +356,90 @@ impl AppState {
         let w = self.watcher.clone();
         logger::set_watcher(Arc::new(move |d| w(d)));
 
-        self.refresh(false).await
+        self.refresh_cache_only().await
+    }
+
+    pub fn selected_identity(&self) -> Option<&GitHubIdentity> {
+        self.selected_identity.as_ref()
+    }
+
+    pub fn account_generation(&self) -> u64 {
+        self.account_generation
+    }
+
+    pub fn has_client(&self) -> bool {
+        self.client.is_some()
+    }
+
+    fn client(&self) -> Result<GhCliClient> {
+        if self.selected_identity.is_none() {
+            return Err(AccountError::NoAccountSelected.into());
+        }
+        self.client
+            .clone()
+            .ok_or_else(|| AccountError::CredentialUnavailable.into())
+    }
+
+    pub fn restore_client(&mut self, identity: &GitHubIdentity, token: GhToken) -> bool {
+        if self.selected_identity.as_ref() != Some(identity) {
+            return false;
+        }
+        self.client = Some(GhCliClient::for_token(identity.host.clone(), token));
+        true
+    }
+
+    async fn replace_account(&mut self, identity: GitHubIdentity, token: GhToken) -> Result<()> {
+        let path = selected_identity_path()?;
+        save_persisted_identity(&path, &identity)?;
+
+        self.install_account(identity, token);
+        self.refresh_cache_only().await
+    }
+
+    fn install_account(&mut self, identity: GitHubIdentity, token: GhToken) {
+        if self.selected_identity.as_ref() != Some(&identity) {
+            self.account_generation = self.account_generation.wrapping_add(1);
+            self.fields = None;
+            self.work_items = None;
+            self.epic_conflicts.clear();
+        }
+        self.client = Some(GhCliClient::for_token(identity.host.clone(), token));
+        self.selected_identity = Some(identity);
+    }
+
+    fn matches_account_context(&self, generation: u64, identity: &GitHubIdentity) -> bool {
+        self.account_generation == generation && self.selected_identity.as_ref() == Some(identity)
+    }
+
+    pub async fn refresh_cache_only(&mut self) -> Result<()> {
+        let (fields, work_items) = if let Some(identity) = &self.selected_identity {
+            let fields = load_fields_from_appdata(identity).unwrap_or_else(|error| {
+                debug!("failed to load account-scoped fields cache: {error}");
+                Fields::default()
+            });
+            let work_items = load_workitems_from_appdata(identity).unwrap_or_else(|error| {
+                debug!("failed to load account-scoped work item cache: {error}");
+                WorkItems::default()
+            });
+            (fields, work_items)
+        } else {
+            (Fields::default(), WorkItems::default())
+        };
+
+        self.fields = Some(fields.clone());
+        self.work_items = Some(work_items.clone());
+        self.publish_data(fields, work_items);
+        Ok(())
     }
 
     pub async fn refresh(&mut self, force_refresh: bool) -> Result<()> {
         let fields = self.refresh_fields(force_refresh).await?;
-        let mut work_items = self.refresh_work_items(force_refresh).await?;
+        let work_items = self.refresh_work_items(force_refresh).await?;
+        self.publish_data(fields, work_items);
+        Ok(())
+    }
+
+    fn publish_data(&self, fields: Fields, mut work_items: WorkItems) {
         let original_work_items = if self.preview_changes {
             self.apply_changes(&mut work_items)
         } else {
@@ -339,7 +467,6 @@ impl AppState {
             can_redo: self.undo_history.can_redo(),
             epic_conflicts: self.epic_conflicts.clone(),
         })));
-        Ok(())
     }
 
     pub async fn force_refresh(&mut self) -> Result<RefreshSummary> {
@@ -369,21 +496,24 @@ impl AppState {
                 return Ok(fields.clone());
             }
 
-            let load_result = load_fields_from_appdata();
-            if let Ok(fields) = load_result {
-                self.fields = Some(fields.clone());
-                return Ok(fields);
-            } else {
-                warn!(
-                    "failed to load cached fields: {}",
-                    load_result.err().unwrap()
-                );
+            if let Some(identity) = &self.selected_identity {
+                match load_fields_from_appdata(identity) {
+                    Ok(fields) => {
+                        self.fields = Some(fields.clone());
+                        return Ok(fields);
+                    }
+                    Err(error) => warn!("failed to load cached fields: {error}"),
+                }
             }
         }
 
-        let client = GhCliClient::default();
+        let client = self.client()?;
         let fields = get_fields(&client).await?;
-        let save_result = save_fields_to_appdata(&fields);
+        let identity = self
+            .selected_identity
+            .as_ref()
+            .ok_or(AccountError::NoAccountSelected)?;
+        let save_result = save_fields_to_appdata(identity, &fields);
         if let Err(error) = save_result {
             warn!("failed to save cached fields: {error}");
         }
@@ -394,26 +524,22 @@ impl AppState {
 
     pub async fn refresh_work_items(&mut self, force: bool) -> Result<WorkItems> {
         if !force {
-            if self.work_items.is_some() {
-                return Ok(self.work_items.clone().unwrap());
+            if let Some(work_items) = &self.work_items {
+                return Ok(work_items.clone());
             }
 
-            // Try loading from the local cache
-            let load_result = load_workitems_from_appdata();
-
-            if let Ok(work_items) = load_result {
-                self.work_items = Some(work_items.clone());
-                return Ok(work_items);
-            } else {
-                warn!(
-                    "failed to load cached work items: {}",
-                    load_result.err().unwrap()
-                );
+            if let Some(identity) = &self.selected_identity {
+                match load_workitems_from_appdata(identity) {
+                    Ok(work_items) => {
+                        self.work_items = Some(work_items.clone());
+                        return Ok(work_items);
+                    }
+                    Err(error) => warn!("failed to load cached work items: {error}"),
+                }
             }
         }
 
-        // Try retrieving from github
-        let client = GhCliClient::default();
+        let client = self.client()?;
 
         let report_progress = |done, total| {
             (self.watcher)(DataUpdate::Progress { done, total });
@@ -433,7 +559,11 @@ impl AppState {
             get_all_items(&client, &report_progress, &report_inconsistency).await?,
         );
 
-        let save_result = save_workitems_to_appdata(&work_items);
+        let identity = self
+            .selected_identity
+            .as_ref()
+            .ok_or(AccountError::NoAccountSelected)?;
+        let save_result = save_workitems_to_appdata(identity, &work_items);
         if let Err(error) = save_result {
             warn!("failed to save cached work items: {error}");
         }
@@ -538,19 +668,32 @@ impl AppState {
         &mut self,
         report_progress: &impl Fn(usize, usize),
     ) -> Result<(Vec<ProjectItemId>, usize)> {
-        let client = GhCliClient::default();
+        let client = self.client()?;
 
-        let fields = self.refresh_fields(false).await?;
+        let fields_need_refresh = self
+            .fields
+            .as_ref()
+            .is_none_or(|fields| fields.project_id.is_empty());
+        let fields = self.refresh_fields(fields_need_refresh).await?;
+        let work_items_need_refresh = self
+            .work_items
+            .as_ref()
+            .is_none_or(|work_items| work_items.work_items.is_empty());
+        self.refresh_work_items(work_items_need_refresh).await?;
 
         let pre_save = self.changes.clone();
         let changes_count = pre_save.len();
 
+        let work_items = self
+            .work_items
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("work items are not loaded"))?;
         let result = self
             .changes
             .save(
                 &client,
                 &fields,
-                self.work_items.as_ref().unwrap(),
+                work_items,
                 SaveMode::Commit,
                 &|_, a, b| report_progress(a, b),
             )
@@ -576,7 +719,7 @@ impl AppState {
     /// `work_items` map to determine whether the item is already in the project
     /// and to inspect its current state (e.g., existing parent).
     pub async fn resolve_url(&self, url: String) -> Result<ResolvedUrl> {
-        let client = GhCliClient::default();
+        let client = self.client()?;
         let (id_str, title) = get_resource_id(&client, &url).await?;
         Ok(ResolvedUrl {
             id: WorkItemId(id_str),
@@ -650,18 +793,148 @@ impl AppState {
 }
 
 impl DataState {
-    pub fn request_update_items(&self, project_item_ids: Vec<ProjectItemId>) -> JoinHandle<()> {
+    fn begin_operation(&self) -> Result<BusyGuard> {
+        loop {
+            let current = self.busy_operations.load(Ordering::Acquire);
+            if current == ACCOUNT_SELECTION_BUSY {
+                return Err(AccountError::Busy.into());
+            }
+            let next = current
+                .checked_add(1)
+                .ok_or_else(|| anyhow::anyhow!("busy operation counter overflow"))?;
+            if self
+                .busy_operations
+                .compare_exchange(current, next, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                return Ok(BusyGuard {
+                    busy_operations: Arc::clone(&self.busy_operations),
+                    exclusive: false,
+                });
+            }
+        }
+    }
+
+    fn begin_account_selection(&self) -> Result<BusyGuard> {
+        self.busy_operations
+            .compare_exchange(
+                0,
+                ACCOUNT_SELECTION_BUSY,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .map_err(|_| AccountError::Busy)?;
+        Ok(BusyGuard {
+            busy_operations: Arc::clone(&self.busy_operations),
+            exclusive: true,
+        })
+    }
+
+    pub fn is_busy(&self) -> bool {
+        self.busy_operations.load(Ordering::Acquire) != 0
+    }
+
+    pub async fn restore_client(&self, identity: &GitHubIdentity, token: GhToken) -> bool {
+        self.lock().await.restore_client(identity, token)
+    }
+
+    pub async fn select_account(
+        &self,
+        identity: GitHubIdentity,
+        token: GhToken,
+        confirmed_pending_edits: bool,
+    ) -> Result<SelectAccountResult> {
+        identity.validate()?;
+        let _guard = self.begin_account_selection()?;
+        let mut state = self.lock().await;
+        let changing_identity = state.selected_identity.as_ref() != Some(&identity);
+        let pending_edits = state.changes_count();
+        if changing_identity && pending_edits > 0 && !confirmed_pending_edits {
+            return Ok(SelectAccountResult::ConfirmationRequired { pending_edits });
+        }
+        state.replace_account(identity, token).await?;
+        let mut account_state = self.account_state_from_locked(&state);
+        account_state.busy = false;
+        Ok(SelectAccountResult::Selected {
+            state: account_state,
+        })
+    }
+
+    pub async fn pending_edits_for_account_change(
+        &self,
+        identity: &GitHubIdentity,
+    ) -> Result<Option<usize>> {
+        if self.is_busy() {
+            return Err(AccountError::Busy.into());
+        }
+        let state = self.lock().await;
+        let pending_edits = state.changes_count();
+        Ok(
+            (state.selected_identity.as_ref() != Some(identity) && pending_edits > 0)
+                .then_some(pending_edits),
+        )
+    }
+
+    pub async fn account_state(&self) -> github_account::AccountState {
+        let state = self.lock().await;
+        self.account_state_from_locked(&state)
+    }
+
+    fn account_state_from_locked(&self, state: &AppState) -> github_account::AccountState {
+        let selected =
+            state
+                .selected_identity
+                .as_ref()
+                .map(|identity| github_account::SelectedAccount {
+                    identity: identity.clone(),
+                    avatar_uri: avatar_uri(identity),
+                    state: if state.client.is_some() {
+                        github_account::SelectedAccountState::Unverified
+                    } else {
+                        github_account::SelectedAccountState::TokenMissing
+                    },
+                });
+        github_account::AccountState {
+            selected,
+            busy: self.is_busy(),
+            pending_edits: state.changes_count(),
+        }
+    }
+
+    pub async fn force_refresh(&self) -> Result<RefreshSummary> {
+        let _guard = self.begin_operation()?;
+        self.lock().await.force_refresh().await
+    }
+
+    pub async fn resolve_url(&self, url: String) -> Result<ResolvedUrl> {
+        let _guard = self.begin_operation()?;
+        self.lock().await.resolve_url(url).await
+    }
+
+    pub async fn request_update_items(
+        &self,
+        project_item_ids: Vec<ProjectItemId>,
+    ) -> Result<JoinHandle<()>> {
         if project_item_ids.is_empty() {
-            return tokio::spawn(async {});
+            return Ok(tokio::spawn(async {}));
         }
 
-        let app_state = Arc::clone(&self.0);
-        tokio::spawn(async move {
+        let guard = self.begin_operation()?;
+        let app_state = Arc::clone(&self.state);
+        let state = self.state.lock().await;
+        let client = state.client()?;
+        let generation = state.account_generation;
+        let identity = state
+            .selected_identity
+            .clone()
+            .ok_or(AccountError::NoAccountSelected)?;
+        drop(state);
+
+        Ok(tokio::spawn(async move {
+            let _guard = guard;
             let batch_size = project_item_ids.len();
             let started = std::time::Instant::now();
             debug!("request_update_items: starting batch of {batch_size} item(s)");
-
-            let client = GhCliClient::default();
 
             let updated_work_items = match get_items(&client, project_item_ids).await {
                 Ok(items) => items,
@@ -672,6 +945,10 @@ impl DataState {
             };
 
             let mut state = app_state.lock().await;
+            if !state.matches_account_context(generation, &identity) {
+                debug!("request_update_items: discarded stale account result");
+                return;
+            }
             let watcher = state.watcher.clone();
             if let Some(work_items) = &mut state.work_items {
                 let mut update_type = UpdateType::NoUpdate;
@@ -694,7 +971,7 @@ impl DataState {
 
             // Persist updated work items to disk cache
             if let Some(work_items) = &state.work_items
-                && let Err(e) = save_workitems_to_appdata(work_items)
+                && let Err(e) = save_workitems_to_appdata(&identity, work_items)
             {
                 warn!("failed to save cached work items: {e}");
             }
@@ -703,15 +980,19 @@ impl DataState {
                 "request_update_items: completed batch of {batch_size} item(s) in {}ms",
                 started.elapsed().as_millis()
             );
-        })
+        }))
     }
 
     pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<usize> {
+        let _guard = self.begin_operation()?;
         let (project_item_ids, changes_count) =
             self.lock().await.save_changes(report_progress).await?;
 
         if !project_item_ids.is_empty() {
-            self.request_update_items(project_item_ids).await?;
+            let handle = self.request_update_items(project_item_ids).await?;
+            if let Err(error) = handle.await {
+                warn!("post-save work item update task failed: {error}");
+            }
         }
 
         self.lock().await.refresh(false).await?;
@@ -762,6 +1043,7 @@ impl DataState {
     }
 
     pub async fn load_all_work_items(&self, force: bool) -> Result<()> {
+        let _guard = self.begin_operation()?;
         let app_state = self.lock().await;
         if let Some(work_items) = &app_state.work_items {
             let project_item_ids: Vec<_> = work_items
@@ -778,13 +1060,17 @@ impl DataState {
 
             info!("Loading {} items....", project_item_ids.len());
 
-            let join_handles = JoinSet::from_iter(
-                project_item_ids
-                    .chunks(50)
-                    .map(|chunk| self.request_update_items(chunk.to_vec())),
-            );
-
-            join_handles.join_all().await;
+            let mut join_handles = JoinSet::new();
+            for chunk in project_item_ids.chunks(50) {
+                join_handles.spawn(self.request_update_items(chunk.to_vec()).await?);
+            }
+            while let Some(result) = join_handles.join_next().await {
+                match result {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => warn!("work item update task failed: {error}"),
+                    Err(error) => warn!("work item update join failed: {error}"),
+                }
+            }
             info!("Done");
         }
         Ok(())
@@ -793,18 +1079,19 @@ impl DataState {
 
 const FIELDS_FILENAME: &str = "fields";
 
-fn load_fields_from_appdata() -> anyhow::Result<Fields> {
-    let path = get_appdata_path(FIELDS_FILENAME);
+fn load_fields_from_appdata(identity: &GitHubIdentity) -> anyhow::Result<Fields> {
+    let path = get_account_appdata_path(identity, FIELDS_FILENAME)?;
     info!("Attempting to load fields cache from {path:?}");
 
     let reader = fs::File::open(path)?;
     Ok(serde_json::from_reader(BufReader::new(reader))?)
 }
 
-fn save_fields_to_appdata(fields: &Fields) -> anyhow::Result<()> {
-    let path = get_appdata_path(FIELDS_FILENAME);
+fn save_fields_to_appdata(identity: &GitHubIdentity, fields: &Fields) -> anyhow::Result<()> {
+    let path = get_account_appdata_path(identity, FIELDS_FILENAME)?;
     info!("Attempting to save fields cache to {path:?}");
 
+    ensure_parent_directory(&path)?;
     let writer = fs::File::create(path)?;
     Ok(serde_json::to_writer_pretty(
         BufWriter::new(writer),
@@ -814,18 +1101,22 @@ fn save_fields_to_appdata(fields: &Fields) -> anyhow::Result<()> {
 
 const WORK_ITEMS_FILENAME: &str = "work_items";
 
-fn load_workitems_from_appdata() -> anyhow::Result<WorkItems> {
-    let path = get_appdata_path(WORK_ITEMS_FILENAME);
+fn load_workitems_from_appdata(identity: &GitHubIdentity) -> anyhow::Result<WorkItems> {
+    let path = get_account_appdata_path(identity, WORK_ITEMS_FILENAME)?;
     info!("Attempting to load work item cache from {path:?}");
 
     let reader = fs::File::open(path)?;
     Ok(serde_json::from_reader(BufReader::new(reader))?)
 }
 
-fn save_workitems_to_appdata(work_items: &WorkItems) -> anyhow::Result<()> {
-    let path = get_appdata_path(WORK_ITEMS_FILENAME);
+fn save_workitems_to_appdata(
+    identity: &GitHubIdentity,
+    work_items: &WorkItems,
+) -> anyhow::Result<()> {
+    let path = get_account_appdata_path(identity, WORK_ITEMS_FILENAME)?;
     info!("Attempting to save work item cache to {path:?}");
 
+    ensure_parent_directory(&path)?;
     let writer = fs::File::create(path)?;
     Ok(serde_json::to_writer_pretty(
         BufWriter::new(writer),
@@ -869,41 +1160,91 @@ fn save_view_config_to_file(path: &Path, cache: &ViewConfigCache) -> anyhow::Res
 }
 
 fn load_view_config_from_appdata() -> anyhow::Result<ViewConfigCache> {
-    let path = get_appdata_path(VIEW_CONFIG_FILENAME);
+    let path = get_global_appdata_path(VIEW_CONFIG_FILENAME)?;
     info!("Attempting to load view config cache from {path:?}");
     load_view_config_from_file(&path)
 }
 
 fn save_view_config_to_appdata(cache: &ViewConfigCache) -> anyhow::Result<()> {
-    let path = get_appdata_path(VIEW_CONFIG_FILENAME);
+    let path = get_global_appdata_path(VIEW_CONFIG_FILENAME)?;
     info!("Attempting to save view config cache to {path:?}");
     save_view_config_to_file(&path, cache)
 }
 
-pub fn save_work_items_extra_data(data: &str) -> anyhow::Result<()> {
-    let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
+pub fn save_work_items_extra_data(identity: &GitHubIdentity, data: &str) -> anyhow::Result<()> {
+    let path = get_account_appdata_path(identity, WORK_ITEMS_EXTRA_DATA)?;
     info!("Saving work items extra data to {path:?}");
 
+    ensure_parent_directory(&path)?;
     let mut writer = fs::File::create(path)?;
     writer.write_all(data.as_bytes())?;
     Ok(())
 }
 
-pub fn load_work_items_extra_data() -> anyhow::Result<String> {
-    let path = get_appdata_path(WORK_ITEMS_EXTRA_DATA);
+pub fn load_work_items_extra_data(identity: &GitHubIdentity) -> anyhow::Result<String> {
+    let path = get_account_appdata_path(identity, WORK_ITEMS_EXTRA_DATA)?;
     info!("Loading work items extra data from {path:?}");
 
-    let mut reader = fs::File::open(path)?;
+    let mut reader = match fs::File::open(path) {
+        Ok(reader) => reader,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok("{}".to_owned());
+        }
+        Err(error) => return Err(error.into()),
+    };
 
     let mut buf = String::new();
     reader.read_to_string(&mut buf)?;
     Ok(buf)
 }
 
-fn get_appdata_path(name: &str) -> PathBuf {
-    let mut path = home_dir().unwrap();
+fn get_global_appdata_path(name: &str) -> anyhow::Result<PathBuf> {
+    let mut path =
+        home_dir().ok_or_else(|| anyhow::anyhow!("could not determine home directory"))?;
     path.push(format!("{name}.ghui.json"));
+    Ok(path)
+}
+
+fn selected_identity_path() -> anyhow::Result<PathBuf> {
+    get_global_appdata_path("github_account")
+}
+
+fn get_account_appdata_path(identity: &GitHubIdentity, name: &str) -> anyhow::Result<PathBuf> {
+    identity.validate()?;
+    let path = home_dir().ok_or_else(|| anyhow::anyhow!("could not determine home directory"))?;
+    Ok(account_appdata_path_in(&path, identity, name))
+}
+
+fn account_appdata_path_in(base: &Path, identity: &GitHubIdentity, name: &str) -> PathBuf {
+    let mut path = base.to_path_buf();
+    path.push(".ghui");
+    path.push("accounts");
+    path.push(safe_path_component(&identity.host));
+    path.push(safe_path_component(&identity.login));
+    path.push(format!("{}.json", safe_path_component(name)));
     path
+}
+
+fn safe_path_component(value: &str) -> String {
+    if matches!(value, "." | "..") {
+        return value.bytes().map(|byte| format!("_{byte:02x}")).collect();
+    }
+    let mut safe = String::new();
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.') {
+            safe.push(char::from(byte));
+        } else {
+            safe.push_str(&format!("_{byte:02x}"));
+        }
+    }
+    safe
+}
+
+fn ensure_parent_directory(path: &Path) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    Ok(())
 }
 
 fn summarize_refresh_changes(
@@ -934,11 +1275,111 @@ fn summarize_refresh_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use github_graphql::client::transport::{GhFuture, GhOutput, GhRunner};
     use github_graphql::data::test_helpers::TestData;
     use github_graphql::data::{Issue, IssueState, PullRequest, PullRequestState, WorkItemData};
     use github_graphql::pivot::{Axis, MultiValueStrategy, PivotField};
-    use std::sync::{Arc, Mutex};
+    use std::sync::{
+        Arc, Mutex,
+        atomic::{AtomicUsize, Ordering},
+    };
     use tempfile::NamedTempFile;
+
+    struct CountingRunner {
+        calls: Arc<AtomicUsize>,
+    }
+
+    impl GhRunner for CountingRunner {
+        fn run(&self, _input: Vec<u8>) -> GhFuture {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async {
+                Ok(GhOutput {
+                    status: Some(1),
+                    stdout: Vec::new(),
+                    stderr: b"unexpected network call".to_vec(),
+                })
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_no_account_startup_and_refresh_make_zero_gh_runner_calls() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut app_state = AppState::new();
+        app_state.selected_identity = None;
+        app_state.client = Some(GhCliClient::with_runner(Arc::new(CountingRunner {
+            calls: Arc::clone(&calls),
+        })));
+        app_state.set_watcher(Box::new(|_| {})).await.unwrap();
+
+        let data_state = DataState {
+            state: Arc::new(tokio::sync::Mutex::new(app_state)),
+            busy_operations: Arc::new(AtomicUsize::new(0)),
+        };
+        let error = data_state.force_refresh().await.unwrap_err();
+
+        assert!(error.downcast_ref::<AccountError>().is_some());
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn test_account_scoped_cache_paths_are_isolated_and_safe() {
+        let base = Path::new("cache-root");
+        let first = account_appdata_path_in(
+            base,
+            &GitHubIdentity::github_dot_com("first-user"),
+            WORK_ITEMS_FILENAME,
+        );
+        let second = account_appdata_path_in(
+            base,
+            &GitHubIdentity::github_dot_com("second/user"),
+            WORK_ITEMS_FILENAME,
+        );
+
+        assert_ne!(first, second);
+        assert!(first.ends_with(Path::new("github.com/first-user/work_items.json")));
+        assert!(second.ends_with(Path::new("github.com/second_2fuser/work_items.json")));
+        assert_eq!(safe_path_component(".."), "_2e_2e");
+    }
+
+    #[test]
+    fn test_account_replacement_increments_generation_and_preserves_edits() {
+        let mut data = TestData::default();
+        let work_item_id = data.build().status("Active").add();
+        let mut state = AppState::new();
+        state.selected_identity = Some(GitHubIdentity::github_dot_com("first"));
+        state.account_generation = 7;
+        state.undo_history.track_add(
+            &mut state.changes,
+            Change {
+                work_item_id,
+                data: ChangeData::Status(None),
+            },
+        );
+
+        state.install_account(
+            GitHubIdentity::github_dot_com("second"),
+            GhToken::new("replacement".to_owned()),
+        );
+
+        assert_eq!(state.account_generation, 8);
+        assert_eq!(state.changes_count(), 1);
+        assert!(state.undo_history.can_undo());
+        assert!(state.matches_account_context(8, &GitHubIdentity::github_dot_com("second")));
+        assert!(!state.matches_account_context(7, &GitHubIdentity::github_dot_com("first")));
+    }
+
+    #[test]
+    fn test_reselecting_same_account_replaces_client_without_generation_change() {
+        let identity = GitHubIdentity::github_dot_com("octocat");
+        let mut state = AppState::new();
+        state.selected_identity = Some(identity.clone());
+        state.account_generation = 3;
+        state.install_account(identity, GhToken::new("replacement".to_owned()));
+
+        assert_eq!(state.account_generation, 3);
+        assert!(state.has_client());
+    }
 
     #[test]
     fn test_get_project_ids_to_update_returns_ids_when_force_is_true() {

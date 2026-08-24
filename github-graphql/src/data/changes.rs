@@ -711,18 +711,15 @@ impl WorkItems {
                 continue;
             }
 
-            let work_item = self.get_mut(&change.work_item_id);
-            if work_item.is_none() {
+            let Some(work_item) = self.get_mut(&change.work_item_id) else {
                 warn!(
                     "change for '{0}' - work item not found",
                     change.work_item_id.0
                 );
                 continue;
-            }
+            };
 
-            remember_original(work_item.as_deref());
-
-            let work_item = work_item.unwrap();
+            remember_original(Some(&*work_item));
 
             match &change.data {
                 ChangeData::IssueType(value) => {

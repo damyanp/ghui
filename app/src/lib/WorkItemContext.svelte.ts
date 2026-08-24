@@ -1,6 +1,7 @@
 import { getContext, setContext, tick } from "svelte";
 import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { WorkItemId } from "./bindings/WorkItemId";
 import type { Change } from "./bindings/Change";
 import type { Fields } from "./bindings/Fields";
@@ -22,6 +23,16 @@ import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
 
 const key = Symbol("WorkItemContext");
+
+type GitHubIdentity = {
+  host: string;
+  login: string;
+};
+
+type WorkItemsExtraData = {
+  identity: GitHubIdentity;
+  data: string;
+};
 
 export function setWorkItemContext(wic: WorkItemContext) {
   setContext(key, wic);
@@ -96,26 +107,38 @@ export class WorkItemContext {
   loadProgress = $state<number>(0);
 
   updates_channel = new Channel<DataUpdate>();
+  workItemExtraDataIdentity = $state<GitHubIdentity | null>(null);
 
   constructor() {
     this.updates_channel.onmessage = (data_update) =>
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
 
-    let loadedExtraData = false;
-    invoke<string>("get_work_items_extra_data")
-      .then((value) => {
-        this.workItemExtraData = JSON.parse(value);
-        loadedExtraData = true;
-      })
-      .catch(() => (this.workItemExtraData = {}));
+    void this.reloadWorkItemExtraData();
+    void listen("github-account-selected", () => {
+      void this.reloadWorkItemExtraData();
+    });
 
     $effect(() => {
       const extraData = JSON.stringify(this.workItemExtraData, undefined, " ");
-      if (loadedExtraData) {
-        invoke("set_work_items_extra_data", { extraData });
+      const identity = this.workItemExtraDataIdentity;
+      if (identity) {
+        invoke("set_work_items_extra_data", { identity, extraData });
       }
     });
+  }
+
+  private async reloadWorkItemExtraData(): Promise<void> {
+    try {
+      const snapshot = await invoke<WorkItemsExtraData>(
+        "get_work_items_extra_data"
+      );
+      this.workItemExtraDataIdentity = snapshot.identity;
+      this.workItemExtraData = JSON.parse(snapshot.data);
+    } catch {
+      this.workItemExtraDataIdentity = null;
+      this.workItemExtraData = {};
+    }
   }
 
   on_data_update(dataUpdate: DataUpdate) {

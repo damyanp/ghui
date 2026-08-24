@@ -12,6 +12,7 @@ gql!(
 pub enum ProjectAccess {
     Granted,
     MissingScope,
+    Denied,
 }
 
 /// Probes project access with a minimal query so the UI can distinguish a
@@ -29,6 +30,15 @@ pub async fn check_project_access(client: &impl Client) -> Result<ProjectAccess>
         });
         if missing_scope {
             return Ok(ProjectAccess::MissingScope);
+        }
+        let denied = errors.iter().any(|e| {
+            let msg = e.message.to_lowercase();
+            msg.contains("could not resolve to a projectv2")
+                || msg.contains("resource not accessible")
+                || msg.contains("forbidden")
+        });
+        if denied {
+            return Ok(ProjectAccess::Denied);
         }
         return Err(Error::GraphQlResponseErrors(errors.clone()));
     }
@@ -69,5 +79,16 @@ mod tests {
         let body = r#"{"errors":[{"message":"Something else went wrong"}]}"#;
         let client = GhCliClient::canned(Some(1), body, "");
         assert!(check_project_access(&client).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_check_project_access_denied() {
+        let body =
+            r#"{"errors":[{"message":"Could not resolve to a ProjectV2 with the number of 1."}]}"#;
+        let client = GhCliClient::canned(Some(1), body, "");
+        assert_eq!(
+            check_project_access(&client).await.unwrap(),
+            ProjectAccess::Denied
+        );
     }
 }
