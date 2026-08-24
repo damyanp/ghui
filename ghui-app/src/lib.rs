@@ -1251,7 +1251,7 @@ fn account_appdata_path_in(base: &Path, identity: &GitHubIdentity, name: &str) -
     path.push("accounts");
     path.push(safe_path_component(&identity.host));
     path.push(safe_path_component(&identity.login));
-    path.push(format!("{}.json", safe_path_component(name)));
+    path.push(format!("{name}.json"));
     path
 }
 
@@ -1261,7 +1261,7 @@ fn safe_path_component(value: &str) -> String {
     }
     let mut safe = String::new();
     for byte in value.bytes() {
-        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.') {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.') {
             safe.push(char::from(byte));
         } else {
             safe.push_str(&format!("_{byte:02x}"));
@@ -1370,6 +1370,11 @@ mod tests {
         assert!(first.ends_with(Path::new("github.com/first-user/work_items.json")));
         assert!(second.ends_with(Path::new("github.com/second_2fuser/work_items.json")));
         assert_eq!(safe_path_component(".."), "_2e_2e");
+        assert_ne!(
+            safe_path_component("account/name"),
+            safe_path_component("account_2fname")
+        );
+        assert_eq!(safe_path_component("account_2fname"), "account_5f2fname");
     }
 
     #[test]
