@@ -21,6 +21,7 @@ import type { PivotConfig } from "./bindings/PivotConfig";
 import { upsertWorkItem } from "./workItems";
 import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
+import { commandErrorLogEntry } from "./commandErrors";
 
 const key = Symbol("WorkItemContext");
 
@@ -123,7 +124,16 @@ export class WorkItemContext {
       const extraData = JSON.stringify(this.workItemExtraData, undefined, " ");
       const identity = this.workItemExtraDataIdentity;
       if (identity) {
-        invoke("set_work_items_extra_data", { identity, extraData });
+        void invoke("set_work_items_extra_data", { identity, extraData }).catch(
+          (error) => {
+            this.onDataUpdateLog(
+              commandErrorLogEntry(
+                "Failed to save work item extra data",
+                error
+              )
+            );
+          }
+        );
       }
     });
   }

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    io::{BufReader, BufWriter},
+    io::BufReader,
     path::Path,
     process::{Command, Output, Stdio},
     time::Duration,
@@ -593,7 +593,7 @@ pub fn save_persisted_identity(path: &Path, identity: &GitHubIdentity) -> anyhow
         fs::create_dir_all(parent)?;
     }
     let writer = fs::File::create(path)?;
-    serde_json::to_writer_pretty(BufWriter::new(writer), identity)?;
+    serde_json::to_writer_pretty(writer, identity)?;
     Ok(())
 }
 
@@ -709,6 +709,17 @@ mod tests {
             load_persisted_identity(&path).unwrap(),
             GitHubIdentity::github_dot_com("octocat")
         );
+    }
+
+    #[test]
+    fn test_persisted_identity_round_trips() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("identity.json");
+        let identity = GitHubIdentity::github_dot_com("octocat");
+
+        save_persisted_identity(&path, &identity).unwrap();
+
+        assert_eq!(load_persisted_identity(&path).unwrap(), identity);
     }
 
     #[test]
