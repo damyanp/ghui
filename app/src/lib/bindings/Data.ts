@@ -7,6 +7,7 @@ import type { PivotConfig } from "./PivotConfig";
 import type { SanitizeConflict } from "./SanitizeConflict";
 
 export type Data = {
+  accountGeneration: number;
   fields: Fields;
   workItems: {
     [key in import("./WorkItemId").WorkItemId]?: import("./WorkItem").WorkItem;

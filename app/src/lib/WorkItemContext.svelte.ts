@@ -47,6 +47,7 @@ export function recordTelemetry(event: TelemetryEvent): void {
 export class WorkItemContext {
   data = $state<Data>({
     fields: make_blank_fields(),
+    accountGeneration: 0,
     workItems: {},
     nodes: [],
     filters: {
@@ -110,6 +111,9 @@ export class WorkItemContext {
     WorkItemId,
     any
   >();
+  itemUpdateBatcher = new ItemUpdateBatcher((error) => {
+    this.onDataUpdateLog(commandErrorLogEntry("Failed to update work items", error));
+  });
 
   constructor() {
     this.updates_channel.onmessage = (data_update) =>
@@ -120,6 +124,7 @@ export class WorkItemContext {
     let disposed = false;
     let unlistenAccountSelected: UnlistenFn | null = null;
     void listen("github-account-selected", () => {
+      this.itemUpdateBatcher.clear();
       void this.reloadWorkItemExtraData();
     })
       .then((unlisten) => {
@@ -243,10 +248,12 @@ export class WorkItemContext {
     return await invoke<RefreshSummary>("force_refresh_data");
   }
 
-  itemUpdateBatcher = new ItemUpdateBatcher();
-
   public async updateWorkItem(workItemId: WorkItemId) {
-    this.itemUpdateBatcher.add(workItemId, false);
+    this.itemUpdateBatcher.add(
+      workItemId,
+      false,
+      this.data.accountGeneration
+    );
   }
 
   /**

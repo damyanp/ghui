@@ -57,6 +57,14 @@ impl UndoHistory {
         !self.redo_stack.is_empty()
     }
 
+    pub fn reset_for_account_switch(&mut self, changes: &Changes) {
+        self.undo_stack.clear();
+        self.redo_stack.clear();
+        if !changes.is_empty() {
+            self.undo_stack.push(UndoAction::RestoreAll(HashMap::new()));
+        }
+    }
+
     pub fn track_add(&mut self, changes: &mut Changes, change: Change) {
         let key = change.key();
         let old_value = changes.data.insert(key.clone(), change.clone());

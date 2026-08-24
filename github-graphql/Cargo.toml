@@ -3,6 +3,10 @@ name = "github-graphql"
 version = "0.11.0"
 edition = "2021"
 
+[features]
+gh-active-account = []
+test-runner = []
+
 [dependencies]
 graphql_client = { version = "0.16.0" }
 anyhow = "1.0"

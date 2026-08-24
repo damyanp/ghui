@@ -66,6 +66,10 @@ pub enum AccountError {
     UnsupportedHost(String),
     #[error("The GitHub account identity is invalid")]
     InvalidIdentity,
+    #[error("The GitHub account changed before this update was submitted; retry the update")]
+    StaleAccountContext,
+    #[error("The selected credential must be verified before it can replace a rejected credential")]
+    CredentialVerificationRequired,
 }
 
 #[derive(Clone, Debug, Serialize, TS, PartialEq, Eq)]
@@ -101,6 +105,7 @@ pub struct GitHubAccount {
     pub avatar_uri: Option<String>,
     pub source: AccountSource,
     pub readiness: AccountReadiness,
+    pub identity_verified: bool,
     pub selected: bool,
     pub selectable: bool,
     pub detail: Option<String>,
@@ -125,6 +130,20 @@ pub struct AccountList {
     pub state: AccountListState,
     pub accounts: Vec<GitHubAccount>,
     pub message: Option<String>,
+}
+
+pub struct AccountEnumeration {
+    pub list: AccountList,
+    pub verified_selected_token: Option<GhToken>,
+}
+
+impl AccountEnumeration {
+    fn unverified(list: AccountList) -> Self {
+        Self {
+            list,
+            verified_selected_token: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, TS, PartialEq, Eq)]
@@ -209,9 +228,26 @@ pub async fn resolve_token(identity: &GitHubIdentity) -> Result<GhToken, GhAuthE
     Ok(GhToken::new(token.to_owned()))
 }
 
+pub async fn verify_token_identity(
+    identity: &GitHubIdentity,
+    token: &GhToken,
+) -> github_graphql::Result<()> {
+    let client =
+        GhCliClient::for_account(identity.host.clone(), identity.login.clone(), token.clone());
+    let viewer = get_viewer_info(&client).await?;
+    if viewer.login.eq_ignore_ascii_case(&identity.login) {
+        Ok(())
+    } else {
+        Err(Error::UnexpectedData(format!(
+            "credential resolved to {} instead of {}",
+            viewer.login, identity.login
+        )))
+    }
+}
+
 pub async fn enumerate_accounts(
     selected: Option<&GitHubIdentity>,
-) -> Result<AccountList, GhAuthError> {
+) -> Result<AccountEnumeration, GhAuthError> {
     let output = run_gh(
         &[
             "auth",
@@ -230,49 +266,59 @@ pub async fn enumerate_accounts(
 async fn account_list_from_status_output(
     output: &Output,
     selected: Option<&GitHubIdentity>,
-) -> Result<AccountList, GhAuthError> {
+) -> Result<AccountEnumeration, GhAuthError> {
     let stdout = String::from_utf8_lossy(&output.stdout);
     if stdout.trim().is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         if stderr.contains("unknown flag") && stderr.contains("--json") {
-            return Ok(AccountList {
+            return Ok(AccountEnumeration::unverified(AccountList {
                 state: AccountListState::GhTooOld,
                 accounts: Vec::new(),
                 message: Some(
                     "This version of GitHub CLI is too old; update gh to list accounts.".to_owned(),
                 ),
-            });
+            }));
         }
         if output.status.success() {
-            return Ok(AccountList {
+            return Ok(AccountEnumeration::unverified(AccountList {
                 state: AccountListState::NoAccounts,
                 accounts: Vec::new(),
                 message: non_empty(stderr.trim()),
-            });
+            }));
         }
-        return Ok(AccountList {
+        return Ok(AccountEnumeration::unverified(AccountList {
             state: AccountListState::Error,
             accounts: Vec::new(),
             message: Some(stderr_message(output, "gh auth status failed")),
-        });
+        }));
     }
 
     let discovered = parse_status_accounts(&stdout, selected).map_err(|error| {
         GhAuthError::Command(format!("could not parse gh auth status: {error}"))
     })?;
     if discovered.is_empty() {
-        return Ok(AccountList {
+        return Ok(AccountEnumeration::unverified(AccountList {
             state: AccountListState::NoAccounts,
             accounts: Vec::new(),
             message: non_empty(String::from_utf8_lossy(&output.stderr).trim()),
-        });
+        }));
     }
 
-    let accounts = join_all(discovered.into_iter().map(probe_account)).await;
-    Ok(AccountList {
-        state: AccountListState::Ready,
-        accounts,
-        message: None,
+    let probed_accounts = join_all(discovered.into_iter().map(probe_account)).await;
+    let verified_selected_token = probed_accounts
+        .iter()
+        .find(|probed| probed.account.selected)
+        .and_then(|probed| probed.verified_token.clone());
+    Ok(AccountEnumeration {
+        list: AccountList {
+            state: AccountListState::Ready,
+            accounts: probed_accounts
+                .into_iter()
+                .map(|probed| probed.account)
+                .collect(),
+            message: None,
+        },
+        verified_selected_token,
     })
 }
 
@@ -282,6 +328,20 @@ struct DiscoveredAccount {
     source: AccountSource,
     selected: bool,
     status_hint: Option<String>,
+}
+
+struct ProbedAccount {
+    account: GitHubAccount,
+    verified_token: Option<GhToken>,
+}
+
+impl ProbedAccount {
+    fn unverified(account: GitHubAccount) -> Self {
+        Self {
+            account,
+            verified_token: None,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -362,43 +422,52 @@ fn parse_status_accounts(
     Ok(discovered)
 }
 
-async fn probe_account(account: DiscoveredAccount) -> GitHubAccount {
+async fn probe_account(account: DiscoveredAccount) -> ProbedAccount {
     if account.source == AccountSource::Environment {
-        return GitHubAccount {
+        return ProbedAccount::unverified(GitHubAccount {
             identity: account.identity,
             avatar_uri: None,
             source: AccountSource::Environment,
             readiness: AccountReadiness::EnvironmentOnly,
+            identity_verified: false,
             selected: account.selected,
             selectable: false,
             detail: Some(
                 "This account comes from an environment token. Unset GH_TOKEN or GITHUB_TOKEN and store it with gh auth login before selecting it."
                     .to_owned(),
             ),
-        };
+        });
     }
 
     let token = match resolve_token(&account.identity).await {
         Ok(token) => token,
         Err(GhAuthError::Timeout) => {
-            return unavailable_account(
+            return ProbedAccount::unverified(unavailable_account(
                 account,
                 AccountReadiness::Timeout,
                 "Token lookup timed out",
-            );
+            ));
         }
         Err(GhAuthError::GhMissing) => {
-            return unavailable_account(
+            return ProbedAccount::unverified(unavailable_account(
                 account,
                 AccountReadiness::Error,
                 "GitHub CLI was not found",
-            );
+            ));
         }
         Err(GhAuthError::Command(message)) => {
-            return unavailable_account(account, AccountReadiness::TokenMissing, &message);
+            return ProbedAccount::unverified(unavailable_account(
+                account,
+                AccountReadiness::TokenMissing,
+                &message,
+            ));
         }
     };
-    let client = GhCliClient::for_token(account.identity.host.clone(), token);
+    let client = GhCliClient::for_account(
+        account.identity.host.clone(),
+        account.identity.login.clone(),
+        token.clone(),
+    );
     let identity = account.identity.clone();
     let probe = tokio::time::timeout(GH_TIMEOUT, async {
         tokio::join!(get_viewer_info(&client), check_project_access(&client))
@@ -408,44 +477,66 @@ async fn probe_account(account: DiscoveredAccount) -> GitHubAccount {
     let (viewer, access) = match probe {
         Ok(results) => results,
         Err(_) => {
-            return GitHubAccount {
+            return ProbedAccount::unverified(GitHubAccount {
                 identity: account.identity,
                 avatar_uri: None,
                 source: AccountSource::Stored,
                 readiness: AccountReadiness::Timeout,
+                identity_verified: false,
                 selected: account.selected,
                 selectable: true,
                 detail: Some(
                     "GitHub access check timed out; selection is still allowed.".to_owned(),
                 ),
-            };
+            });
         }
     };
 
     match viewer {
-        Ok(viewer) if !viewer.login.eq_ignore_ascii_case(&identity.login) => GitHubAccount {
-            identity,
-            avatar_uri: Some(viewer.avatar_uri),
-            source: AccountSource::Stored,
-            readiness: AccountReadiness::CredentialMismatch,
-            selected: account.selected,
-            selectable: false,
-            detail: Some(format!(
-                "gh returned credentials for {} instead of the stored account.",
-                viewer.login
-            )),
+        Ok(viewer) if !viewer.login.eq_ignore_ascii_case(&identity.login) => {
+            ProbedAccount::unverified(GitHubAccount {
+                identity,
+                avatar_uri: Some(viewer.avatar_uri),
+                source: AccountSource::Stored,
+                readiness: AccountReadiness::CredentialMismatch,
+                identity_verified: false,
+                selected: account.selected,
+                selectable: false,
+                detail: Some(format!(
+                    "gh returned credentials for {} instead of the stored account.",
+                    viewer.login
+                )),
+            })
+        }
+        Ok(viewer) => ProbedAccount {
+            account: account_from_access(account, Some(viewer.avatar_uri), access),
+            verified_token: Some(token),
         },
-        Ok(viewer) => account_from_access(account, Some(viewer.avatar_uri), access),
-        Err(Error::Connectivity(_)) => GitHubAccount {
+        Err(Error::CredentialIdentityMismatch { actual, .. }) => {
+            ProbedAccount::unverified(GitHubAccount {
+                identity,
+                avatar_uri: None,
+                source: AccountSource::Stored,
+                readiness: AccountReadiness::CredentialMismatch,
+                identity_verified: false,
+                selected: account.selected,
+                selectable: false,
+                detail: Some(format!(
+                    "gh returned credentials for {actual} instead of the stored account."
+                )),
+            })
+        }
+        Err(Error::Connectivity(_)) => ProbedAccount::unverified(GitHubAccount {
             identity,
             avatar_uri: None,
             source: AccountSource::Stored,
             readiness: AccountReadiness::Offline,
+            identity_verified: false,
             selected: account.selected,
             selectable: true,
             detail: Some("GitHub could not be reached; selection is still allowed.".to_owned()),
-        },
-        Err(error) => GitHubAccount {
+        }),
+        Err(error) => ProbedAccount::unverified(GitHubAccount {
             identity,
             avatar_uri: None,
             source: AccountSource::Stored,
@@ -454,10 +545,11 @@ async fn probe_account(account: DiscoveredAccount) -> GitHubAccount {
             } else {
                 AccountReadiness::Error
             },
+            identity_verified: false,
             selected: account.selected,
             selectable: true,
             detail: Some(error.to_string()),
-        },
+        }),
     }
 }
 
@@ -493,6 +585,7 @@ fn account_from_access(
         avatar_uri,
         source: AccountSource::Stored,
         readiness,
+        identity_verified: true,
         selected: account.selected,
         selectable: true,
         detail,
@@ -509,6 +602,7 @@ fn unavailable_account(
         avatar_uri: None,
         source: AccountSource::Stored,
         readiness,
+        identity_verified: false,
         selected: account.selected,
         selectable: false,
         detail: Some(detail.to_owned()),
@@ -679,8 +773,8 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(list.state, AccountListState::NoAccounts);
-        assert!(list.accounts.is_empty());
+        assert_eq!(list.list.state, AccountListState::NoAccounts);
+        assert!(list.list.accounts.is_empty());
     }
 
     #[tokio::test]
@@ -688,7 +782,7 @@ mod tests {
         let list = account_list_from_status_output(&output(1, "", "unknown flag: --json"), None)
             .await
             .unwrap();
-        assert_eq!(list.state, AccountListState::GhTooOld);
+        assert_eq!(list.list.state, AccountListState::GhTooOld);
     }
 
     #[tokio::test]
@@ -696,8 +790,8 @@ mod tests {
         let list = account_list_from_status_output(&output(1, "", "authentication failed"), None)
             .await
             .unwrap();
-        assert_eq!(list.state, AccountListState::Error);
-        assert_eq!(list.message.as_deref(), Some("authentication failed"));
+        assert_eq!(list.list.state, AccountListState::Error);
+        assert_eq!(list.list.message.as_deref(), Some("authentication failed"));
     }
 
     #[test]
@@ -729,6 +823,7 @@ mod tests {
             avatar_uri: None,
             source: AccountSource::Stored,
             readiness: AccountReadiness::Unverified,
+            identity_verified: false,
             selected: true,
             selectable: true,
             detail: None,

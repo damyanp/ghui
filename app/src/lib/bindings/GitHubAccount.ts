@@ -8,6 +8,7 @@ export type GitHubAccount = {
   avatarUri: string | null;
   source: AccountSource;
   readiness: AccountReadiness;
+  identityVerified: boolean;
   selected: boolean;
   selectable: boolean;
   detail: string | null;

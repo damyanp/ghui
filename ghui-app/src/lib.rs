@@ -157,6 +157,8 @@ impl Filters {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Data {
+    #[ts(type = "number")]
+    account_generation: u64,
     fields: Fields,
     // Keep indexed access optional in generated TS to model missing map entries.
     #[ts(
@@ -232,6 +234,8 @@ pub enum DataUpdate {
 pub struct ItemToUpdate {
     pub work_item_id: WorkItemId,
     pub force: bool,
+    #[ts(type = "number")]
+    pub account_generation: u64,
 }
 
 #[derive(Default, Deserialize, Serialize, TS, Debug, Clone, PartialEq, Eq)]
@@ -287,7 +291,9 @@ pub struct AppState {
     watcher: Arc<SendDataUpdate>,
     selected_identity: Option<GitHubIdentity>,
     client: Option<GhCliClient>,
+    credential_rejected: bool,
     account_generation: u64,
+    credential_generation: u64,
     fields: Option<Fields>,
     work_items: Option<WorkItems>,
     filters: Filters,
@@ -337,7 +343,9 @@ impl AppState {
             })),
             selected_identity,
             client: None,
+            credential_rejected: false,
             account_generation: 0,
+            credential_generation: 0,
             fields: None,
             work_items: None,
             filters,
@@ -371,6 +379,14 @@ impl AppState {
         self.client.is_some()
     }
 
+    pub fn can_restore_client(&self) -> bool {
+        !self.credential_rejected
+    }
+
+    pub fn requires_identity_verification(&self, identity: &GitHubIdentity) -> bool {
+        self.selected_identity.as_ref() == Some(identity) && self.credential_rejected
+    }
+
     fn client(&self) -> Result<GhCliClient> {
         if self.selected_identity.is_none() {
             return Err(AccountError::NoAccountSelected.into());
@@ -380,24 +396,43 @@ impl AppState {
             .ok_or_else(|| AccountError::CredentialUnavailable.into())
     }
 
-    pub fn selected_account_context(&self) -> Option<(GitHubIdentity, u64)> {
+    pub fn selected_credential_context(&self) -> Option<(GitHubIdentity, u64)> {
         self.selected_identity
             .clone()
-            .map(|identity| (identity, self.account_generation))
+            .map(|identity| (identity, self.credential_generation))
     }
 
     pub fn apply_resolved_client(
         &mut self,
         identity: &GitHubIdentity,
-        generation: u64,
+        credential_generation: u64,
         token: Option<GhToken>,
     ) -> Option<u64> {
-        if !self.matches_account_context(generation, identity) {
+        if !self.matches_credential_context(credential_generation, identity) {
             return None;
         }
-        self.account_generation = self.account_generation.wrapping_add(1);
-        self.client = token.map(|token| GhCliClient::for_token(identity.host.clone(), token));
-        Some(self.account_generation)
+        self.credential_generation = self.credential_generation.wrapping_add(1);
+        if token.is_some() {
+            self.credential_rejected = false;
+        }
+        self.client = token.map(|token| {
+            GhCliClient::for_account(identity.host.clone(), identity.login.clone(), token)
+        });
+        Some(self.credential_generation)
+    }
+
+    pub fn reject_resolved_client(
+        &mut self,
+        identity: &GitHubIdentity,
+        credential_generation: u64,
+    ) -> Option<u64> {
+        if !self.matches_credential_context(credential_generation, identity) {
+            return None;
+        }
+        self.credential_generation = self.credential_generation.wrapping_add(1);
+        self.client = None;
+        self.credential_rejected = true;
+        Some(self.credential_generation)
     }
 
     async fn replace_account(&mut self, identity: GitHubIdentity, token: GhToken) -> Result<()> {
@@ -411,17 +446,29 @@ impl AppState {
     fn install_account(&mut self, identity: GitHubIdentity, token: GhToken) {
         let changing_identity = self.selected_identity.as_ref() != Some(&identity);
         self.account_generation = self.account_generation.wrapping_add(1);
+        self.credential_generation = self.credential_generation.wrapping_add(1);
         if changing_identity {
             self.fields = None;
             self.work_items = None;
             self.epic_conflicts.clear();
+            self.undo_history.reset_for_account_switch(&self.changes);
         }
-        self.client = Some(GhCliClient::for_token(identity.host.clone(), token));
+        self.client = Some(GhCliClient::for_account(
+            identity.host.clone(),
+            identity.login.clone(),
+            token,
+        ));
+        self.credential_rejected = false;
         self.selected_identity = Some(identity);
     }
 
     fn matches_account_context(&self, generation: u64, identity: &GitHubIdentity) -> bool {
         self.account_generation == generation && self.selected_identity.as_ref() == Some(identity)
+    }
+
+    fn matches_credential_context(&self, generation: u64, identity: &GitHubIdentity) -> bool {
+        self.credential_generation == generation
+            && self.selected_identity.as_ref() == Some(identity)
     }
 
     pub async fn refresh_cache_only(&mut self) -> Result<()> {
@@ -469,6 +516,7 @@ impl AppState {
         .build();
 
         (self.watcher)(DataUpdate::Data(Box::new(Data {
+            account_generation: self.account_generation,
             nodes,
             work_items: work_items.work_items,
             fields,
@@ -850,12 +898,26 @@ impl DataState {
     pub async fn apply_resolved_client(
         &self,
         identity: &GitHubIdentity,
-        generation: u64,
+        credential_generation: u64,
         token: Option<GhToken>,
     ) -> Option<u64> {
         self.lock()
             .await
-            .apply_resolved_client(identity, generation, token)
+            .apply_resolved_client(identity, credential_generation, token)
+    }
+
+    pub async fn requires_identity_verification(&self, identity: &GitHubIdentity) -> bool {
+        self.lock().await.requires_identity_verification(identity)
+    }
+
+    pub async fn reject_resolved_client(
+        &self,
+        identity: &GitHubIdentity,
+        credential_generation: u64,
+    ) -> Option<u64> {
+        self.lock()
+            .await
+            .reject_resolved_client(identity, credential_generation)
     }
 
     pub async fn select_account(
@@ -863,11 +925,15 @@ impl DataState {
         identity: GitHubIdentity,
         token: GhToken,
         confirmed_pending_edits: bool,
+        identity_verified: bool,
     ) -> Result<SelectAccountResult> {
         identity.validate()?;
         let _guard = self.begin_account_selection()?;
         let mut state = self.lock().await;
         let changing_identity = state.selected_identity.as_ref() != Some(&identity);
+        if !changing_identity && state.credential_rejected && !identity_verified {
+            return Err(AccountError::CredentialVerificationRequired.into());
+        }
         let pending_edits = state.changes_count();
         if changing_identity && pending_edits > 0 && !confirmed_pending_edits {
             return Ok(SelectAccountResult::ConfirmationRequired { pending_edits });
@@ -903,11 +969,11 @@ impl DataState {
     pub async fn account_state_for_context(
         &self,
         identity: &GitHubIdentity,
-        generation: u64,
+        credential_generation: u64,
     ) -> Option<github_account::AccountState> {
         let state = self.lock().await;
         state
-            .matches_account_context(generation, identity)
+            .matches_credential_context(credential_generation, identity)
             .then(|| self.account_state_from_locked(&state))
     }
 
@@ -960,7 +1026,15 @@ impl DataState {
         items: &[ItemToUpdate],
     ) -> Result<JoinHandle<()>> {
         let guard = self.begin_operation()?;
-        let project_item_ids = self.lock().await.get_project_ids_to_update(items);
+        let state = self.lock().await;
+        if items
+            .iter()
+            .any(|item| item.account_generation != state.account_generation)
+        {
+            return Err(AccountError::StaleAccountContext.into());
+        }
+        let project_item_ids = state.get_project_ids_to_update(items);
+        drop(state);
         if project_item_ids.is_empty() {
             return Ok(tokio::spawn(async {}));
         }
@@ -1423,8 +1497,37 @@ mod tests {
         assert_eq!(state.account_generation, 8);
         assert_eq!(state.changes_count(), 1);
         assert!(state.undo_history.can_undo());
+        state.undo_history.undo(&mut state.changes);
+        assert_eq!(state.changes_count(), 0);
         assert!(state.matches_account_context(8, &GitHubIdentity::github_dot_com("second")));
         assert!(!state.matches_account_context(7, &GitHubIdentity::github_dot_com("first")));
+    }
+
+    #[test]
+    fn test_account_replacement_discards_history_for_non_pending_changes() {
+        let mut data = TestData::default();
+        let work_item_id = data.build().status("Active").add();
+        let change = Change {
+            work_item_id,
+            data: ChangeData::Status(None),
+        };
+        let mut state = AppState::new();
+        state.selected_identity = Some(GitHubIdentity::github_dot_com("first"));
+        state
+            .undo_history
+            .track_add(&mut state.changes, change.clone());
+        state.undo_history.track_remove(&mut state.changes, change);
+        assert!(state.changes.is_empty());
+        assert!(state.undo_history.can_undo());
+
+        state.install_account(
+            GitHubIdentity::github_dot_com("second"),
+            GhToken::new("replacement".to_owned()),
+        );
+
+        assert!(!state.undo_history.can_undo());
+        assert!(!state.undo_history.undo(&mut state.changes));
+        assert!(state.changes.is_empty());
     }
 
     #[test]
@@ -1446,6 +1549,7 @@ mod tests {
         let mut state = AppState::new();
         state.selected_identity = Some(first.clone());
         state.account_generation = 7;
+        state.credential_generation = 7;
         state.install_account(second.clone(), GhToken::new("second-token".to_owned()));
 
         assert_eq!(state.apply_resolved_client(&first, 7, None), None);
@@ -1460,7 +1564,10 @@ mod tests {
         state.selected_identity = Some(identity.clone());
         state.account_generation = 3;
         state.install_account(identity.clone(), GhToken::new("token".to_owned()));
-        let generation = state.account_generation();
+        let generation = state
+            .selected_credential_context()
+            .map(|(_, generation)| generation)
+            .unwrap();
 
         assert_eq!(
             state.apply_resolved_client(&identity, generation, None),
@@ -1470,11 +1577,31 @@ mod tests {
     }
 
     #[test]
+    fn test_token_recheck_does_not_change_data_account_generation() {
+        let identity = GitHubIdentity::github_dot_com("octocat");
+        let mut state = AppState::new();
+        state.selected_identity = Some(identity.clone());
+        state.account_generation = 9;
+        state.credential_generation = 4;
+
+        assert_eq!(
+            state.apply_resolved_client(
+                &identity,
+                4,
+                Some(GhToken::new("refreshed-token".to_owned()))
+            ),
+            Some(5)
+        );
+        assert_eq!(state.account_generation(), 9);
+    }
+
+    #[test]
     fn test_older_token_resolution_cannot_restore_invalidated_client() {
         let identity = GitHubIdentity::github_dot_com("octocat");
         let mut state = AppState::new();
         state.selected_identity = Some(identity.clone());
         state.account_generation = 4;
+        state.credential_generation = 4;
 
         assert_eq!(state.apply_resolved_client(&identity, 4, None), Some(5));
         assert_eq!(
@@ -1482,6 +1609,35 @@ mod tests {
             None
         );
         assert!(!state.has_client());
+    }
+
+    #[test]
+    fn test_rejected_credential_blocks_local_restore_until_rechecked() {
+        let identity = GitHubIdentity::github_dot_com("octocat");
+        let mut state = AppState::new();
+        state.selected_identity = Some(identity.clone());
+        state.account_generation = 4;
+        state.credential_generation = 4;
+
+        assert_eq!(state.reject_resolved_client(&identity, 4), Some(5));
+        assert!(!state.has_client());
+        assert!(!state.can_restore_client());
+        assert_eq!(state.apply_resolved_client(&identity, 5, None), Some(6));
+        assert!(!state.can_restore_client());
+        assert_eq!(
+            state.apply_resolved_client(&identity, 4, Some(GhToken::new("stale-token".to_owned()))),
+            None
+        );
+        assert!(!state.has_client());
+        assert_eq!(
+            state.apply_resolved_client(
+                &identity,
+                6,
+                Some(GhToken::new("verified-token".to_owned()))
+            ),
+            Some(7)
+        );
+        assert!(state.can_restore_client());
     }
 
     #[test]
@@ -1496,6 +1652,7 @@ mod tests {
         let items = vec![ItemToUpdate {
             work_item_id: id,
             force: true,
+            account_generation: 0,
         }];
         let result = state.get_project_ids_to_update(&items);
 
@@ -1513,6 +1670,7 @@ mod tests {
         let items = vec![ItemToUpdate {
             work_item_id: id,
             force: false,
+            account_generation: 0,
         }];
         let result = state.get_project_ids_to_update(&items);
 
@@ -1530,6 +1688,7 @@ mod tests {
         let items = vec![ItemToUpdate {
             work_item_id: "nonexistent".to_string().into(),
             force: true,
+            account_generation: 0,
         }];
         let result = state.get_project_ids_to_update(&items);
 
@@ -1543,10 +1702,36 @@ mod tests {
         let items = vec![ItemToUpdate {
             work_item_id: "any".to_string().into(),
             force: true,
+            account_generation: 0,
         }];
         let result = state.get_project_ids_to_update(&items);
 
         assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_request_work_item_updates_rejects_stale_account_generation() {
+        let mut app_state = AppState::new();
+        app_state.account_generation = 7;
+        let data_state = DataState {
+            state: Arc::new(tokio::sync::Mutex::new(app_state)),
+            busy_operations: Arc::new(AtomicUsize::new(0)),
+        };
+        let items = vec![ItemToUpdate {
+            work_item_id: "item".to_string().into(),
+            force: true,
+            account_generation: 6,
+        }];
+
+        let error = data_state
+            .request_work_item_updates(&items)
+            .await
+            .unwrap_err();
+
+        assert!(matches!(
+            error.downcast_ref::<AccountError>(),
+            Some(AccountError::StaleAccountContext)
+        ));
     }
 
     #[test]

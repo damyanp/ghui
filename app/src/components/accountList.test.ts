@@ -19,6 +19,7 @@ function account(
     avatarUri: null,
     source: readiness === "environmentOnly" ? "environment" : "stored",
     readiness,
+    identityVerified: readiness === "ready",
     selected: false,
     selectable,
     detail: null,

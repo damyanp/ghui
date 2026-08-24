@@ -7,6 +7,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub trait Client: Clone + Send + Sync + 'static {
     fn request<Q, R>(&self, request: &Q) -> impl Future<Output = Result<R>> + Send
@@ -61,16 +62,28 @@ enum Authentication {
 
 /// A [`Client`] that issues GraphQL requests through the `gh` CLI.
 ///
-/// Desktop callers must use [`GhCliClient::for_token`]. The global-active
+/// Desktop callers must use [`GhCliClient::for_account`]. The global-active
 /// account constructor is deliberately named and reserved for command-line
 /// tools whose documented behavior is to follow `gh`'s active account.
 #[derive(Clone)]
 pub struct GhCliClient {
     runner: Arc<dyn GhRunner>,
+    expected_login: Option<Arc<str>>,
+    verification: Arc<Mutex<IdentityVerification>>,
+}
+
+enum IdentityVerification {
+    Pending,
+    Verified,
+    Rejected(String),
 }
 
 impl GhCliClient {
-    pub fn for_token(host: impl Into<Arc<str>>, token: GhToken) -> Self {
+    pub fn for_account(
+        host: impl Into<Arc<str>>,
+        login: impl Into<Arc<str>>,
+        token: GhToken,
+    ) -> Self {
         Self {
             runner: Arc::new(RealGhRunner {
                 authentication: Authentication::ExplicitToken {
@@ -78,25 +91,68 @@ impl GhCliClient {
                     token,
                 },
             }),
+            expected_login: Some(login.into()),
+            verification: Arc::new(Mutex::new(IdentityVerification::Pending)),
         }
     }
 
+    #[cfg(feature = "gh-active-account")]
     pub fn using_gh_active_account() -> Self {
         Self {
             runner: Arc::new(RealGhRunner {
                 authentication: Authentication::GhActiveAccount,
             }),
+            expected_login: None,
+            verification: Arc::new(Mutex::new(IdentityVerification::Verified)),
         }
     }
 
     /// Builds a client backed by a custom runner (used by tests).
+    #[cfg(any(test, feature = "test-runner"))]
     pub fn with_runner(runner: Arc<dyn GhRunner>) -> Self {
-        Self { runner }
+        Self {
+            runner,
+            expected_login: None,
+            verification: Arc::new(Mutex::new(IdentityVerification::Verified)),
+        }
     }
-}
 
-impl Client for GhCliClient {
-    async fn request<Q, R>(&self, request: &Q) -> Result<R>
+    async fn verify_identity(&self) -> Result<()> {
+        let Some(expected_login) = &self.expected_login else {
+            return Ok(());
+        };
+        let mut verification = self.verification.lock().await;
+        match &*verification {
+            IdentityVerification::Verified => return Ok(()),
+            IdentityVerification::Rejected(actual_login) => {
+                return Err(identity_mismatch_error(expected_login, actual_login));
+            }
+            IdentityVerification::Pending => {}
+        }
+
+        let response: serde_json::Value = self
+            .request_unchecked(&serde_json::json!({
+                "query": "query GhuiVerifyIdentity { viewer { login } }"
+            }))
+            .await?;
+        let actual_login = response
+            .pointer("/data/viewer/login")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                Error::GraphQlResponseUnexpected(
+                    "identity verification response did not include viewer.login".to_owned(),
+                )
+            })?;
+        if actual_login.eq_ignore_ascii_case(expected_login) {
+            *verification = IdentityVerification::Verified;
+            Ok(())
+        } else {
+            *verification = IdentityVerification::Rejected(actual_login.to_owned());
+            Err(identity_mismatch_error(expected_login, actual_login))
+        }
+    }
+
+    async fn request_unchecked<Q, R>(&self, request: &Q) -> Result<R>
     where
         Q: Serialize + Sync,
         R: DeserializeOwned,
@@ -110,9 +166,6 @@ impl Client for GhCliClient {
             .await
             .map_err(|e| Error::GhCli(format!("failed to run gh: {e}")))?;
 
-        // gh prints the GraphQL JSON body to stdout even when it exits non-zero
-        // because the response carries an `errors` array, so prefer parsing
-        // stdout whenever it is present (matching the old reqwest behavior).
         let stdout = String::from_utf8_lossy(&output.stdout);
         let trimmed = stdout.trim();
         if !trimmed.is_empty() {
@@ -129,10 +182,26 @@ impl Client for GhCliClient {
             });
         }
 
-        // No usable JSON: gh itself failed (not installed, not authenticated, or
-        // the network is down).
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         Err(classify_gh_failure(output.status, stderr))
+    }
+}
+
+impl Client for GhCliClient {
+    async fn request<Q, R>(&self, request: &Q) -> Result<R>
+    where
+        Q: Serialize + Sync,
+        R: DeserializeOwned,
+    {
+        self.verify_identity().await?;
+        self.request_unchecked(request).await
+    }
+}
+
+fn identity_mismatch_error(expected_login: &str, actual_login: &str) -> Error {
+    Error::CredentialIdentityMismatch {
+        expected: expected_login.to_owned(),
+        actual: actual_login.to_owned(),
     }
 }
 
@@ -263,10 +332,48 @@ impl GhCliClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::VecDeque;
     use std::ffi::OsStr;
+    use std::sync::Mutex as StdMutex;
 
     fn client(status: Option<i32>, stdout: &str, stderr: &str) -> GhCliClient {
         GhCliClient::canned(status, stdout, stderr)
+    }
+
+    struct SequenceRunner {
+        outputs: StdMutex<VecDeque<GhOutput>>,
+    }
+
+    impl SequenceRunner {
+        fn new(stdout: &[&str]) -> Self {
+            Self {
+                outputs: StdMutex::new(
+                    stdout
+                        .iter()
+                        .map(|stdout| GhOutput {
+                            status: Some(0),
+                            stdout: stdout.as_bytes().to_vec(),
+                            stderr: Vec::new(),
+                        })
+                        .collect(),
+                ),
+            }
+        }
+    }
+
+    impl GhRunner for SequenceRunner {
+        fn run(&self, _input: Vec<u8>) -> GhFuture {
+            let output = self.outputs.lock().unwrap().pop_front().unwrap();
+            Box::pin(async move { Ok(output) })
+        }
+    }
+
+    fn account_client(login: &str, outputs: &[&str]) -> GhCliClient {
+        GhCliClient {
+            runner: Arc::new(SequenceRunner::new(outputs)),
+            expected_login: Some(Arc::from(login)),
+            verification: Arc::new(Mutex::new(IdentityVerification::Pending)),
+        }
     }
 
     #[tokio::test]
@@ -303,6 +410,36 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, Error::Connectivity(_)));
+    }
+
+    #[tokio::test]
+    async fn test_account_client_rejects_mismatched_identity_before_request() {
+        let client = account_client("expected", &[r#"{"data":{"viewer":{"login":"other"}}}"#]);
+
+        let error = client
+            .request::<_, serde_json::Value>(&serde_json::json!({"operation": "must-not-run"}))
+            .await
+            .unwrap_err();
+
+        assert!(matches!(error, Error::CredentialIdentityMismatch { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_account_client_runs_request_after_identity_verification() {
+        let client = account_client(
+            "expected",
+            &[
+                r#"{"data":{"viewer":{"login":"expected"}}}"#,
+                r#"{"value":42}"#,
+            ],
+        );
+
+        let value: serde_json::Value = client
+            .request(&serde_json::json!({"operation": "allowed"}))
+            .await
+            .unwrap();
+
+        assert_eq!(value["value"], 42);
     }
 
     #[test]
