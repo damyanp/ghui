@@ -1,6 +1,7 @@
-import { getContext, setContext, tick } from "svelte";
+import { getContext, onDestroy, setContext, tick } from "svelte";
 import type { Data } from "./bindings/Data";
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { WorkItemId } from "./bindings/WorkItemId";
 import type { Change } from "./bindings/Change";
 import type { Fields } from "./bindings/Fields";
@@ -17,9 +18,15 @@ import type { TelemetryEvent } from "./bindings/TelemetryEvent";
 import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
 import type { PivotConfig } from "./bindings/PivotConfig";
+import type { GitHubIdentity } from "./bindings/GitHubIdentity";
+import type { WorkItemsExtraData } from "./bindings/WorkItemsExtraData";
 import { upsertWorkItem } from "./workItems";
 import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
+import { commandErrorLogEntry } from "./commandErrors";
+import { RequestSerial } from "./requestSerial";
+import { RequestScopedEdits } from "./requestScopedEdits";
+import { mergePendingExtraData } from "./workItemExtraData";
 
 const key = Symbol("WorkItemContext");
 
@@ -40,6 +47,7 @@ export function recordTelemetry(event: TelemetryEvent): void {
 export class WorkItemContext {
   data = $state<Data>({
     fields: make_blank_fields(),
+    accountGeneration: 0,
     workItems: {},
     nodes: [],
     filters: {
@@ -96,26 +104,92 @@ export class WorkItemContext {
   loadProgress = $state<number>(0);
 
   updates_channel = new Channel<DataUpdate>();
+  workItemExtraDataIdentity = $state<GitHubIdentity | null>(null);
+  private workItemExtraDataReloads = new RequestSerial();
+  private activeWorkItemExtraDataReload: number | null = null;
+  private pendingWorkItemExtraDataEdits = new RequestScopedEdits<
+    WorkItemId,
+    any
+  >();
+  itemUpdateBatcher = new ItemUpdateBatcher((error) => {
+    this.onDataUpdateLog(commandErrorLogEntry("Failed to update work items", error));
+  });
 
   constructor() {
     this.updates_channel.onmessage = (data_update) =>
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
 
-    let loadedExtraData = false;
-    invoke<string>("get_work_items_extra_data")
-      .then((value) => {
-        this.workItemExtraData = JSON.parse(value);
-        loadedExtraData = true;
+    void this.reloadWorkItemExtraData();
+    let disposed = false;
+    let unlistenAccountSelected: UnlistenFn | null = null;
+    void listen("github-account-selected", () => {
+      this.itemUpdateBatcher.clear();
+      void this.reloadWorkItemExtraData();
+    })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenAccountSelected = unlisten;
       })
-      .catch(() => (this.workItemExtraData = {}));
+      .catch((error) => {
+        if (!disposed) {
+          this.onDataUpdateLog(
+            commandErrorLogEntry(
+              "Failed to listen for GitHub account changes",
+              error
+            )
+          );
+        }
+      });
+    onDestroy(() => {
+      disposed = true;
+      this.workItemExtraDataReloads.invalidate();
+      unlistenAccountSelected?.();
+    });
 
     $effect(() => {
       const extraData = JSON.stringify(this.workItemExtraData, undefined, " ");
-      if (loadedExtraData) {
-        invoke("set_work_items_extra_data", { extraData });
+      const identity = this.workItemExtraDataIdentity;
+      if (identity) {
+        void invoke("set_work_items_extra_data", { identity, extraData }).catch(
+          (error) => {
+            this.onDataUpdateLog(
+              commandErrorLogEntry(
+                "Failed to save work item extra data",
+                error
+              )
+            );
+          }
+        );
       }
     });
+  }
+
+  private async reloadWorkItemExtraData(): Promise<void> {
+    const request = this.workItemExtraDataReloads.start();
+    this.activeWorkItemExtraDataReload = request;
+    this.pendingWorkItemExtraDataEdits.begin(request);
+    this.workItemExtraDataIdentity = null;
+    this.workItemExtraData = {};
+    try {
+      const snapshot = await invoke<WorkItemsExtraData>(
+        "get_work_items_extra_data"
+      );
+      if (!this.workItemExtraDataReloads.isCurrent(request)) return;
+      const loaded = JSON.parse(snapshot.data);
+      this.workItemExtraData = mergePendingExtraData(
+        loaded,
+        this.pendingWorkItemExtraDataEdits.take(request)
+      );
+      this.activeWorkItemExtraDataReload = null;
+      this.workItemExtraDataIdentity = snapshot.identity;
+    } catch {
+      if (!this.workItemExtraDataReloads.isCurrent(request)) return;
+      this.workItemExtraDataIdentity = null;
+      this.workItemExtraData = {};
+      this.activeWorkItemExtraDataReload = null;
+      this.pendingWorkItemExtraDataEdits.cancel(request);
+    }
   }
 
   on_data_update(dataUpdate: DataUpdate) {
@@ -174,10 +248,12 @@ export class WorkItemContext {
     return await invoke<RefreshSummary>("force_refresh_data");
   }
 
-  itemUpdateBatcher = new ItemUpdateBatcher();
-
   public async updateWorkItem(workItemId: WorkItemId) {
-    this.itemUpdateBatcher.add(workItemId, false);
+    this.itemUpdateBatcher.add(
+      workItemId,
+      false,
+      this.data.accountGeneration
+    );
   }
 
   /**
@@ -412,6 +488,10 @@ export class WorkItemContext {
   }
 
   public setWorkItemExtraData(id: WorkItemId, data: any) {
+    const request = this.activeWorkItemExtraDataReload;
+    if (request !== null) {
+      this.pendingWorkItemExtraDataEdits.set(request, id, data);
+    }
     this.workItemExtraData[id] = data;
   }
 }

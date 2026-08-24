@@ -206,7 +206,12 @@
         items.push({
           type: "action",
           title: "Refresh",
-          action: () => context.itemUpdateBatcher.add(workItemId, true),
+          action: () =>
+            context.itemUpdateBatcher.add(
+              workItemId,
+              true,
+              context.data.accountGeneration
+            ),
         });
 
         if (item.data.type === "issue") {

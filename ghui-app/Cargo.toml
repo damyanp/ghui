@@ -14,9 +14,12 @@ tokio = { version = "1", features = ["full"] }
 log = "0.4"
 time = "0.3"
 reqwest = { version = "0.13", features = ["json"] }
+thiserror = "2.0.12"
+futures = "0.3.32"
 
 [dev-dependencies]
 tempfile = "3"
+github-graphql = { path = "../github-graphql", features = ["test-runner"] }
 
 [lints]
 workspace = true

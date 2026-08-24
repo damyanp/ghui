@@ -14,6 +14,16 @@ pub struct Field<T> {
     pub options: Vec<FieldOption<T>>,
 }
 
+impl<T> Default for Field<T> {
+    fn default() -> Self {
+        Self {
+            id: FieldId(String::new()),
+            name: String::new(),
+            options: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
 pub struct FieldOption<T> {
     pub id: FieldOptionId,
@@ -31,7 +41,7 @@ pub struct Iteration {
     pub duration: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[derive(Debug, Default, Serialize, Deserialize, TS, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Fields {
     pub project_id: String,

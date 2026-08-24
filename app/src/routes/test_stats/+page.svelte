@@ -6,6 +6,7 @@
   import type { WorkItemContext } from "$lib/WorkItemContext.svelte";
 
   const mockData: Data = {
+    accountGeneration: 0,
     fields: {
       projectId: "p1",
       status: {

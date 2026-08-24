@@ -2,9 +2,12 @@ use crate::{Error, Result};
 use log::{debug, error};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
+use std::process::{Command, Stdio};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub trait Client: Clone + Send + Sync + 'static {
     fn request<Q, R>(&self, request: &Q) -> impl Future<Output = Result<R>> + Send
@@ -20,7 +23,7 @@ pub struct GhOutput {
     pub stderr: Vec<u8>,
 }
 
-type GhFuture = Pin<Box<dyn Future<Output = std::io::Result<GhOutput>> + Send>>;
+pub type GhFuture = Pin<Box<dyn Future<Output = std::io::Result<GhOutput>> + Send>>;
 
 /// Runs `gh api graphql --input -`, writing `input` to stdin. Abstracted so
 /// tests can inject canned output instead of spawning the real CLI.
@@ -28,34 +31,128 @@ pub trait GhRunner: Send + Sync + 'static {
     fn run(&self, input: Vec<u8>) -> GhFuture;
 }
 
-/// A [`Client`] that issues GraphQL requests through the `gh` CLI, relying on
-/// the user's existing `gh auth login` session instead of a stored token.
+/// A token resolved from `gh` for one explicitly selected account.
+///
+/// The inner value is intentionally private, non-serializable, and redacted
+/// from debug output.
+#[derive(Clone)]
+pub struct GhToken(Arc<str>);
+
+impl GhToken {
+    pub fn new(value: String) -> Self {
+        Self(Arc::from(value))
+    }
+
+    fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for GhToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("GhToken([REDACTED])")
+    }
+}
+
+#[derive(Clone)]
+enum Authentication {
+    ExplicitToken { host: Arc<str>, token: GhToken },
+    GhActiveAccount,
+}
+
+/// A [`Client`] that issues GraphQL requests through the `gh` CLI.
+///
+/// Desktop callers must use [`GhCliClient::for_account`]. The global-active
+/// account constructor is deliberately named and reserved for command-line
+/// tools whose documented behavior is to follow `gh`'s active account.
 #[derive(Clone)]
 pub struct GhCliClient {
     runner: Arc<dyn GhRunner>,
+    expected_login: Option<Arc<str>>,
+    verification: Arc<Mutex<IdentityVerification>>,
 }
 
-impl Default for GhCliClient {
-    fn default() -> Self {
-        Self {
-            runner: Arc::new(RealGhRunner),
-        }
-    }
+enum IdentityVerification {
+    Pending,
+    Verified,
+    Rejected(String),
 }
 
 impl GhCliClient {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn for_account(
+        host: impl Into<Arc<str>>,
+        login: impl Into<Arc<str>>,
+        token: GhToken,
+    ) -> Self {
+        Self {
+            runner: Arc::new(RealGhRunner {
+                authentication: Authentication::ExplicitToken {
+                    host: host.into(),
+                    token,
+                },
+            }),
+            expected_login: Some(login.into()),
+            verification: Arc::new(Mutex::new(IdentityVerification::Pending)),
+        }
+    }
+
+    #[cfg(feature = "gh-active-account")]
+    pub fn using_gh_active_account() -> Self {
+        Self {
+            runner: Arc::new(RealGhRunner {
+                authentication: Authentication::GhActiveAccount,
+            }),
+            expected_login: None,
+            verification: Arc::new(Mutex::new(IdentityVerification::Verified)),
+        }
     }
 
     /// Builds a client backed by a custom runner (used by tests).
+    #[cfg(any(test, feature = "test-runner"))]
     pub fn with_runner(runner: Arc<dyn GhRunner>) -> Self {
-        Self { runner }
+        Self {
+            runner,
+            expected_login: None,
+            verification: Arc::new(Mutex::new(IdentityVerification::Verified)),
+        }
     }
-}
 
-impl Client for GhCliClient {
-    async fn request<Q, R>(&self, request: &Q) -> Result<R>
+    async fn verify_identity(&self) -> Result<()> {
+        let Some(expected_login) = &self.expected_login else {
+            return Ok(());
+        };
+        let mut verification = self.verification.lock().await;
+        match &*verification {
+            IdentityVerification::Verified => return Ok(()),
+            IdentityVerification::Rejected(actual_login) => {
+                return Err(identity_mismatch_error(expected_login, actual_login));
+            }
+            IdentityVerification::Pending => {}
+        }
+
+        let response: serde_json::Value = self
+            .request_unchecked(&serde_json::json!({
+                "query": "query GhuiVerifyIdentity { viewer { login } }"
+            }))
+            .await?;
+        let actual_login = response
+            .pointer("/data/viewer/login")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                Error::GraphQlResponseUnexpected(
+                    "identity verification response did not include viewer.login".to_owned(),
+                )
+            })?;
+        if actual_login.eq_ignore_ascii_case(expected_login) {
+            *verification = IdentityVerification::Verified;
+            Ok(())
+        } else {
+            *verification = IdentityVerification::Rejected(actual_login.to_owned());
+            Err(identity_mismatch_error(expected_login, actual_login))
+        }
+    }
+
+    async fn request_unchecked<Q, R>(&self, request: &Q) -> Result<R>
     where
         Q: Serialize + Sync,
         R: DeserializeOwned,
@@ -69,9 +166,6 @@ impl Client for GhCliClient {
             .await
             .map_err(|e| Error::GhCli(format!("failed to run gh: {e}")))?;
 
-        // gh prints the GraphQL JSON body to stdout even when it exits non-zero
-        // because the response carries an `errors` array, so prefer parsing
-        // stdout whenever it is present (matching the old reqwest behavior).
         let stdout = String::from_utf8_lossy(&output.stdout);
         let trimmed = stdout.trim();
         if !trimmed.is_empty() {
@@ -88,34 +182,42 @@ impl Client for GhCliClient {
             });
         }
 
-        // No usable JSON: gh itself failed (not installed, not authenticated, or
-        // the network is down).
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         Err(classify_gh_failure(output.status, stderr))
     }
 }
 
-struct RealGhRunner;
+impl Client for GhCliClient {
+    async fn request<Q, R>(&self, request: &Q) -> Result<R>
+    where
+        Q: Serialize + Sync,
+        R: DeserializeOwned,
+    {
+        self.verify_identity().await?;
+        self.request_unchecked(request).await
+    }
+}
+
+fn identity_mismatch_error(expected_login: &str, actual_login: &str) -> Error {
+    Error::CredentialIdentityMismatch {
+        expected: expected_login.to_owned(),
+        actual: actual_login.to_owned(),
+    }
+}
+
+struct RealGhRunner {
+    authentication: Authentication,
+}
 
 impl GhRunner for RealGhRunner {
     fn run(&self, input: Vec<u8>) -> GhFuture {
+        let authentication = self.authentication.clone();
         Box::pin(async move {
             use tokio::io::AsyncWriteExt;
-            use tokio::process::Command;
 
-            let mut command = Command::new("gh");
-            command
-                .args(["api", "graphql", "--input", "-"])
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped());
-
-            // Don't flash a console window for each gh call on Windows.
-            #[cfg(windows)]
-            {
-                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-                command.creation_flags(CREATE_NO_WINDOW);
-            }
+            let command = build_api_command(&authentication);
+            let mut command = tokio::process::Command::from(command);
+            command.kill_on_drop(true);
 
             let mut child = command.spawn()?;
 
@@ -132,6 +234,40 @@ impl GhRunner for RealGhRunner {
             })
         })
     }
+}
+
+fn build_api_command(authentication: &Authentication) -> Command {
+    let mut command = Command::new("gh");
+    command.args(["api"]);
+    if let Authentication::ExplicitToken { host, .. } = authentication {
+        command.args(["--hostname", host, "graphql", "--input", "-"]);
+    } else {
+        command.args(["graphql", "--input", "-"]);
+    }
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    if let Authentication::ExplicitToken { token, .. } = authentication {
+        command
+            .env_remove("GH_HOST")
+            .env_remove("GITHUB_TOKEN")
+            .env_remove("GH_ENTERPRISE_TOKEN")
+            .env_remove("GITHUB_ENTERPRISE_TOKEN");
+        command.env("GH_TOKEN", token.expose());
+    }
+
+    // Don't flash a console window for each gh call on Windows.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    command
 }
 
 /// Turns a failed `gh` invocation into an [`Error`], flagging unreachable-network
@@ -196,9 +332,48 @@ impl GhCliClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::VecDeque;
+    use std::ffi::OsStr;
+    use std::sync::Mutex as StdMutex;
 
     fn client(status: Option<i32>, stdout: &str, stderr: &str) -> GhCliClient {
         GhCliClient::canned(status, stdout, stderr)
+    }
+
+    struct SequenceRunner {
+        outputs: StdMutex<VecDeque<GhOutput>>,
+    }
+
+    impl SequenceRunner {
+        fn new(stdout: &[&str]) -> Self {
+            Self {
+                outputs: StdMutex::new(
+                    stdout
+                        .iter()
+                        .map(|stdout| GhOutput {
+                            status: Some(0),
+                            stdout: stdout.as_bytes().to_vec(),
+                            stderr: Vec::new(),
+                        })
+                        .collect(),
+                ),
+            }
+        }
+    }
+
+    impl GhRunner for SequenceRunner {
+        fn run(&self, _input: Vec<u8>) -> GhFuture {
+            let output = self.outputs.lock().unwrap().pop_front().unwrap();
+            Box::pin(async move { Ok(output) })
+        }
+    }
+
+    fn account_client(login: &str, outputs: &[&str]) -> GhCliClient {
+        GhCliClient {
+            runner: Arc::new(SequenceRunner::new(outputs)),
+            expected_login: Some(Arc::from(login)),
+            verification: Arc::new(Mutex::new(IdentityVerification::Pending)),
+        }
     }
 
     #[tokio::test]
@@ -235,5 +410,73 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, Error::Connectivity(_)));
+    }
+
+    #[tokio::test]
+    async fn test_account_client_rejects_mismatched_identity_before_request() {
+        let client = account_client("expected", &[r#"{"data":{"viewer":{"login":"other"}}}"#]);
+
+        let error = client
+            .request::<_, serde_json::Value>(&serde_json::json!({"operation": "must-not-run"}))
+            .await
+            .unwrap_err();
+
+        assert!(matches!(error, Error::CredentialIdentityMismatch { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_account_client_runs_request_after_identity_verification() {
+        let client = account_client(
+            "expected",
+            &[
+                r#"{"data":{"viewer":{"login":"expected"}}}"#,
+                r#"{"value":42}"#,
+            ],
+        );
+
+        let value: serde_json::Value = client
+            .request(&serde_json::json!({"operation": "allowed"}))
+            .await
+            .unwrap();
+
+        assert_eq!(value["value"], 42);
+    }
+
+    #[test]
+    fn test_token_debug_output_is_redacted() {
+        let token = GhToken::new("secret-token".to_owned());
+        assert_eq!(format!("{token:?}"), "GhToken([REDACTED])");
+        assert!(!format!("{token:?}").contains("secret-token"));
+    }
+
+    #[test]
+    fn test_explicit_token_is_only_passed_through_environment() {
+        let authentication = Authentication::ExplicitToken {
+            host: Arc::from("github.com"),
+            token: GhToken::new("secret-token".to_owned()),
+        };
+        let command = build_api_command(&authentication);
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(
+            args,
+            ["api", "--hostname", "github.com", "graphql", "--input", "-"].map(OsStr::new)
+        );
+        assert!(!args.iter().any(|arg| arg == &OsStr::new("secret-token")));
+
+        let env: std::collections::HashMap<_, _> = command.get_envs().collect();
+        assert_eq!(
+            env.get(OsStr::new("GH_TOKEN")).copied().flatten(),
+            Some(OsStr::new("secret-token"))
+        );
+        assert_eq!(env.get(OsStr::new("GITHUB_TOKEN")), Some(&None));
+        assert_eq!(env.get(OsStr::new("GH_HOST")), Some(&None));
+        assert_eq!(env.get(OsStr::new("GH_ENTERPRISE_TOKEN")), Some(&None));
+        assert_eq!(env.get(OsStr::new("GITHUB_ENTERPRISE_TOKEN")), Some(&None));
+    }
+
+    #[test]
+    fn test_active_account_constructor_does_not_override_auth_environment() {
+        let command = build_api_command(&Authentication::GhActiveAccount);
+        assert_eq!(command.get_envs().count(), 0);
     }
 }

@@ -438,7 +438,7 @@
           disabled={updateButtonDisabled}
           onclick={() => { void onUpdateClicked(); }}
         />
-        <Auth />
+        <Auth {disabled} />
       </AppBar.Trail>
     </AppBar.Toolbar>
   </AppBar>

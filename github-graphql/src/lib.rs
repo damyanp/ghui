@@ -27,6 +27,9 @@ pub enum Error {
     #[error("gh CLI error: {0}")]
     GhCli(String),
 
+    #[error("Credential identity mismatch: expected {expected}, got {actual}")]
+    CredentialIdentityMismatch { expected: String, actual: String },
+
     #[error(transparent)]
     JoinError(#[from] tokio::task::JoinError),
 }

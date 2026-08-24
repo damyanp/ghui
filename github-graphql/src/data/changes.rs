@@ -57,6 +57,14 @@ impl UndoHistory {
         !self.redo_stack.is_empty()
     }
 
+    pub fn reset_for_account_switch(&mut self, changes: &Changes) {
+        self.undo_stack.clear();
+        self.redo_stack.clear();
+        if !changes.is_empty() {
+            self.undo_stack.push(UndoAction::RestoreAll(HashMap::new()));
+        }
+    }
+
     pub fn track_add(&mut self, changes: &mut Changes, change: Change) {
         let key = change.key();
         let old_value = changes.data.insert(key.clone(), change.clone());
@@ -711,18 +719,15 @@ impl WorkItems {
                 continue;
             }
 
-            let work_item = self.get_mut(&change.work_item_id);
-            if work_item.is_none() {
+            let Some(work_item) = self.get_mut(&change.work_item_id) else {
                 warn!(
                     "change for '{0}' - work item not found",
                     change.work_item_id.0
                 );
                 continue;
-            }
+            };
 
-            remember_original(work_item.as_deref());
-
-            let work_item = work_item.unwrap();
+            remember_original(Some(&*work_item));
 
             match &change.data {
                 ChangeData::IssueType(value) => {
