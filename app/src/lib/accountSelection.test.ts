@@ -12,6 +12,7 @@ const selectedState: AccountState = {
   selected: null,
   busy: false,
   pendingEdits: 0,
+  accountGeneration: 0,
 };
 const selected: SelectAccountResult = {
   type: "selected",

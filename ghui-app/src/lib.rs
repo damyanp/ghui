@@ -1059,6 +1059,7 @@ impl DataState {
             selected,
             busy: self.is_busy(),
             pending_edits: state.changes_count(),
+            account_generation: state.account_generation,
         }
     }
 
@@ -1918,6 +1919,66 @@ mod tests {
             state.set_pivot_config(PivotConfig::default()).await
         })
         .await;
+    }
+
+    #[tokio::test]
+    async fn test_extra_data_load_and_save_share_io_mutex() {
+        let app_state = AppState {
+            watcher: Arc::new(Box::new(|_| {})),
+            selected_identity: None,
+            client: None,
+            credential_rejected: false,
+            account_generation: 0,
+            credential_generation: 0,
+            next_account_confirmation_nonce: 0,
+            pending_account_confirmation: None,
+            fields: None,
+            work_items: None,
+            filters: Filters::default(),
+            pivot_config: PivotConfig::default(),
+            changes: Changes::default(),
+            undo_history: UndoHistory::default(),
+            preview_changes: true,
+            epic_conflicts: Vec::new(),
+        };
+        let data_state = DataState {
+            state: Arc::new(tokio::sync::Mutex::new(app_state)),
+            busy_operations: Arc::new(AtomicUsize::new(0)),
+            extra_data_io: Arc::new(tokio::sync::Mutex::new(())),
+        };
+        let io_guard = data_state.extra_data_io.lock().await;
+        let identity = GitHubIdentity {
+            host: "invalid.example".to_owned(),
+            login: "first".to_owned(),
+        };
+
+        let save_state = data_state.clone();
+        let save_identity = identity.clone();
+        let mut save = tokio::spawn(async move {
+            save_state
+                .save_work_items_extra_data(save_identity, "{}")
+                .await
+        });
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), &mut save)
+                .await
+                .is_err()
+        );
+        save.abort();
+        let _ = save.await;
+
+        let load_state = data_state.clone();
+        let mut load =
+            tokio::spawn(async move { load_state.load_work_items_extra_data(&identity).await });
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), &mut load)
+                .await
+                .is_err()
+        );
+        load.abort();
+        let _ = load.await;
+
+        drop(io_guard);
     }
 
     #[test]

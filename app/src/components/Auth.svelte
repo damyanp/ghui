@@ -33,6 +33,7 @@
     selected: null,
     busy: false,
     pendingEdits: 0,
+    accountGeneration: 0,
   });
   let accounts = $state<AccountList | null>(null);
   let isOpen = $state(false);

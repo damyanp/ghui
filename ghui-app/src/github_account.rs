@@ -175,6 +175,8 @@ pub struct AccountState {
     pub selected: Option<SelectedAccount>,
     pub busy: bool,
     pub pending_edits: usize,
+    #[ts(type = "number")]
+    pub account_generation: u64,
 }
 
 #[derive(Clone, Debug, Serialize, TS)]

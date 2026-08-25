@@ -123,7 +123,6 @@ export class WorkItemContext {
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
 
-    void this.reloadWorkItemExtraData();
     let unlistenAccountSelected: UnlistenFn | null = null;
     void listen<SelectedAccount | null>("github-account-selected", (event) => {
       this.itemUpdateBatcher.clear();
@@ -146,7 +145,10 @@ export class WorkItemContext {
     })
       .then((unlisten) => {
         if (this.disposed) unlisten();
-        else unlistenAccountSelected = unlisten;
+        else {
+          unlistenAccountSelected = unlisten;
+          void this.reloadWorkItemExtraData();
+        }
       })
       .catch((error) => {
         if (!this.disposed) {
@@ -156,6 +158,7 @@ export class WorkItemContext {
               error
             )
           );
+          void this.reloadWorkItemExtraData();
         }
       });
     onDestroy(() => {
@@ -227,6 +230,20 @@ export class WorkItemContext {
       const snapshot = await invoke<WorkItemsExtraData>(
         "get_work_items_extra_data"
       );
+      const currentState = await invoke<AccountState>("get_account_state");
+      const currentIdentity = currentState.selected?.identity;
+      if (
+        currentState.accountGeneration !== snapshot.accountGeneration ||
+        !currentIdentity ||
+        accountKey(currentIdentity) !== accountKey(snapshot.identity)
+      ) {
+        if (this.workItemExtraDataReload.invalidateForAccountChange(request)) {
+          this.workItemExtraDataIdentity = null;
+          this.workItemExtraData = {};
+          await this.reloadSelectedWorkItemExtraData();
+        }
+        return;
+      }
       const completion = this.workItemExtraDataReload.finish(
         request,
         accountKey(snapshot.identity),
@@ -264,7 +281,12 @@ export class WorkItemContext {
     try {
       const state = await invoke<AccountState>("get_account_state");
       const selectedIdentity = state.selected?.identity;
-      if (selectedIdentity) {
+      if (
+        selectedIdentity &&
+        (!this.workItemExtraDataIdentity ||
+          accountKey(selectedIdentity) !==
+            accountKey(this.workItemExtraDataIdentity))
+      ) {
         await this.reloadWorkItemExtraData(selectedIdentity);
       }
     } catch (error) {

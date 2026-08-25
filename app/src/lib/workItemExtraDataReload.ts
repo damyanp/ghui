@@ -71,6 +71,14 @@ export class WorkItemExtraDataReload {
     this.pendingEdits.clear();
   }
 
+  invalidateForAccountChange(request: number): boolean {
+    if (request !== this.activeRequest) return false;
+    this.activeRequest = null;
+    this.captureEdits = false;
+    this.pendingEdits.clear();
+    return true;
+  }
+
   fail(request: number, error: unknown): ExtraDataReloadCompletion {
     if (request !== this.activeRequest) return { type: "ignored" };
     this.activeRequest = null;

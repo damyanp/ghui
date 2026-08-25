@@ -15,6 +15,8 @@ use ts_rs::TS;
 pub struct WorkItemsExtraData {
     identity: ghui_app::github_account::GitHubIdentity,
     data: String,
+    #[ts(type = "number")]
+    account_generation: u64,
 }
 
 #[tauri::command]
@@ -147,9 +149,14 @@ pub async fn get_work_items_extra_data(
         .cloned()
         .ok_or(AccountError::NoAccountSelected)
         .map_err(anyhow::Error::from)?;
+    let account_generation = state.account_generation();
     let data = data_state.load_work_items_extra_data(&identity).await?;
     drop(state);
-    Ok(WorkItemsExtraData { data, identity })
+    Ok(WorkItemsExtraData {
+        data,
+        identity,
+        account_generation,
+    })
 }
 
 #[tauri::command]

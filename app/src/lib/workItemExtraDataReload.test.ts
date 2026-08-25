@@ -180,4 +180,15 @@ describe("WorkItemExtraDataReload", () => {
       reload.finish(recovery.request, "github.com\u0000second", "{}")
     ).toEqual({ type: "loaded", data: {} });
   });
+
+  it("invalidates a stale generation only while its request is current", () => {
+    const reload = new WorkItemExtraDataReload();
+    const stale = reload.start("github.com\u0000first");
+
+    expect(reload.invalidateForAccountChange(stale.request)).toBe(true);
+    expect(reload.invalidateForAccountChange(stale.request)).toBe(false);
+    expect(
+      reload.finish(stale.request, "github.com\u0000first", "{}")
+    ).toEqual({ type: "ignored" });
+  });
 });
