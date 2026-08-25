@@ -37,6 +37,7 @@ jobs:
       with:
         name: windows-installer
         retention-days: 7
+        if-no-files-found: error
         path: |
           target/release/bundle/msi/*.msi
           target/release/bundle/nsis/*.exe
@@ -46,6 +47,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: windows-installer
+        if-no-files-found: error
         path: |
           target/release/bundle/msi/*.msi
           target/release/bundle/nsis/*.exe

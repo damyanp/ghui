@@ -1134,12 +1134,10 @@ impl DataState {
     }
 
     pub async fn set_filters(&self, filters: Filters) -> Result<()> {
-        let _guard = self.begin_account_operation()?;
         self.lock().await.set_filters(filters).await
     }
 
     pub async fn set_pivot_config(&self, pivot_config: PivotConfig) -> Result<()> {
-        let _guard = self.begin_account_operation()?;
         self.lock().await.set_pivot_config(pivot_config).await
     }
 
@@ -1838,10 +1836,6 @@ mod tests {
         |state| async move { state.sanitize().await }
     );
     queued_account_operation_test!(
-        test_queued_filter_blocks_account_selection,
-        |state| async move { state.set_filters(Filters::default()).await }
-    );
-    queued_account_operation_test!(
         test_queued_preview_blocks_account_selection,
         |state| async move { state.set_preview_changes(false).await }
     );
@@ -1856,10 +1850,6 @@ mod tests {
     queued_account_operation_test!(
         test_queued_update_blocks_account_selection,
         |state| async move { state.request_work_item_updates(&[]).await }
-    );
-    queued_account_operation_test!(
-        test_queued_pivot_blocks_account_selection,
-        |state| async move { state.set_pivot_config(PivotConfig::default()).await }
     );
 
     #[tokio::test]
@@ -1884,6 +1874,50 @@ mod tests {
             .unwrap()
             .unwrap()
             .unwrap();
+    }
+
+    async fn assert_view_config_operation_waits_for_account_selection<F, Fut>(operation: F)
+    where
+        F: FnOnce(DataState) -> Fut,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+    {
+        let mut app_state = AppState::new();
+        app_state.fields = Some(Fields::default());
+        app_state.work_items = Some(WorkItems::default());
+        let data_state = DataState {
+            state: Arc::new(tokio::sync::Mutex::new(app_state)),
+            busy_operations: Arc::new(AtomicUsize::new(ACCOUNT_SELECTION_BUSY)),
+            extra_data_io: Arc::new(tokio::sync::Mutex::new(())),
+        };
+        let locked_state = data_state.state.lock().await;
+        let mut operation = tokio::spawn(operation(data_state.clone()));
+
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), &mut operation)
+                .await
+                .is_err()
+        );
+
+        operation.abort();
+        let _ = operation.await;
+        drop(locked_state);
+        data_state.busy_operations.store(0, Ordering::Release);
+    }
+
+    #[tokio::test]
+    async fn test_filters_wait_for_account_selection() {
+        assert_view_config_operation_waits_for_account_selection(|state| async move {
+            state.set_filters(Filters::default()).await
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_pivot_config_waits_for_account_selection() {
+        assert_view_config_operation_waits_for_account_selection(|state| async move {
+            state.set_pivot_config(PivotConfig::default()).await
+        })
+        .await;
     }
 
     #[test]

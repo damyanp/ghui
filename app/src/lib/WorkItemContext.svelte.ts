@@ -245,6 +245,7 @@ export class WorkItemContext {
       } else if (completion.type === "superseded") {
         this.workItemExtraDataIdentity = null;
         this.workItemExtraData = {};
+        await this.reloadSelectedWorkItemExtraData();
       }
     } catch (error) {
       const completion = this.workItemExtraDataReload.fail(request, error);
@@ -253,6 +254,25 @@ export class WorkItemContext {
           commandErrorLogEntry(
             "Failed to load work item extra data",
             completion.error
+          )
+        );
+      }
+    }
+  }
+
+  private async reloadSelectedWorkItemExtraData(): Promise<void> {
+    try {
+      const state = await invoke<AccountState>("get_account_state");
+      const selectedIdentity = state.selected?.identity;
+      if (selectedIdentity) {
+        await this.reloadWorkItemExtraData(selectedIdentity);
+      }
+    } catch (error) {
+      if (!this.disposed) {
+        this.onDataUpdateLog(
+          commandErrorLogEntry(
+            "Failed to recover work item extra data after an account change",
+            error
           )
         );
       }

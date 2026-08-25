@@ -166,4 +166,18 @@ describe("WorkItemExtraDataReload", () => {
       { type: "ignored" }
     );
   });
+
+  it("supports re-driving a post-bind account supersession", () => {
+    const reload = new WorkItemExtraDataReload();
+    const stale = reload.start("github.com\u0000first");
+
+    expect(
+      reload.finish(stale.request, "github.com\u0000second", "{}")
+    ).toEqual({ type: "superseded" });
+
+    const recovery = reload.start("github.com\u0000second");
+    expect(
+      reload.finish(recovery.request, "github.com\u0000second", "{}")
+    ).toEqual({ type: "loaded", data: {} });
+  });
 });

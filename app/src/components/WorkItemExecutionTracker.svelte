@@ -29,6 +29,7 @@
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { WorkItem } from "$lib/bindings/WorkItem";
   import type { GitHubIdentity } from "$lib/bindings/GitHubIdentity";
+  import { canSaveWorkItemExtraDataEditor } from "$lib/workItemExtraDataEditor";
   import {
     getWorkItemContext,
     directLinkHRef,
@@ -535,11 +536,21 @@
   }
 
   function saveEditor(text: string) {
-    if (editorWorkItem && editorIdentity) {
+    const identity = editorIdentity;
+    if (
+      editorWorkItem &&
+      identity &&
+      canSaveWorkItemExtraDataEditor(
+        identity,
+        context.workItemExtraDataIdentity,
+        editorGeneration,
+        context.workItemExtraDataGeneration
+      )
+    ) {
       context.setWorkItemExtraData(
         editorWorkItem.id,
         JSON.parse(text),
-        editorIdentity
+        identity
       );
     }
     closeEditor();
