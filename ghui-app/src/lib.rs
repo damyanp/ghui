@@ -1071,7 +1071,6 @@ impl DataState {
     }
 
     pub async fn set_watcher(&self, watcher: SendDataUpdate) -> Result<()> {
-        let _guard = self.begin_account_operation()?;
         self.lock().await.set_watcher(watcher).await
     }
 
@@ -1841,6 +1840,30 @@ mod tests {
         test_queued_pivot_blocks_account_selection,
         |state| async move { state.set_pivot_config(PivotConfig::default()).await }
     );
+
+    #[tokio::test]
+    async fn test_watcher_registration_waits_for_account_selection() {
+        let data_state = DataState::default();
+        let selection_guard = data_state.begin_account_selection().unwrap();
+        let locked_state = data_state.state.lock().await;
+        let registration_state = data_state.clone();
+        let mut registration =
+            tokio::spawn(async move { registration_state.set_watcher(Box::new(|_| {})).await });
+
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), &mut registration)
+                .await
+                .is_err()
+        );
+
+        drop(selection_guard);
+        drop(locked_state);
+        tokio::time::timeout(Duration::from_secs(1), registration)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+    }
 
     #[test]
     fn test_account_replacement_discards_history_for_non_pending_changes() {

@@ -28,6 +28,7 @@
 <script lang="ts">
   import type { FieldOptionId } from "$lib/bindings/FieldOptionId";
   import type { WorkItem } from "$lib/bindings/WorkItem";
+  import type { GitHubIdentity } from "$lib/bindings/GitHubIdentity";
   import {
     getWorkItemContext,
     directLinkHRef,
@@ -199,7 +200,11 @@
       type: "action",
       title: "Edit...",
       action: () => {
+        const identity = context.workItemExtraDataIdentity;
+        if (!identity) return;
         editorWorkItem = workItem;
+        editorIdentity = identity;
+        editorGeneration = context.workItemExtraDataGeneration;
         editorOpen = true;
       },
     };
@@ -510,7 +515,40 @@
   });
 
   let editorWorkItem: WorkItem | undefined = $state(undefined);
+  let editorIdentity: GitHubIdentity | null = $state(null);
+  let editorGeneration = $state(0);
   let editorOpen = $state(false);
+
+  function closeEditor() {
+    editorOpen = false;
+    editorWorkItem = undefined;
+    editorIdentity = null;
+  }
+
+  function getEditorInitialContent() {
+    if (!editorWorkItem) return "{}";
+    return JSON.stringify(
+      context.getWorkItemExtraData(editorWorkItem.id),
+      undefined,
+      4
+    );
+  }
+
+  function saveEditor(text: string) {
+    if (editorWorkItem && editorIdentity) {
+      context.setWorkItemExtraData(
+        editorWorkItem.id,
+        JSON.parse(text),
+        editorIdentity
+      );
+    }
+    closeEditor();
+  }
+
+  $effect(() => {
+    const generation = context.workItemExtraDataGeneration;
+    if (editorOpen && editorGeneration !== generation) closeEditor();
+  });
 </script>
 
 <ExecutionTracker {data} />
@@ -529,23 +567,15 @@
   {/each}
 </div>
 
-<Portal>
-  <WorkItemExtraDataEditor
-    getInitialContent={() =>
-      JSON.stringify(
-        context.getWorkItemExtraData(editorWorkItem!.id),
-        undefined,
-        4
-      )}
-    onSave={(text) => {
-      context.setWorkItemExtraData(editorWorkItem!.id, JSON.parse(text));
-      editorOpen = false;
-    }}
-    onCancel={() => {
-      editorOpen = false;
-    }}
-    open={editorOpen}
-  >
-    <h1>{$state.snapshot(editorWorkItem!.title)}</h1>
-  </WorkItemExtraDataEditor>
-</Portal>
+{#if editorWorkItem}
+  <Portal>
+    <WorkItemExtraDataEditor
+      getInitialContent={getEditorInitialContent}
+      onSave={saveEditor}
+      onCancel={closeEditor}
+      open={editorOpen}
+    >
+      <h1>{$state.snapshot(editorWorkItem.title)}</h1>
+    </WorkItemExtraDataEditor>
+  </Portal>
+{/if}

@@ -10,27 +10,29 @@ export class WorkItemExtraDataReload {
   private nextRequest = 0;
   private activeRequest: number | null = null;
   private accountKey: string | undefined;
-  private hasScope = false;
   private captureEdits = false;
   private pendingEdits = new Map<string, unknown>();
+  private disposed = false;
 
   start(expectedAccountKey?: string): {
     request: number;
     superseded: boolean;
   } {
+    const request = ++this.nextRequest;
+    if (this.disposed) return { request, superseded: false };
+
     const superseded =
-      this.hasScope &&
+      this.accountKey !== undefined &&
       expectedAccountKey !== undefined &&
       expectedAccountKey !== this.accountKey;
     if (superseded) this.pendingEdits.clear();
 
-    this.hasScope = true;
     if (expectedAccountKey !== undefined) {
       this.accountKey = expectedAccountKey;
     }
     this.captureEdits = true;
-    this.activeRequest = ++this.nextRequest;
-    return { request: this.activeRequest, superseded };
+    this.activeRequest = request;
+    return { request, superseded };
   }
 
   bindAccount(request: number, accountKey: string): ExtraDataReloadCompletion {
@@ -48,8 +50,18 @@ export class WorkItemExtraDataReload {
     return { type: "superseded" };
   }
 
-  recordEdit(id: string, data: unknown): void {
+  recordEdit(id: string, data: unknown, accountKey: string): boolean {
+    if (this.disposed || accountKey !== this.accountKey) return false;
     if (this.captureEdits) this.pendingEdits.set(id, data);
+    return true;
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    this.activeRequest = null;
+    this.captureEdits = false;
+    this.pendingEdits.clear();
+    this.accountKey = undefined;
   }
 
   fail(request: number, error: unknown): ExtraDataReloadCompletion {

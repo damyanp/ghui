@@ -109,6 +109,7 @@ export class WorkItemContext {
 
   updates_channel = new Channel<DataUpdate>();
   workItemExtraDataIdentity = $state<GitHubIdentity | null>(null);
+  workItemExtraDataGeneration = $state(0);
   private workItemExtraDataReload = new WorkItemExtraDataReload();
   itemUpdateBatcher = new ItemUpdateBatcher((error) => {
     this.onDataUpdateLog(commandErrorLogEntry("Failed to update work items", error));
@@ -124,6 +125,7 @@ export class WorkItemContext {
     let unlistenAccountSelected: UnlistenFn | null = null;
     void listen<SelectedAccount | null>("github-account-selected", (event) => {
       this.itemUpdateBatcher.clear();
+      this.workItemExtraDataGeneration++;
       void this.reloadWorkItemExtraData(event.payload?.identity);
     })
       .then((unlisten) => {
@@ -142,6 +144,7 @@ export class WorkItemContext {
       });
     onDestroy(() => {
       disposed = true;
+      this.workItemExtraDataReload.dispose();
       unlistenAccountSelected?.();
     });
 
@@ -519,9 +522,22 @@ export class WorkItemContext {
     return {};
   }
 
-  public setWorkItemExtraData(id: WorkItemId, data: any) {
-    this.workItemExtraDataReload.recordEdit(id, data);
+  public setWorkItemExtraData(
+    id: WorkItemId,
+    data: any,
+    identity: GitHubIdentity
+  ): boolean {
+    if (
+      !this.workItemExtraDataReload.recordEdit(
+        id,
+        data,
+        accountKey(identity)
+      )
+    ) {
+      return false;
+    }
     this.workItemExtraData[id] = data;
+    return true;
   }
 }
 
