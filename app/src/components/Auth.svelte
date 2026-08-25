@@ -24,7 +24,10 @@
   } from "./accountList";
   import { selectAccountWithConfirmation } from "$lib/accountSelection";
 
-  let { disabled = false }: { disabled?: boolean } = $props();
+  let {
+    disabled = false,
+    selecting = $bindable(false),
+  }: { disabled?: boolean; selecting?: boolean } = $props();
 
   let accountState = $state<AccountState>({
     selected: null,
@@ -93,6 +96,7 @@
 
     requestSerial++;
     selectingLogin = account.identity.login;
+    selecting = true;
     selectionError = null;
     try {
       const result = await selectAccountWithConfirmation(
@@ -127,6 +131,7 @@
       selectionError = errorMessage(error);
     } finally {
       selectingLogin = null;
+      selecting = false;
     }
   }
 

@@ -1,7 +1,6 @@
 use crate::TauriCommandResult;
 use ghui_app::{
     github_account::AccountError,
-    load_work_items_extra_data, save_work_items_extra_data,
     telemetry::{self, TelemetryEvent},
     DataState, DataUpdate, Filters, ItemToUpdate, RefreshSummary,
 };
@@ -132,36 +131,25 @@ pub async fn set_work_items_extra_data(
     identity: ghui_app::github_account::GitHubIdentity,
     extra_data: String,
 ) -> TauriCommandResult<()> {
-    let _guard = data_state.begin_account_operation()?;
-    let selected_identity = data_state
-        .lock()
-        .await
-        .selected_identity()
-        .cloned()
-        .ok_or(AccountError::NoAccountSelected)
-        .map_err(anyhow::Error::from)?;
-    if selected_identity != identity {
-        return Err(anyhow::anyhow!("selected GitHub account changed").into());
-    }
-    Ok(save_work_items_extra_data(&identity, extra_data.as_str())?)
+    data_state
+        .save_work_items_extra_data(identity, extra_data.as_str())
+        .await?;
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn get_work_items_extra_data(
     data_state: State<'_, DataState>,
 ) -> TauriCommandResult<WorkItemsExtraData> {
-    let _guard = data_state.begin_account_operation()?;
-    let identity = data_state
-        .lock()
-        .await
+    let state = data_state.lock().await;
+    let identity = state
         .selected_identity()
         .cloned()
         .ok_or(AccountError::NoAccountSelected)
         .map_err(anyhow::Error::from)?;
-    Ok(WorkItemsExtraData {
-        data: load_work_items_extra_data(&identity)?,
-        identity,
-    })
+    let data = data_state.load_work_items_extra_data(&identity).await?;
+    drop(state);
+    Ok(WorkItemsExtraData { data, identity })
 }
 
 #[tauri::command]

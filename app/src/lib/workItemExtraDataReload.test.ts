@@ -156,4 +156,14 @@ describe("WorkItemExtraDataReload", () => {
       )
     ).toBe(false);
   });
+
+  it("cancels an unscoped load when no account is selected", () => {
+    const reload = new WorkItemExtraDataReload();
+    const active = reload.start();
+    reload.cancel(active.request);
+
+    expect(reload.finish(active.request, "github.com\u0000first", "{}")).toEqual(
+      { type: "ignored" }
+    );
+  });
 });

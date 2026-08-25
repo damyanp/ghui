@@ -64,6 +64,13 @@ export class WorkItemExtraDataReload {
     this.accountKey = undefined;
   }
 
+  cancel(request: number): void {
+    if (request !== this.activeRequest) return;
+    this.activeRequest = null;
+    this.captureEdits = false;
+    this.pendingEdits.clear();
+  }
+
   fail(request: number, error: unknown): ExtraDataReloadCompletion {
     if (request !== this.activeRequest) return { type: "ignored" };
     this.activeRequest = null;

@@ -254,6 +254,7 @@ const ACCOUNT_SELECTION_BUSY: usize = usize::MAX;
 pub struct DataState {
     state: Arc<Mutex<AppState>>,
     busy_operations: Arc<AtomicUsize>,
+    extra_data_io: Arc<Mutex<()>>,
 }
 
 impl Default for DataState {
@@ -261,6 +262,7 @@ impl Default for DataState {
         Self {
             state: Arc::new(Mutex::new(AppState::new())),
             busy_operations: Arc::new(AtomicUsize::new(0)),
+            extra_data_io: Arc::new(Mutex::new(())),
         }
     }
 }
@@ -1074,6 +1076,20 @@ impl DataState {
         self.lock().await.set_watcher(watcher).await
     }
 
+    pub async fn save_work_items_extra_data(
+        &self,
+        identity: GitHubIdentity,
+        data: &str,
+    ) -> Result<()> {
+        let _io = self.extra_data_io.lock().await;
+        save_work_items_extra_data_to_appdata(&identity, data)
+    }
+
+    pub async fn load_work_items_extra_data(&self, identity: &GitHubIdentity) -> Result<String> {
+        let _io = self.extra_data_io.lock().await;
+        load_work_items_extra_data_from_appdata(identity)
+    }
+
     pub async fn convert_tracked_to_sub_issues(&self, id: WorkItemId) -> Result<()> {
         let _guard = self.begin_account_operation()?;
         self.lock().await.convert_tracked_to_sub_issues(id).await
@@ -1424,7 +1440,10 @@ fn save_view_config_to_appdata(cache: &ViewConfigCache) -> anyhow::Result<()> {
     save_view_config_to_file(&path, cache)
 }
 
-pub fn save_work_items_extra_data(identity: &GitHubIdentity, data: &str) -> anyhow::Result<()> {
+fn save_work_items_extra_data_to_appdata(
+    identity: &GitHubIdentity,
+    data: &str,
+) -> anyhow::Result<()> {
     let path = get_account_appdata_path(identity, WORK_ITEMS_EXTRA_DATA)?;
     info!("Saving work items extra data to {path:?}");
 
@@ -1434,7 +1453,7 @@ pub fn save_work_items_extra_data(identity: &GitHubIdentity, data: &str) -> anyh
     Ok(())
 }
 
-pub fn load_work_items_extra_data(identity: &GitHubIdentity) -> anyhow::Result<String> {
+fn load_work_items_extra_data_from_appdata(identity: &GitHubIdentity) -> anyhow::Result<String> {
     let path = get_account_appdata_path(identity, WORK_ITEMS_EXTRA_DATA)?;
     info!("Loading work items extra data from {path:?}");
 
@@ -1570,6 +1589,7 @@ mod tests {
         let data_state = DataState {
             state: Arc::new(tokio::sync::Mutex::new(app_state)),
             busy_operations: Arc::new(AtomicUsize::new(0)),
+            extra_data_io: Arc::new(tokio::sync::Mutex::new(())),
         };
         let error = data_state.force_refresh().await.unwrap_err();
 
@@ -1747,6 +1767,7 @@ mod tests {
         let data_state = DataState {
             state: Arc::new(tokio::sync::Mutex::new(app_state)),
             busy_operations: Arc::new(AtomicUsize::new(0)),
+            extra_data_io: Arc::new(tokio::sync::Mutex::new(())),
         };
         let locked_state = data_state.state.lock().await;
         let operation = tokio::spawn(operation(data_state.clone()));
@@ -2078,6 +2099,7 @@ mod tests {
         let data_state = DataState {
             state: Arc::new(tokio::sync::Mutex::new(app_state)),
             busy_operations: Arc::new(AtomicUsize::new(0)),
+            extra_data_io: Arc::new(tokio::sync::Mutex::new(())),
         };
         let items = vec![ItemToUpdate {
             work_item_id: "item".to_string().into(),
