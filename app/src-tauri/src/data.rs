@@ -24,8 +24,6 @@ pub async fn watch_data(
     channel: Channel<DataUpdate>,
 ) -> TauriCommandResult<()> {
     data_state
-        .lock()
-        .await
         .set_watcher(Box::new(move |d| {
             let _ = channel.send(d);
         }))
@@ -63,11 +61,10 @@ pub async fn load_all_work_items(data_state: State<'_, DataState>) -> TauriComma
 
 #[tauri::command]
 pub async fn delete_changes(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
-    let count = data_state.lock().await.changes_count();
+    let count = data_state.clear_changes().await?;
     telemetry::record(TelemetryEvent::Discard {
         changes_count: count,
     });
-    data_state.lock().await.clear_changes().await?;
     Ok(())
 }
 
@@ -77,7 +74,7 @@ pub async fn set_preview_changes(
     preview: bool,
 ) -> TauriCommandResult<()> {
     telemetry::record(TelemetryEvent::PreviewToggled { enabled: preview });
-    data_state.lock().await.set_preview_changes(preview).await?;
+    data_state.set_preview_changes(preview).await?;
     Ok(())
 }
 
@@ -111,7 +108,6 @@ pub async fn set_filters(
     telemetry::record(TelemetryEvent::FilterChanged {
         active_filters: filters.active_filter_count(),
     });
-    let mut data_state = data_state.lock().await;
     data_state.set_filters(filters).await?;
     Ok(())
 }
@@ -126,7 +122,7 @@ pub async fn set_pivot_config(
     data_state: State<'_, DataState>,
     cfg: PivotConfig,
 ) -> TauriCommandResult<()> {
-    data_state.lock().await.set_pivot_config(cfg).await?;
+    data_state.set_pivot_config(cfg).await?;
     Ok(())
 }
 
@@ -136,6 +132,7 @@ pub async fn set_work_items_extra_data(
     identity: ghui_app::github_account::GitHubIdentity,
     extra_data: String,
 ) -> TauriCommandResult<()> {
+    let _guard = data_state.begin_account_operation()?;
     let selected_identity = data_state
         .lock()
         .await
@@ -153,6 +150,7 @@ pub async fn set_work_items_extra_data(
 pub async fn get_work_items_extra_data(
     data_state: State<'_, DataState>,
 ) -> TauriCommandResult<WorkItemsExtraData> {
+    let _guard = data_state.begin_account_operation()?;
     let identity = data_state
         .lock()
         .await
@@ -188,7 +186,7 @@ pub async fn record_telemetry(event: TelemetryEvent) -> TauriCommandResult<()> {
 
 #[tauri::command]
 pub async fn capture_view(data_state: State<'_, DataState>) -> TauriCommandResult<String> {
-    let path = data_state.lock().await.capture_view()?;
+    let path = data_state.capture_view().await?;
     Ok(path.to_string_lossy().into_owned())
 }
 

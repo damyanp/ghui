@@ -3,4 +3,8 @@ import type { AccountState } from "./AccountState";
 
 export type SelectAccountResult =
   | { "type": "selected"; state: AccountState }
-  | { "type": "confirmationRequired"; pendingEdits: number };
+  | {
+    "type": "confirmationRequired";
+    pendingEdits: number;
+    confirmationNonce: number;
+  };

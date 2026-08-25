@@ -250,6 +250,7 @@ type SendDataUpdate = Box<dyn Fn(DataUpdate) + Send + Sync>;
 
 const ACCOUNT_SELECTION_BUSY: usize = usize::MAX;
 
+#[derive(Clone)]
 pub struct DataState {
     state: Arc<Mutex<AppState>>,
     busy_operations: Arc<AtomicUsize>,
@@ -264,12 +265,12 @@ impl Default for DataState {
     }
 }
 
-struct BusyGuard {
+pub struct AccountOperationGuard {
     busy_operations: Arc<AtomicUsize>,
     exclusive: bool,
 }
 
-impl Drop for BusyGuard {
+impl Drop for AccountOperationGuard {
     fn drop(&mut self) {
         if self.exclusive {
             self.busy_operations.store(0, Ordering::Release);
@@ -294,6 +295,8 @@ pub struct AppState {
     credential_rejected: bool,
     account_generation: u64,
     credential_generation: u64,
+    next_account_confirmation_nonce: u64,
+    pending_account_confirmation: Option<AccountSelectionConfirmation>,
     fields: Option<Fields>,
     work_items: Option<WorkItems>,
     filters: Filters,
@@ -303,6 +306,24 @@ pub struct AppState {
     preview_changes: bool,
     /// Epic conflicts from the most recent sanitize run.
     epic_conflicts: Vec<SanitizeConflict>,
+}
+
+#[derive(Debug)]
+struct AccountSelectionConfirmation {
+    nonce: u64,
+    target_identity: GitHubIdentity,
+    source_identity: Option<GitHubIdentity>,
+    account_generation: u64,
+    changes: Changes,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum AccountSelectionCheck {
+    Ready,
+    ConfirmationRequired {
+        pending_edits: usize,
+        confirmation_nonce: u64,
+    },
 }
 
 impl Default for AppState {
@@ -346,6 +367,8 @@ impl AppState {
             credential_rejected: false,
             account_generation: 0,
             credential_generation: 0,
+            next_account_confirmation_nonce: 0,
+            pending_account_confirmation: None,
             fields: None,
             work_items: None,
             filters,
@@ -460,6 +483,54 @@ impl AppState {
         ));
         self.credential_rejected = false;
         self.selected_identity = Some(identity);
+        self.pending_account_confirmation = None;
+    }
+
+    fn check_account_selection_confirmation(
+        &mut self,
+        target_identity: &GitHubIdentity,
+        confirmation_nonce: Option<u64>,
+    ) -> Result<AccountSelectionCheck> {
+        let changing_identity = self.selected_identity.as_ref() != Some(target_identity);
+        let pending_edits = self.changes_count();
+
+        if let Some(nonce) = confirmation_nonce {
+            let confirmation = self
+                .pending_account_confirmation
+                .take()
+                .ok_or(AccountError::StaleAccountConfirmation)?;
+            if !changing_identity
+                || pending_edits == 0
+                || confirmation.nonce != nonce
+                || confirmation.target_identity != *target_identity
+                || confirmation.source_identity != self.selected_identity
+                || confirmation.account_generation != self.account_generation
+                || confirmation.changes != self.changes
+            {
+                return Err(AccountError::StaleAccountConfirmation.into());
+            }
+            return Ok(AccountSelectionCheck::Ready);
+        }
+
+        self.pending_account_confirmation = None;
+        if !changing_identity || pending_edits == 0 {
+            return Ok(AccountSelectionCheck::Ready);
+        }
+
+        self.next_account_confirmation_nonce =
+            self.next_account_confirmation_nonce.wrapping_add(1).max(1);
+        let confirmation_nonce = self.next_account_confirmation_nonce;
+        self.pending_account_confirmation = Some(AccountSelectionConfirmation {
+            nonce: confirmation_nonce,
+            target_identity: target_identity.clone(),
+            source_identity: self.selected_identity.clone(),
+            account_generation: self.account_generation,
+            changes: self.changes.clone(),
+        });
+        Ok(AccountSelectionCheck::ConfirmationRequired {
+            pending_edits,
+            confirmation_nonce,
+        })
     }
 
     fn matches_account_context(&self, generation: u64, identity: &GitHubIdentity) -> bool {
@@ -854,7 +925,7 @@ impl AppState {
 }
 
 impl DataState {
-    fn begin_operation(&self) -> Result<BusyGuard> {
+    pub fn begin_account_operation(&self) -> Result<AccountOperationGuard> {
         loop {
             let current = self.busy_operations.load(Ordering::Acquire);
             if current == ACCOUNT_SELECTION_BUSY {
@@ -868,7 +939,7 @@ impl DataState {
                 .compare_exchange(current, next, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
-                return Ok(BusyGuard {
+                return Ok(AccountOperationGuard {
                     busy_operations: Arc::clone(&self.busy_operations),
                     exclusive: false,
                 });
@@ -876,7 +947,7 @@ impl DataState {
         }
     }
 
-    fn begin_account_selection(&self) -> Result<BusyGuard> {
+    fn begin_account_selection(&self) -> Result<AccountOperationGuard> {
         self.busy_operations
             .compare_exchange(
                 0,
@@ -885,7 +956,7 @@ impl DataState {
                 Ordering::Acquire,
             )
             .map_err(|_| AccountError::Busy)?;
-        Ok(BusyGuard {
+        Ok(AccountOperationGuard {
             busy_operations: Arc::clone(&self.busy_operations),
             exclusive: true,
         })
@@ -924,7 +995,7 @@ impl DataState {
         &self,
         identity: GitHubIdentity,
         token: GhToken,
-        confirmed_pending_edits: bool,
+        confirmation_nonce: Option<u64>,
         identity_verified: bool,
     ) -> Result<SelectAccountResult> {
         identity.validate()?;
@@ -934,9 +1005,15 @@ impl DataState {
         if !changing_identity && state.credential_rejected && !identity_verified {
             return Err(AccountError::CredentialVerificationRequired.into());
         }
-        let pending_edits = state.changes_count();
-        if changing_identity && pending_edits > 0 && !confirmed_pending_edits {
-            return Ok(SelectAccountResult::ConfirmationRequired { pending_edits });
+        if let AccountSelectionCheck::ConfirmationRequired {
+            pending_edits,
+            confirmation_nonce,
+        } = state.check_account_selection_confirmation(&identity, confirmation_nonce)?
+        {
+            return Ok(SelectAccountResult::ConfirmationRequired {
+                pending_edits,
+                confirmation_nonce,
+            });
         }
         state.replace_account(identity, token).await?;
         let mut account_state = self.account_state_from_locked(&state);
@@ -944,21 +1021,6 @@ impl DataState {
         Ok(SelectAccountResult::Selected {
             state: account_state,
         })
-    }
-
-    pub async fn pending_edits_for_account_change(
-        &self,
-        identity: &GitHubIdentity,
-    ) -> Result<Option<usize>> {
-        if self.is_busy() {
-            return Err(AccountError::Busy.into());
-        }
-        let state = self.lock().await;
-        let pending_edits = state.changes_count();
-        Ok(
-            (state.selected_identity.as_ref() != Some(identity) && pending_edits > 0)
-                .then_some(pending_edits),
-        )
     }
 
     pub async fn account_state(&self) -> github_account::AccountState {
@@ -999,13 +1061,76 @@ impl DataState {
     }
 
     pub async fn force_refresh(&self) -> Result<RefreshSummary> {
-        let _guard = self.begin_operation()?;
+        let _guard = self.begin_account_operation()?;
         self.lock().await.force_refresh().await
     }
 
     pub async fn resolve_url(&self, url: String) -> Result<ResolvedUrl> {
-        let _guard = self.begin_operation()?;
+        let _guard = self.begin_account_operation()?;
         self.lock().await.resolve_url(url).await
+    }
+
+    pub async fn set_watcher(&self, watcher: SendDataUpdate) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.set_watcher(watcher).await
+    }
+
+    pub async fn convert_tracked_to_sub_issues(&self, id: WorkItemId) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.convert_tracked_to_sub_issues(id).await
+    }
+
+    pub async fn add_change(&self, change: Change) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.add_change(change).await
+    }
+
+    pub async fn add_changes(&self, changes: Changes) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.add_changes(changes).await
+    }
+
+    pub async fn remove_change(&self, change: Change) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.remove_change(change).await
+    }
+
+    pub async fn clear_changes(&self) -> Result<usize> {
+        let _guard = self.begin_account_operation()?;
+        let mut state = self.lock().await;
+        let count = state.changes_count();
+        state.clear_changes().await?;
+        Ok(count)
+    }
+
+    pub async fn undo_change(&self) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.undo_change().await
+    }
+
+    pub async fn redo_change(&self) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.redo_change().await
+    }
+
+    pub async fn set_preview_changes(&self, preview: bool) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.set_preview_changes(preview).await
+    }
+
+    pub async fn set_filters(&self, filters: Filters) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.set_filters(filters).await
+    }
+
+    pub async fn set_pivot_config(&self, pivot_config: PivotConfig) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.set_pivot_config(pivot_config).await
+    }
+
+    pub async fn capture_view(&self) -> Result<PathBuf> {
+        let _guard = self.begin_account_operation()?;
+        self.lock().await.capture_view()
     }
 
     pub async fn request_update_items(
@@ -1016,7 +1141,7 @@ impl DataState {
             return Ok(tokio::spawn(async {}));
         }
 
-        let guard = self.begin_operation()?;
+        let guard = self.begin_account_operation()?;
         self.request_update_items_with_guard(project_item_ids, guard)
             .await
     }
@@ -1025,7 +1150,7 @@ impl DataState {
         &self,
         items: &[ItemToUpdate],
     ) -> Result<JoinHandle<()>> {
-        let guard = self.begin_operation()?;
+        let guard = self.begin_account_operation()?;
         let state = self.lock().await;
         if items
             .iter()
@@ -1045,7 +1170,7 @@ impl DataState {
     async fn request_update_items_with_guard(
         &self,
         project_item_ids: Vec<ProjectItemId>,
-        guard: BusyGuard,
+        guard: AccountOperationGuard,
     ) -> Result<JoinHandle<()>> {
         let app_state = Arc::clone(&self.state);
         let state = self.state.lock().await;
@@ -1111,7 +1236,7 @@ impl DataState {
     }
 
     pub async fn save_changes(&self, report_progress: &impl Fn(usize, usize)) -> Result<usize> {
-        let _guard = self.begin_operation()?;
+        let _guard = self.begin_account_operation()?;
         let (project_item_ids, changes_count) =
             self.lock().await.save_changes(report_progress).await?;
 
@@ -1127,6 +1252,7 @@ impl DataState {
     }
 
     pub async fn sanitize(&self) -> Result<(usize, usize)> {
+        let _guard = self.begin_account_operation()?;
         self.load_all_work_items(false).await?;
 
         let mut app_state = self.lock().await;
@@ -1147,6 +1273,7 @@ impl DataState {
     /// proposed Epic from the stored conflict list.  Removes the staged items
     /// from the conflict list and triggers a UI refresh.
     pub async fn stage_epic_overrides(&self, ids: Vec<WorkItemId>) -> Result<()> {
+        let _guard = self.begin_account_operation()?;
         let mut app_state = self.lock().await;
 
         let id_set: std::collections::HashSet<&WorkItemId> = ids.iter().collect();
@@ -1170,7 +1297,7 @@ impl DataState {
     }
 
     pub async fn load_all_work_items(&self, force: bool) -> Result<()> {
-        let _guard = self.begin_operation()?;
+        let _guard = self.begin_account_operation()?;
         let app_state = self.lock().await;
         if let Some(work_items) = &app_state.work_items {
             let project_item_ids: Vec<_> = work_items
@@ -1406,10 +1533,12 @@ mod tests {
     use github_graphql::data::test_helpers::TestData;
     use github_graphql::data::{Issue, IssueState, PullRequest, PullRequestState, WorkItemData};
     use github_graphql::pivot::{Axis, MultiValueStrategy, PivotField};
+    use std::future::Future;
     use std::sync::{
         Arc, Mutex,
         atomic::{AtomicUsize, Ordering},
     };
+    use std::time::Duration;
     use tempfile::NamedTempFile;
 
     struct CountingRunner {
@@ -1502,6 +1631,216 @@ mod tests {
         assert!(state.matches_account_context(8, &GitHubIdentity::github_dot_com("second")));
         assert!(!state.matches_account_context(7, &GitHubIdentity::github_dot_com("first")));
     }
+
+    fn test_change(id: &str) -> Change {
+        Change {
+            work_item_id: id.to_owned().into(),
+            data: ChangeData::Status(None),
+        }
+    }
+
+    fn state_with_pending_change() -> AppState {
+        let mut state = AppState::new();
+        state.selected_identity = Some(GitHubIdentity::github_dot_com("first"));
+        state.account_generation = 7;
+        state
+            .undo_history
+            .track_add(&mut state.changes, test_change("first-edit"));
+        state
+    }
+
+    fn required_confirmation(check: AccountSelectionCheck) -> u64 {
+        match check {
+            AccountSelectionCheck::ConfirmationRequired {
+                pending_edits,
+                confirmation_nonce,
+            } => {
+                assert_eq!(pending_edits, 1);
+                confirmation_nonce
+            }
+            AccountSelectionCheck::Ready => panic!("confirmation should be required"),
+        }
+    }
+
+    #[test]
+    fn test_account_selection_confirmation_normal_flow_consumes_nonce() {
+        let mut state = state_with_pending_change();
+        let target = GitHubIdentity::github_dot_com("second");
+        let nonce = required_confirmation(
+            state
+                .check_account_selection_confirmation(&target, None)
+                .unwrap(),
+        );
+
+        assert_eq!(
+            state
+                .check_account_selection_confirmation(&target, Some(nonce))
+                .unwrap(),
+            AccountSelectionCheck::Ready
+        );
+        let replay = state
+            .check_account_selection_confirmation(&target, Some(nonce))
+            .unwrap_err();
+        assert!(matches!(
+            replay.downcast_ref::<AccountError>(),
+            Some(AccountError::StaleAccountConfirmation)
+        ));
+    }
+
+    #[test]
+    fn test_account_selection_confirmation_rejects_edit_change_and_replay() {
+        let mut state = state_with_pending_change();
+        let target = GitHubIdentity::github_dot_com("second");
+        let nonce = required_confirmation(
+            state
+                .check_account_selection_confirmation(&target, None)
+                .unwrap(),
+        );
+        state
+            .undo_history
+            .track_add(&mut state.changes, test_change("new-edit"));
+
+        let stale = state
+            .check_account_selection_confirmation(&target, Some(nonce))
+            .unwrap_err();
+        assert!(matches!(
+            stale.downcast_ref::<AccountError>(),
+            Some(AccountError::StaleAccountConfirmation)
+        ));
+        let replay = state
+            .check_account_selection_confirmation(&target, Some(nonce))
+            .unwrap_err();
+        assert!(matches!(
+            replay.downcast_ref::<AccountError>(),
+            Some(AccountError::StaleAccountConfirmation)
+        ));
+    }
+
+    #[test]
+    fn test_account_selection_confirmation_rejects_source_account_change() {
+        let mut state = state_with_pending_change();
+        let target = GitHubIdentity::github_dot_com("second");
+        let nonce = required_confirmation(
+            state
+                .check_account_selection_confirmation(&target, None)
+                .unwrap(),
+        );
+        state.selected_identity = Some(GitHubIdentity::github_dot_com("third"));
+        state.account_generation += 1;
+
+        let stale = state
+            .check_account_selection_confirmation(&target, Some(nonce))
+            .unwrap_err();
+        assert!(matches!(
+            stale.downcast_ref::<AccountError>(),
+            Some(AccountError::StaleAccountConfirmation)
+        ));
+    }
+
+    async fn assert_queued_account_operation_blocks_selection<F, Fut, T>(operation: F)
+    where
+        F: FnOnce(DataState) -> Fut,
+        Fut: Future<Output = T> + Send + 'static,
+        T: Send + 'static,
+    {
+        let mut app_state = AppState::new();
+        app_state.selected_identity = Some(GitHubIdentity::github_dot_com("first"));
+        let data_state = DataState {
+            state: Arc::new(tokio::sync::Mutex::new(app_state)),
+            busy_operations: Arc::new(AtomicUsize::new(0)),
+        };
+        let locked_state = data_state.state.lock().await;
+        let operation = tokio::spawn(operation(data_state.clone()));
+
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while !data_state.is_busy() {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+
+        let error = data_state
+            .select_account(
+                GitHubIdentity::github_dot_com("second"),
+                GhToken::new("token".to_owned()),
+                None,
+                false,
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<AccountError>(),
+            Some(AccountError::Busy)
+        ));
+
+        operation.abort();
+        drop(locked_state);
+        let _ = operation.await;
+        assert!(!data_state.is_busy());
+    }
+
+    macro_rules! queued_account_operation_test {
+        ($name:ident, $operation:expr) => {
+            #[tokio::test]
+            async fn $name() {
+                assert_queued_account_operation_blocks_selection($operation).await;
+            }
+        };
+    }
+
+    queued_account_operation_test!(
+        test_queued_add_change_blocks_account_selection,
+        |state| async move { state.add_change(test_change("item")).await }
+    );
+    queued_account_operation_test!(
+        test_queued_add_changes_blocks_account_selection,
+        |state| async move { state.add_changes(Changes::default()).await }
+    );
+    queued_account_operation_test!(
+        test_queued_remove_change_blocks_account_selection,
+        |state| async move { state.remove_change(test_change("item")).await }
+    );
+    queued_account_operation_test!(
+        test_queued_undo_blocks_account_selection,
+        |state| async move { state.undo_change().await }
+    );
+    queued_account_operation_test!(
+        test_queued_redo_blocks_account_selection,
+        |state| async move { state.redo_change().await }
+    );
+    queued_account_operation_test!(
+        test_queued_clear_blocks_account_selection,
+        |state| async move { state.clear_changes().await }
+    );
+    queued_account_operation_test!(
+        test_queued_sanitize_blocks_account_selection,
+        |state| async move { state.sanitize().await }
+    );
+    queued_account_operation_test!(
+        test_queued_filter_blocks_account_selection,
+        |state| async move { state.set_filters(Filters::default()).await }
+    );
+    queued_account_operation_test!(
+        test_queued_preview_blocks_account_selection,
+        |state| async move { state.set_preview_changes(false).await }
+    );
+    queued_account_operation_test!(
+        test_queued_load_blocks_account_selection,
+        |state| async move { state.load_all_work_items(false).await }
+    );
+    queued_account_operation_test!(
+        test_queued_save_blocks_account_selection,
+        |state| async move { state.save_changes(&|_, _| {}).await }
+    );
+    queued_account_operation_test!(
+        test_queued_update_blocks_account_selection,
+        |state| async move { state.request_work_item_updates(&[]).await }
+    );
+    queued_account_operation_test!(
+        test_queued_pivot_blocks_account_selection,
+        |state| async move { state.set_pivot_config(PivotConfig::default()).await }
+    );
 
     #[test]
     fn test_account_replacement_discards_history_for_non_pending_changes() {

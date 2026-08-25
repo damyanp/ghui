@@ -56,7 +56,11 @@ impl fmt::Debug for GhToken {
 
 #[derive(Clone)]
 enum Authentication {
-    ExplicitToken { host: Arc<str>, token: GhToken },
+    ExplicitToken {
+        host: Arc<str>,
+        token: GhToken,
+    },
+    #[cfg(feature = "gh-active-account")]
     GhActiveAccount,
 }
 
@@ -238,25 +242,25 @@ impl GhRunner for RealGhRunner {
 
 fn build_api_command(authentication: &Authentication) -> Command {
     let mut command = Command::new("gh");
-    command.args(["api"]);
-    if let Authentication::ExplicitToken { host, .. } = authentication {
-        command.args(["--hostname", host, "graphql", "--input", "-"]);
-    } else {
-        command.args(["graphql", "--input", "-"]);
+    match authentication {
+        Authentication::ExplicitToken { host, token } => {
+            command.args(["api", "--hostname", host, "graphql", "--input", "-"]);
+            command
+                .env_remove("GH_HOST")
+                .env_remove("GITHUB_TOKEN")
+                .env_remove("GH_ENTERPRISE_TOKEN")
+                .env_remove("GITHUB_ENTERPRISE_TOKEN");
+            command.env("GH_TOKEN", token.expose());
+        }
+        #[cfg(feature = "gh-active-account")]
+        Authentication::GhActiveAccount => {
+            command.args(["api", "graphql", "--input", "-"]);
+        }
     }
     command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-
-    if let Authentication::ExplicitToken { token, .. } = authentication {
-        command
-            .env_remove("GH_HOST")
-            .env_remove("GITHUB_TOKEN")
-            .env_remove("GH_ENTERPRISE_TOKEN")
-            .env_remove("GITHUB_ENTERPRISE_TOKEN");
-        command.env("GH_TOKEN", token.expose());
-    }
 
     // Don't flash a console window for each gh call on Windows.
     #[cfg(windows)]
@@ -475,6 +479,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "gh-active-account")]
     fn test_active_account_constructor_does_not_override_auth_environment() {
         let command = build_api_command(&Authentication::GhActiveAccount);
         assert_eq!(command.get_envs().count(), 0);

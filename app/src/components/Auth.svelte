@@ -22,6 +22,7 @@
     type GitHubAccount,
     type SelectAccountResult,
   } from "./accountList";
+  import { selectAccountWithConfirmation } from "$lib/accountSelection";
 
   let { disabled = false }: { disabled?: boolean } = $props();
 
@@ -94,23 +95,18 @@
     selectingLogin = account.identity.login;
     selectionError = null;
     try {
-      let result = await invoke<SelectAccountResult>("select_account", {
-        identity: account.identity,
-        confirmedPendingEdits: false,
-      });
-      if (result.type === "confirmationRequired") {
-        const count = result.pendingEdits;
-        const confirmed = window.confirm(
+      const result = await selectAccountWithConfirmation(
+        account.identity,
+        (request) =>
+          invoke<SelectAccountResult>("select_account", request),
+        (count) =>
+          window.confirm(
           `Switch GitHub accounts with ${count} pending ${
             count === 1 ? "edit" : "edits"
           }? The edits will be re-applied as ${account.identity.login} and may fail.`
-        );
-        if (!confirmed) return;
-        result = await invoke<SelectAccountResult>("select_account", {
-          identity: account.identity,
-          confirmedPendingEdits: true,
-        });
-      }
+          )
+      );
+      if (!result) return;
 
       if (result.type === "selected") {
         accountState = result.state;
