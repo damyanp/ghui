@@ -68,6 +68,8 @@ pub enum AccountError {
     InvalidIdentity,
     #[error("The GitHub account changed before this update was submitted; retry the update")]
     StaleAccountContext,
+    #[error("The GitHub account selection confirmation is stale; review the pending edits again")]
+    StaleAccountConfirmation,
     #[error("The selected credential must be verified before it can replace a rejected credential")]
     CredentialVerificationRequired,
 }
@@ -173,6 +175,8 @@ pub struct AccountState {
     pub selected: Option<SelectedAccount>,
     pub busy: bool,
     pub pending_edits: usize,
+    #[ts(type = "number")]
+    pub account_generation: u64,
 }
 
 #[derive(Clone, Debug, Serialize, TS)]
@@ -183,8 +187,14 @@ pub struct AccountState {
 )]
 #[ts(export)]
 pub enum SelectAccountResult {
-    Selected { state: AccountState },
-    ConfirmationRequired { pending_edits: usize },
+    Selected {
+        state: AccountState,
+    },
+    ConfirmationRequired {
+        pending_edits: usize,
+        #[ts(type = "number")]
+        confirmation_nonce: u64,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]

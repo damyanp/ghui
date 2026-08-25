@@ -3,6 +3,7 @@ name: Build Windows Installer
 on:
   push:
     branches: [ "main" ]
+  pull_request:
 
 permissions:
   contents: read
@@ -30,10 +31,23 @@ jobs:
       working-directory: app
       run: npx tauri build
 
-    - name: Upload installer artifacts
+    - name: Upload pull request installer artifacts
+      if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v7
       with:
         name: windows-installer
+        retention-days: 7
+        if-no-files-found: error
+        path: |
+          target/release/bundle/msi/*.msi
+          target/release/bundle/nsis/*.exe
+
+    - name: Upload main installer artifacts
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@v7
+      with:
+        name: windows-installer
+        if-no-files-found: error
         path: |
           target/release/bundle/msi/*.msi
           target/release/bundle/nsis/*.exe

@@ -5,4 +5,5 @@ export type AccountState = {
   selected: SelectedAccount | null;
   busy: boolean;
   pendingEdits: number;
+  accountGeneration: number;
 };

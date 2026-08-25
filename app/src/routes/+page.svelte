@@ -99,7 +99,17 @@
   let logPanelOpen = $state(false);
   let recipeBarOpen = $state(false);
   let busy = $state(false);
-  const disabled = $derived(busy || context.loadProgress > 0);
+  let accountSelecting = $state(false);
+  const disabled = $derived(
+    busy || accountSelecting || context.loadProgress > 0
+  );
+
+  $effect(() => {
+    document.body.inert = accountSelecting;
+    return () => {
+      document.body.inert = false;
+    };
+  });
 
   let openDropdown = $state<"mode" | "more" | null>(null);
 
@@ -235,7 +245,10 @@
   const onUpdateClicked = $derived(updateInfo ? installUpdate : checkForUpdate);
 </script>
 
-<div class="flex flex-col h-full w-full fixed">
+<div
+  class="flex flex-col h-full w-full fixed"
+  aria-busy={accountSelecting}
+>
   {#if openDropdown !== null}
     <button
       class="fixed inset-0 z-40 cursor-default"
@@ -438,7 +451,7 @@
           disabled={updateButtonDisabled}
           onclick={() => { void onUpdateClicked(); }}
         />
-        <Auth {disabled} />
+        <Auth {disabled} bind:selecting={accountSelecting} />
       </AppBar.Trail>
     </AppBar.Toolbar>
   </AppBar>

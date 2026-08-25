@@ -12,11 +12,7 @@ pub async fn convert_tracked_to_sub_issues(
     id: WorkItemId,
 ) -> TauriCommandResult<()> {
     telemetry::record(TelemetryEvent::ConvertTracked);
-    data_state
-        .lock()
-        .await
-        .convert_tracked_to_sub_issues(id)
-        .await?;
+    data_state.convert_tracked_to_sub_issues(id).await?;
     Ok(())
 }
 
@@ -54,7 +50,7 @@ pub async fn add_change(
         field: change.field_name().to_owned(),
         value: change.field_value(),
     });
-    data_state.lock().await.add_change(change).await?;
+    data_state.add_change(change).await?;
     Ok(())
 }
 
@@ -72,7 +68,7 @@ pub async fn add_changes(
     for change in changes {
         batch.add(change);
     }
-    data_state.lock().await.add_changes(batch).await?;
+    data_state.add_changes(batch).await?;
     Ok(())
 }
 
@@ -85,21 +81,21 @@ pub async fn remove_change(
         field: change.field_name().to_owned(),
         value: change.field_value(),
     });
-    data_state.lock().await.remove_change(change).await?;
+    data_state.remove_change(change).await?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn undo_change(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
     telemetry::record(TelemetryEvent::Undo);
-    data_state.lock().await.undo_change().await?;
+    data_state.undo_change().await?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn redo_change(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
     telemetry::record(TelemetryEvent::Redo);
-    data_state.lock().await.redo_change().await?;
+    data_state.redo_change().await?;
     Ok(())
 }
 

@@ -1,7 +1,6 @@
 use crate::TauriCommandResult;
 use ghui_app::{
     github_account::AccountError,
-    load_work_items_extra_data, save_work_items_extra_data,
     telemetry::{self, TelemetryEvent},
     DataState, DataUpdate, Filters, ItemToUpdate, RefreshSummary,
 };
@@ -16,6 +15,8 @@ use ts_rs::TS;
 pub struct WorkItemsExtraData {
     identity: ghui_app::github_account::GitHubIdentity,
     data: String,
+    #[ts(type = "number")]
+    account_generation: u64,
 }
 
 #[tauri::command]
@@ -24,8 +25,6 @@ pub async fn watch_data(
     channel: Channel<DataUpdate>,
 ) -> TauriCommandResult<()> {
     data_state
-        .lock()
-        .await
         .set_watcher(Box::new(move |d| {
             let _ = channel.send(d);
         }))
@@ -63,11 +62,10 @@ pub async fn load_all_work_items(data_state: State<'_, DataState>) -> TauriComma
 
 #[tauri::command]
 pub async fn delete_changes(data_state: State<'_, DataState>) -> TauriCommandResult<()> {
-    let count = data_state.lock().await.changes_count();
+    let count = data_state.clear_changes().await?;
     telemetry::record(TelemetryEvent::Discard {
         changes_count: count,
     });
-    data_state.lock().await.clear_changes().await?;
     Ok(())
 }
 
@@ -77,7 +75,7 @@ pub async fn set_preview_changes(
     preview: bool,
 ) -> TauriCommandResult<()> {
     telemetry::record(TelemetryEvent::PreviewToggled { enabled: preview });
-    data_state.lock().await.set_preview_changes(preview).await?;
+    data_state.set_preview_changes(preview).await?;
     Ok(())
 }
 
@@ -111,7 +109,6 @@ pub async fn set_filters(
     telemetry::record(TelemetryEvent::FilterChanged {
         active_filters: filters.active_filter_count(),
     });
-    let mut data_state = data_state.lock().await;
     data_state.set_filters(filters).await?;
     Ok(())
 }
@@ -126,7 +123,7 @@ pub async fn set_pivot_config(
     data_state: State<'_, DataState>,
     cfg: PivotConfig,
 ) -> TauriCommandResult<()> {
-    data_state.lock().await.set_pivot_config(cfg).await?;
+    data_state.set_pivot_config(cfg).await?;
     Ok(())
 }
 
@@ -136,33 +133,29 @@ pub async fn set_work_items_extra_data(
     identity: ghui_app::github_account::GitHubIdentity,
     extra_data: String,
 ) -> TauriCommandResult<()> {
-    let selected_identity = data_state
-        .lock()
-        .await
-        .selected_identity()
-        .cloned()
-        .ok_or(AccountError::NoAccountSelected)
-        .map_err(anyhow::Error::from)?;
-    if selected_identity != identity {
-        return Err(anyhow::anyhow!("selected GitHub account changed").into());
-    }
-    Ok(save_work_items_extra_data(&identity, extra_data.as_str())?)
+    data_state
+        .save_work_items_extra_data(identity, extra_data.as_str())
+        .await?;
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn get_work_items_extra_data(
     data_state: State<'_, DataState>,
 ) -> TauriCommandResult<WorkItemsExtraData> {
-    let identity = data_state
-        .lock()
-        .await
+    let state = data_state.lock().await;
+    let identity = state
         .selected_identity()
         .cloned()
         .ok_or(AccountError::NoAccountSelected)
         .map_err(anyhow::Error::from)?;
+    let account_generation = state.account_generation();
+    let data = data_state.load_work_items_extra_data(&identity).await?;
+    drop(state);
     Ok(WorkItemsExtraData {
-        data: load_work_items_extra_data(&identity)?,
+        data,
         identity,
+        account_generation,
     })
 }
 
@@ -188,7 +181,7 @@ pub async fn record_telemetry(event: TelemetryEvent) -> TauriCommandResult<()> {
 
 #[tauri::command]
 pub async fn capture_view(data_state: State<'_, DataState>) -> TauriCommandResult<String> {
-    let path = data_state.lock().await.capture_view()?;
+    let path = data_state.capture_view().await?;
     Ok(path.to_string_lossy().into_owned())
 }
 

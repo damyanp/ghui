@@ -136,16 +136,8 @@ pub async fn select_account(
     app: AppHandle,
     data_state: State<'_, DataState>,
     identity: GitHubIdentity,
-    confirmed_pending_edits: bool,
+    confirmation_nonce: Option<u64>,
 ) -> TauriCommandResult<SelectAccountResult> {
-    if !confirmed_pending_edits {
-        if let Some(pending_edits) = data_state
-            .pending_edits_for_account_change(&identity)
-            .await?
-        {
-            return Ok(SelectAccountResult::ConfirmationRequired { pending_edits });
-        }
-    }
     let token = resolve_token(&identity)
         .await
         .map_err(anyhow::Error::from)?;
@@ -158,7 +150,7 @@ pub async fn select_account(
         false
     };
     let result = data_state
-        .select_account(identity, token, confirmed_pending_edits, identity_verified)
+        .select_account(identity, token, confirmation_nonce, identity_verified)
         .await?;
     if let SelectAccountResult::Selected { state } = &result {
         app.emit("github-account-selected", &state.selected)

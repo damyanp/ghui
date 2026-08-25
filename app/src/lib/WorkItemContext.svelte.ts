@@ -19,16 +19,21 @@ import type { ResolvedUrl } from "./bindings/ResolvedUrl";
 import type { RefreshSummary } from "./bindings/RefreshSummary";
 import type { PivotConfig } from "./bindings/PivotConfig";
 import type { GitHubIdentity } from "./bindings/GitHubIdentity";
+import type { AccountState } from "./bindings/AccountState";
+import type { SelectedAccount } from "./bindings/SelectedAccount";
 import type { WorkItemsExtraData } from "./bindings/WorkItemsExtraData";
 import { upsertWorkItem } from "./workItems";
 import * as filterableFields from "./filterableFields";
 import type { FilterableField } from "./filterableFields";
 import { commandErrorLogEntry } from "./commandErrors";
-import { RequestSerial } from "./requestSerial";
-import { RequestScopedEdits } from "./requestScopedEdits";
-import { mergePendingExtraData } from "./workItemExtraData";
+import { WorkItemExtraDataReload } from "./workItemExtraDataReload";
+import { SerializedTaskQueue } from "./serializedTaskQueue";
 
 const key = Symbol("WorkItemContext");
+
+function accountKey(identity: GitHubIdentity): string {
+  return `${identity.host}\u0000${identity.login}`;
+}
 
 export function setWorkItemContext(wic: WorkItemContext) {
   setContext(key, wic);
@@ -105,12 +110,10 @@ export class WorkItemContext {
 
   updates_channel = new Channel<DataUpdate>();
   workItemExtraDataIdentity = $state<GitHubIdentity | null>(null);
-  private workItemExtraDataReloads = new RequestSerial();
-  private activeWorkItemExtraDataReload: number | null = null;
-  private pendingWorkItemExtraDataEdits = new RequestScopedEdits<
-    WorkItemId,
-    any
-  >();
+  workItemExtraDataGeneration = $state(0);
+  private workItemExtraDataReload = new WorkItemExtraDataReload();
+  private workItemExtraDataSaves = new SerializedTaskQueue();
+  private disposed = false;
   itemUpdateBatcher = new ItemUpdateBatcher((error) => {
     this.onDataUpdateLog(commandErrorLogEntry("Failed to update work items", error));
   });
@@ -120,30 +123,47 @@ export class WorkItemContext {
       this.on_data_update(data_update);
     tick().then(() => invoke("watch_data", { channel: this.updates_channel }));
 
-    void this.reloadWorkItemExtraData();
-    let disposed = false;
     let unlistenAccountSelected: UnlistenFn | null = null;
-    void listen("github-account-selected", () => {
+    void listen<SelectedAccount | null>("github-account-selected", (event) => {
       this.itemUpdateBatcher.clear();
-      void this.reloadWorkItemExtraData();
+      this.workItemExtraDataGeneration++;
+      const identity = event.payload?.identity;
+      if (
+        identity &&
+        this.workItemExtraDataIdentity &&
+        accountKey(identity) === accountKey(this.workItemExtraDataIdentity)
+      ) {
+        return;
+      }
+      if (this.workItemExtraDataIdentity) {
+        this.queueWorkItemExtraDataSave(
+          this.workItemExtraDataIdentity,
+          JSON.stringify(this.workItemExtraData, undefined, " ")
+        );
+      }
+      void this.reloadWorkItemExtraData(identity);
     })
       .then((unlisten) => {
-        if (disposed) unlisten();
-        else unlistenAccountSelected = unlisten;
+        if (this.disposed) unlisten();
+        else {
+          unlistenAccountSelected = unlisten;
+          void this.reloadWorkItemExtraData();
+        }
       })
       .catch((error) => {
-        if (!disposed) {
+        if (!this.disposed) {
           this.onDataUpdateLog(
             commandErrorLogEntry(
               "Failed to listen for GitHub account changes",
               error
             )
           );
+          void this.reloadWorkItemExtraData();
         }
       });
     onDestroy(() => {
-      disposed = true;
-      this.workItemExtraDataReloads.invalidate();
+      this.disposed = true;
+      this.workItemExtraDataReload.dispose();
       unlistenAccountSelected?.();
     });
 
@@ -151,44 +171,133 @@ export class WorkItemContext {
       const extraData = JSON.stringify(this.workItemExtraData, undefined, " ");
       const identity = this.workItemExtraDataIdentity;
       if (identity) {
-        void invoke("set_work_items_extra_data", { identity, extraData }).catch(
-          (error) => {
-            this.onDataUpdateLog(
-              commandErrorLogEntry(
-                "Failed to save work item extra data",
-                error
-              )
-            );
-          }
-        );
+        this.queueWorkItemExtraDataSave(identity, extraData);
       }
     });
   }
 
-  private async reloadWorkItemExtraData(): Promise<void> {
-    const request = this.workItemExtraDataReloads.start();
-    this.activeWorkItemExtraDataReload = request;
-    this.pendingWorkItemExtraDataEdits.begin(request);
-    this.workItemExtraDataIdentity = null;
-    this.workItemExtraData = {};
+  private queueWorkItemExtraDataSave(
+    identity: GitHubIdentity,
+    extraData: string
+  ): void {
+    this.workItemExtraDataSaves.enqueue(
+      async () => {
+        await invoke("set_work_items_extra_data", { identity, extraData });
+      },
+      (error) => {
+        if (!this.disposed) {
+          this.onDataUpdateLog(
+            commandErrorLogEntry(
+              "Failed to save work item extra data",
+              error
+            )
+          );
+        }
+      }
+    );
+  }
+
+  private async reloadWorkItemExtraData(
+    expectedIdentity?: GitHubIdentity
+  ): Promise<void> {
+    const { request, superseded } = this.workItemExtraDataReload.start(
+      expectedIdentity ? accountKey(expectedIdentity) : undefined
+    );
+    if (superseded) {
+      this.workItemExtraDataIdentity = null;
+      this.workItemExtraData = {};
+    }
     try {
+      await this.workItemExtraDataSaves.flush();
+      if (!expectedIdentity) {
+        const state = await invoke<AccountState>("get_account_state");
+        const selectedIdentity = state.selected?.identity;
+        if (!selectedIdentity) {
+          this.workItemExtraDataReload.cancel(request);
+          return;
+        }
+        const binding = this.workItemExtraDataReload.bindAccount(
+          request,
+          accountKey(selectedIdentity)
+        );
+        if (binding.type === "superseded") {
+          this.workItemExtraDataIdentity = null;
+          this.workItemExtraData = {};
+          await this.reloadWorkItemExtraData(selectedIdentity);
+          return;
+        }
+      }
       const snapshot = await invoke<WorkItemsExtraData>(
         "get_work_items_extra_data"
       );
-      if (!this.workItemExtraDataReloads.isCurrent(request)) return;
-      const loaded = JSON.parse(snapshot.data);
-      this.workItemExtraData = mergePendingExtraData(
-        loaded,
-        this.pendingWorkItemExtraDataEdits.take(request)
+      const currentState = await invoke<AccountState>("get_account_state");
+      const currentIdentity = currentState.selected?.identity;
+      if (
+        currentState.accountGeneration !== snapshot.accountGeneration ||
+        !currentIdentity ||
+        accountKey(currentIdentity) !== accountKey(snapshot.identity)
+      ) {
+        if (this.workItemExtraDataReload.invalidateForAccountChange(request)) {
+          this.workItemExtraDataIdentity = null;
+          this.workItemExtraData = {};
+          await this.reloadSelectedWorkItemExtraData();
+        }
+        return;
+      }
+      const completion = this.workItemExtraDataReload.finish(
+        request,
+        accountKey(snapshot.identity),
+        snapshot.data
       );
-      this.activeWorkItemExtraDataReload = null;
-      this.workItemExtraDataIdentity = snapshot.identity;
-    } catch {
-      if (!this.workItemExtraDataReloads.isCurrent(request)) return;
-      this.workItemExtraDataIdentity = null;
-      this.workItemExtraData = {};
-      this.activeWorkItemExtraDataReload = null;
-      this.pendingWorkItemExtraDataEdits.cancel(request);
+      if (completion.type === "loaded") {
+        this.workItemExtraData = completion.data;
+        this.workItemExtraDataIdentity = snapshot.identity;
+      } else if (completion.type === "failed") {
+        this.onDataUpdateLog(
+          commandErrorLogEntry(
+            "Failed to load work item extra data",
+            completion.error
+          )
+        );
+      } else if (completion.type === "superseded") {
+        this.workItemExtraDataIdentity = null;
+        this.workItemExtraData = {};
+        await this.reloadSelectedWorkItemExtraData();
+      }
+    } catch (error) {
+      const completion = this.workItemExtraDataReload.fail(request, error);
+      if (completion.type === "failed") {
+        this.onDataUpdateLog(
+          commandErrorLogEntry(
+            "Failed to load work item extra data",
+            completion.error
+          )
+        );
+      }
+    }
+  }
+
+  private async reloadSelectedWorkItemExtraData(): Promise<void> {
+    try {
+      const state = await invoke<AccountState>("get_account_state");
+      const selectedIdentity = state.selected?.identity;
+      if (
+        selectedIdentity &&
+        (!this.workItemExtraDataIdentity ||
+          accountKey(selectedIdentity) !==
+            accountKey(this.workItemExtraDataIdentity))
+      ) {
+        await this.reloadWorkItemExtraData(selectedIdentity);
+      }
+    } catch (error) {
+      if (!this.disposed) {
+        this.onDataUpdateLog(
+          commandErrorLogEntry(
+            "Failed to recover work item extra data after an account change",
+            error
+          )
+        );
+      }
     }
   }
 
@@ -487,12 +596,22 @@ export class WorkItemContext {
     return {};
   }
 
-  public setWorkItemExtraData(id: WorkItemId, data: any) {
-    const request = this.activeWorkItemExtraDataReload;
-    if (request !== null) {
-      this.pendingWorkItemExtraDataEdits.set(request, id, data);
+  public setWorkItemExtraData(
+    id: WorkItemId,
+    data: any,
+    identity: GitHubIdentity
+  ): boolean {
+    if (
+      !this.workItemExtraDataReload.recordEdit(
+        id,
+        data,
+        accountKey(identity)
+      )
+    ) {
+      return false;
     }
     this.workItemExtraData[id] = data;
+    return true;
   }
 }
 
