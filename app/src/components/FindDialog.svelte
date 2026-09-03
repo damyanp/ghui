@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Search, SearchSlash } from "@lucide/svelte";
+  import { Search } from "@lucide/svelte";
   import { onMount, tick } from "svelte";
   import { recordTelemetry } from "$lib/WorkItemContext.svelte";
+  import { isFindShortcut } from "./findDialogShortcut";
 
   type Props = {
     text: string;
@@ -34,14 +35,13 @@
     };
   });
 
-  function onkeydown(e: KeyboardEvent) {
-    if (!open && e.key.trim().length === 1) {
+  function onkeydown(e: KeyboardEvent): void {
+    if (isFindShortcut(e)) {
+      e.preventDefault();
       openDialog();
-    } else {
-      if (e.key === "Escape") {
-        text = "";
-        open = false;
-      }
+    } else if (e.key === "Escape") {
+      text = "";
+      open = false;
     }
   }
 </script>
