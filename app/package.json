@@ -21,10 +21,10 @@
     "@primer/octicons": "^19.40.0",
     "@tauri-apps/api": "^2.12.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.4.0",
-    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-opener": "2.5.4",
     "@tauri-apps/plugin-window-state": "^2",
-    "@zag-js/select": "1.46.0",
-    "@zag-js/svelte": "1.46.0",
+    "@zag-js/select": "1.43.0",
+    "@zag-js/svelte": "1.43.0",
     "bits-ui": "^2.19.0",
     "dayjs": "^1.11.23",
     "monaco-editor": "^0.57.0"
